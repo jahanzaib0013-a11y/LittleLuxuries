@@ -101,7 +101,8 @@ export function Footer() {
         </div>
       </div>
       <div className="border-t border-border/60 px-6 py-6 text-center text-xs text-muted-foreground">
-        © 2026 Little Luxuries Baby Garments. Ethically made with love.
+        © 2026 Little Luxuries Baby Garments. Ethically made with love. ·{" "}
+        <Link to="/login" className="hover:text-primary">Admin</Link>
       </div>
     </footer>
   );
