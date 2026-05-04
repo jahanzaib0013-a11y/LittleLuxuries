@@ -10,8 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as ShopRouteImport } from './routes/shop'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ProductsRouteImport } from './routes/products'
+import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CustomersRouteImport } from './routes/customers'
+import { Route as CouponsRouteImport } from './routes/coupons'
+import { Route as ContentRouteImport } from './routes/content'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
@@ -19,6 +28,46 @@ import { Route as ProductIdRouteImport } from './routes/product.$id'
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsRoute = ProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersRoute = OrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CustomersRoute = CustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CouponsRoute = CouponsRouteImport.update({
+  id: '/coupons',
+  path: '/coupons',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContentRoute = ContentRouteImport.update({
+  id: '/content',
+  path: '/content',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -29,6 +78,11 @@ const ContactRoute = ContactRouteImport.update({
 const CheckoutRoute = CheckoutRouteImport.update({
   id: '/checkout',
   path: '/checkout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyticsRoute = AnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AboutRoute = AboutRouteImport.update({
@@ -50,16 +104,34 @@ const ProductIdRoute = ProductIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/analytics': typeof AnalyticsRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/content': typeof ContentRoute
+  '/coupons': typeof CouponsRoute
+  '/customers': typeof CustomersRoute
+  '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
+  '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/analytics': typeof AnalyticsRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/content': typeof ContentRoute
+  '/coupons': typeof CouponsRoute
+  '/customers': typeof CustomersRoute
+  '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
+  '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/product/$id': typeof ProductIdRoute
 }
@@ -67,8 +139,17 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/analytics': typeof AnalyticsRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/content': typeof ContentRoute
+  '/coupons': typeof CouponsRoute
+  '/customers': typeof CustomersRoute
+  '/dashboard': typeof DashboardRoute
+  '/login': typeof LoginRoute
+  '/orders': typeof OrdersRoute
+  '/products': typeof ProductsRoute
+  '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/product/$id': typeof ProductIdRoute
 }
@@ -77,18 +158,51 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/analytics'
     | '/checkout'
     | '/contact'
+    | '/content'
+    | '/coupons'
+    | '/customers'
+    | '/dashboard'
+    | '/login'
+    | '/orders'
+    | '/products'
+    | '/settings'
     | '/shop'
     | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/about' | '/checkout' | '/contact' | '/shop' | '/product/$id'
+  to:
+    | '/'
+    | '/about'
+    | '/analytics'
+    | '/checkout'
+    | '/contact'
+    | '/content'
+    | '/coupons'
+    | '/customers'
+    | '/dashboard'
+    | '/login'
+    | '/orders'
+    | '/products'
+    | '/settings'
+    | '/shop'
+    | '/product/$id'
   id:
     | '__root__'
     | '/'
     | '/about'
+    | '/analytics'
     | '/checkout'
     | '/contact'
+    | '/content'
+    | '/coupons'
+    | '/customers'
+    | '/dashboard'
+    | '/login'
+    | '/orders'
+    | '/products'
+    | '/settings'
     | '/shop'
     | '/product/$id'
   fileRoutesById: FileRoutesById
@@ -96,8 +210,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AnalyticsRoute: typeof AnalyticsRoute
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
+  ContentRoute: typeof ContentRoute
+  CouponsRoute: typeof CouponsRoute
+  CustomersRoute: typeof CustomersRoute
+  DashboardRoute: typeof DashboardRoute
+  LoginRoute: typeof LoginRoute
+  OrdersRoute: typeof OrdersRoute
+  ProductsRoute: typeof ProductsRoute
+  SettingsRoute: typeof SettingsRoute
   ShopRoute: typeof ShopRoute
   ProductIdRoute: typeof ProductIdRoute
 }
@@ -109,6 +232,62 @@ declare module '@tanstack/react-router' {
       path: '/shop'
       fullPath: '/shop'
       preLoaderRoute: typeof ShopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products': {
+      id: '/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof ProductsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders': {
+      id: '/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/customers': {
+      id: '/customers'
+      path: '/customers'
+      fullPath: '/customers'
+      preLoaderRoute: typeof CustomersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/coupons': {
+      id: '/coupons'
+      path: '/coupons'
+      fullPath: '/coupons'
+      preLoaderRoute: typeof CouponsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/content': {
+      id: '/content'
+      path: '/content'
+      fullPath: '/content'
+      preLoaderRoute: typeof ContentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -123,6 +302,13 @@ declare module '@tanstack/react-router' {
       path: '/checkout'
       fullPath: '/checkout'
       preLoaderRoute: typeof CheckoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analytics': {
+      id: '/analytics'
+      path: '/analytics'
+      fullPath: '/analytics'
+      preLoaderRoute: typeof AnalyticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/about': {
@@ -152,20 +338,20 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AnalyticsRoute: AnalyticsRoute,
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
+  ContentRoute: ContentRoute,
+  CouponsRoute: CouponsRoute,
+  CustomersRoute: CustomersRoute,
+  DashboardRoute: DashboardRoute,
+  LoginRoute: LoginRoute,
+  OrdersRoute: OrdersRoute,
+  ProductsRoute: ProductsRoute,
+  SettingsRoute: SettingsRoute,
   ShopRoute: ShopRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
