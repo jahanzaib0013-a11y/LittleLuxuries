@@ -44,7 +44,7 @@ export const Route = createFileRoute("/product/$id")({
 
 function ProductPage() {
   const { product } = Route.useLoaderData();
-  const [size, setSize] = useState(product.sizes[0]);
+  const [size, setSize] = useState<string>(product.sizes[0]);
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState<"sustainability" | "care" | "gift">("sustainability");
 
