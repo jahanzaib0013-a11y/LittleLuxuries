@@ -1,4 +1,4 @@
-import { Link, Outlet, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import {
   LayoutGrid, ShoppingBag, Receipt, Users, Tag, FileEdit,
   BarChart3, Settings, Bell, Search, LogOut,
@@ -21,9 +21,11 @@ const navItems = [
 export function AdminLayout({
   searchPlaceholder = "Search…",
   rightSlot,
+  children,
 }: {
   searchPlaceholder?: string;
   rightSlot?: React.ReactNode;
+  children: React.ReactNode;
 }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
@@ -95,9 +97,7 @@ export function AdminLayout({
           </div>
         </header>
 
-        <main className="flex-1 px-6 lg:px-10 py-8">
-          <Outlet />
-        </main>
+        <main className="flex-1 px-6 lg:px-10 py-8">{children}</main>
       </div>
     </div>
   );
