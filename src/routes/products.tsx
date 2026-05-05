@@ -21,13 +21,13 @@ function ProductsContent() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-4xl text-foreground">Inventory Management</h1>
-          <p className="mt-2 text-sm text-muted-foreground flex items-center gap-4">
+          <h1 className="font-serif text-3xl sm:text-4xl text-foreground">Inventory Management</h1>
+          <p className="mt-2 text-sm text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1">
             <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-primary" />{inventoryProducts.length.toLocaleString()} Products</span>
             <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-[color:var(--color-blush)]" />{lowStock} Low Stock</span>
           </p>
         </div>
-        <Button className="rounded-full h-11 px-6"><Plus className="h-4 w-4" /> Add New Product</Button>
+        <Button className="rounded-full h-11 px-6"><Plus className="h-4 w-4" /> Add Product</Button>
       </div>
 
       {/* Filters */}

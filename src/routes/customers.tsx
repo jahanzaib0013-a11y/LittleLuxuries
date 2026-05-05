@@ -18,10 +18,10 @@ function CustomersContent() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-4xl text-foreground">Customers</h1>
+          <h1 className="font-serif text-3xl sm:text-4xl text-foreground">Customers</h1>
           <p className="mt-2 text-sm text-muted-foreground">Managing 2,482 luxury client accounts and preferences.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button variant="outline" className="rounded-full h-11"><Download className="h-4 w-4" /> Export CSV</Button>
           <Button className="rounded-full h-11"><UserPlus className="h-4 w-4" /> Add Customer</Button>
         </div>
