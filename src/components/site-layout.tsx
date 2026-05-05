@@ -1,21 +1,56 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingBag, Search, Heart } from "lucide-react";
+import { ShoppingBag, Search, Heart, Menu } from "lucide-react";
 import logo from "@/assets/logo.png";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
+import { useEffect, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
+
+const navItems = [
+  { to: "/", label: "Home" },
+  { to: "/shop", label: "Shop" },
+  { to: "/about", label: "About" },
+  { to: "/contact", label: "Contact" },
+] as const;
 
 export function Header() {
-  const navItems = [
-    { to: "/", label: "Home" },
-    { to: "/shop", label: "Shop" },
-    { to: "/about", label: "About" },
-    { to: "/contact", label: "Contact" },
-  ] as const;
+  const [open, setOpen] = useState(false);
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  useEffect(() => setOpen(false), [pathname]);
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between gap-4 px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <span className="font-serif text-2xl italic text-primary">Little Luxuries</span>
-        </Link>
+      <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
+        <div className="flex items-center gap-2 min-w-0">
+          <Sheet open={open} onOpenChange={setOpen}>
+            <SheetTrigger asChild>
+              <button
+                className="md:hidden rounded-full p-2.5 text-muted-foreground hover:bg-muted hover:text-primary"
+                aria-label="Open menu"
+              >
+                <Menu className="size-5" />
+              </button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-72 bg-background">
+              <SheetTitle className="font-serif text-2xl italic text-primary">Little Luxuries</SheetTitle>
+              <nav className="mt-8 flex flex-col gap-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    activeOptions={{ exact: item.to === "/" }}
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground hover:bg-muted hover:text-primary data-[status=active]:bg-primary-soft data-[status=active]:text-primary"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </nav>
+            </SheetContent>
+          </Sheet>
+          <Link to="/" className="flex items-center gap-2 min-w-0">
+            <span className="font-serif text-xl sm:text-2xl italic text-primary truncate">Little Luxuries</span>
+          </Link>
+        </div>
 
         <nav className="hidden items-center gap-10 md:flex">
           {navItems.map((item) => (
@@ -31,7 +66,7 @@ export function Header() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button className="hidden rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex" aria-label="Search">
             <Search className="size-4" />
           </button>
