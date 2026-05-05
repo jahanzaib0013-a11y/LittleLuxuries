@@ -42,11 +42,11 @@ function ContentPage() {
               <Button className="rounded-full">Save Changes</Button>
             </div>
 
-            <div className="mt-6 rounded-xl bg-gradient-to-br from-primary-soft/60 via-card to-[color:var(--color-blush)]/30 p-10 relative overflow-hidden">
+            <div className="mt-6 rounded-xl bg-gradient-to-br from-primary-soft/60 via-card to-[color:var(--color-blush)]/30 p-6 sm:p-10 relative overflow-hidden">
               <div className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">Seasonal Collection</div>
-              <div className="mt-3 font-serif text-3xl text-foreground max-w-md">The Softest Organic Cotton Essentials</div>
+              <div className="mt-3 font-serif text-2xl sm:text-3xl text-foreground max-w-md">The Softest Organic Cotton Essentials</div>
               <button className="mt-5 text-sm font-medium text-primary border-b border-primary pb-0.5">Shop Now</button>
-              <img src={logo} alt="" className="absolute right-8 top-1/2 -translate-y-1/2 h-32 w-32 opacity-60" />
+              <img src={logo} alt="" className="hidden sm:block absolute right-8 top-1/2 -translate-y-1/2 h-24 w-24 lg:h-32 lg:w-32 opacity-60" />
             </div>
 
             <div className="mt-6 space-y-4">
