@@ -23,19 +23,19 @@ function CouponsContent() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="max-w-2xl">
-          <h1 className="font-serif text-4xl text-foreground">Coupon Management</h1>
+          <h1 className="font-serif text-3xl sm:text-4xl text-foreground">Coupon Management</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             Manage your boutique's promotional offers with elegance. Track performance and create tailored discounts for your discerning clientele.
           </p>
         </div>
-        <Button className="rounded-full h-12 px-6"><Plus className="h-4 w-4" /> Create New Coupon</Button>
+        <Button className="rounded-full h-12 px-6"><Plus className="h-4 w-4" /> New Coupon</Button>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         <StatCard label="Active Offers" value="12" note="↗ +3 this month" />
         <StatCard label="Total Redeemed" value="1,284" note="✨ 82% conversion" noteColor="text-[color:var(--color-gold-foreground)]" />
         <StatCard label="Revenue Influence" value="$14.2k" note="🐷 $2.4k saved" />
-        <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-primary-container text-primary-foreground">
+        <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-lilac text-primary-foreground">
           <div className="font-serif text-xl">Seasonal Discounts</div>
           <div className="mt-2 text-sm opacity-90">Prepare for the Autumn Collection launch.</div>
         </div>
