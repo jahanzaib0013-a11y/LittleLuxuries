@@ -103,7 +103,7 @@ function SettingsPage() {
       </div>
 
       {/* Admin account */}
-      <div className="rounded-2xl p-8 bg-gradient-to-br from-primary to-primary-container text-primary-foreground">
+      <div className="rounded-2xl p-8 bg-gradient-to-br from-primary to-lilac text-primary-foreground">
         <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-6 items-center">
           <div className="h-24 w-24 rounded-full bg-card/20 grid place-items-center text-4xl">👤</div>
           <div>

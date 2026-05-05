@@ -127,7 +127,7 @@ function ContentPage() {
 
         {/* Right rail */}
         <div className="space-y-5">
-          <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-primary-container text-primary-foreground">
+          <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-lilac text-primary-foreground">
             <div className="flex items-center gap-2 text-sm">
               <Eye className="h-4 w-4 text-[color:var(--color-gold)]" /> Live Store View
             </div>

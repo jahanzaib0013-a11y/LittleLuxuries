@@ -35,7 +35,7 @@ function CouponsContent() {
         <StatCard label="Active Offers" value="12" note="↗ +3 this month" />
         <StatCard label="Total Redeemed" value="1,284" note="✨ 82% conversion" noteColor="text-[color:var(--color-gold-foreground)]" />
         <StatCard label="Revenue Influence" value="$14.2k" note="🐷 $2.4k saved" />
-        <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-primary-container text-primary-foreground">
+        <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-lilac text-primary-foreground">
           <div className="font-serif text-xl">Seasonal Discounts</div>
           <div className="mt-2 text-sm opacity-90">Prepare for the Autumn Collection launch.</div>
         </div>
