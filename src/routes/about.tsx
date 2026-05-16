@@ -8,7 +8,11 @@ export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
       { title: "Our Story — Little Luxuries" },
-      { name: "description", content: "Crafting heirloom-quality baby garments since 2018, with care for both babies and the planet." },
+      {
+        name: "description",
+        content:
+          "Crafting heirloom-quality baby garments since 2018, with care for both babies and the planet.",
+      },
       { property: "og:title", content: "Our Story — Little Luxuries" },
       { property: "og:description", content: "Heirloom baby garments hand-crafted with love." },
     ],
@@ -34,7 +38,7 @@ function About() {
 
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="grid items-center gap-12 lg:grid-cols-2">
-          <div className="aspect-[4/5] overflow-hidden rounded-3xl shadow-[var(--shadow-soft)]">
+          <div className="aspect-4/5 overflow-hidden rounded-3xl shadow-(--shadow-soft)">
             <img src={hero} alt="Baby" className="h-full w-full object-cover" />
           </div>
           <div>
@@ -65,9 +69,21 @@ function About() {
             <h2 className="mt-3 font-serif text-4xl md:text-5xl">What we believe in</h2>
           </div>
           <div className="grid gap-8 md:grid-cols-3">
-            <Value icon={Leaf} title="Honest Materials" body="We trace every fiber. Only certified organic, biodegradable, and naturally dyed materials touch your baby's skin." />
-            <Value icon={Heart} title="Fair Hands" body="Every artisan partner is paid a living wage and works in safe, sustainable conditions." />
-            <Value icon={Sparkles} title="Designed to Last" body="Garments built for hand-me-downs, with reinforced seams and timeless silhouettes." />
+            <Value
+              icon={Leaf}
+              title="Honest Materials"
+              body="We trace every fiber. Only certified organic, biodegradable, and naturally dyed materials touch your baby's skin."
+            />
+            <Value
+              icon={Heart}
+              title="Fair Hands"
+              body="Every artisan partner is paid a living wage and works in safe, sustainable conditions."
+            />
+            <Value
+              icon={Sparkles}
+              title="Designed to Last"
+              body="Garments built for hand-me-downs, with reinforced seams and timeless silhouettes."
+            />
           </div>
         </div>
       </section>
@@ -96,7 +112,7 @@ function Stat({ n, l }: { n: string; l: string }) {
 
 function Value({ icon: Icon, title, body }: { icon: typeof Leaf; title: string; body: string }) {
   return (
-    <div className="rounded-3xl bg-card p-8 shadow-[var(--shadow-card)]">
+    <div className="rounded-3xl bg-card p-8 shadow-(--shadow-card)">
       <div className="grid size-12 place-items-center rounded-full bg-primary-soft text-primary">
         <Icon className="size-5" />
       </div>

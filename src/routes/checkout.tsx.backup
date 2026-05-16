@@ -1,0 +1,306 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { Layout } from "@/components/site-layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Lock, CreditCard, Loader2, CheckCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { toast } from "sonner";
+
+// SafePay API Configuration
+const SAFEPAY_SECRET_KEY = '5044ba0fcb1b502a69de307781641d4cbc11850b27c9e1ef466888b70c61d4dc';
+const SAFEPAY_API_KEY = "sec_617d3017-aeeb-465c-adda-f6f7849e4bd6";
+
+export const Route = createFileRoute("/safepay-test")({
+  head: () => ({
+    meta: [
+      { title: "SafePay Test — Little Luxuries" },
+      { name: "description", content: "Test SafePay payment integration." },
+    ],
+  }),
+  component: SafePayTest,
+});
+
+function SafePayTest() {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
+  const [orderNumber, setOrderNumber] = useState("");
+  
+  // Test form data
+  const [formData, setFormData] = useState({
+    firstName: "Fatima",
+    lastName: "Ahmed",
+    email: "test@example.com",
+    phone: "03001234567",
+    amount: 6000, // Rs. 6,000
+    orderId: "TEST-" + Date.now()
+  });
+
+  const testSafePay = async () => {
+    setIsSubmitting(true);
+    
+    try {
+      // Step 1: Create payment session
+      const sessionResponse = await fetch('https://sandbox.api.getsafepay.com/order/payments/v3/', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SAFEPAY_SECRET_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          merchant_api_key: SAFEPAY_API_KEY,
+          intent: "CYBERSOURCE",
+          mode: "payment",
+          entry_mode: "raw",
+          currency: "PKR",
+          amount: formData.amount * 100, // Convert to paisa
+          metadata: {
+            order_id: formData.orderId
+          }
+        })
+      });
+
+      const sessionData = await sessionResponse.json();
+      
+      // Check for API errors
+      if (sessionData.status && sessionData.status.errors && sessionData.status.errors.length > 0) {
+        const errorMessage = sessionData.status.errors.map((err: any) => err.message || err).join(', ');
+        throw new Error(`SafePay API Error: ${errorMessage}`);
+      }
+
+      if (!sessionData.data || !sessionData.data.tracker) {
+        throw new Error('Invalid response from SafePay API');
+      }
+
+      const trackerToken = sessionData.data.tracker.token;
+
+      // Step 2: Get authentication token
+      const authResponse = await fetch('https://api.getsafepay.com/client/passport/v1/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${SAFEPAY_SECRET_KEY}`,
+          'Content-Type': 'application/json',
+          'X-Merchant-Webhook-Secret': SAFEPAY_API_KEY
+        },
+        body: JSON.stringify({})
+      });
+
+      if (!authResponse.ok) {
+        throw new Error('Failed to get authentication token');
+      }
+
+      const authData = await authResponse.json();
+      
+      // Check for auth errors
+      if (authData.status && authData.status.errors && authData.status.errors.length > 0) {
+        const errorMessage = authData.status.errors.map((err: any) => err.message || err).join(', ');
+        throw new Error(`SafePay Auth Error: ${errorMessage}`);
+      }
+
+      if (!authData.data) {
+        throw new Error('Invalid authentication response from SafePay');
+      }
+
+      const authToken = authData.data;
+
+      // Step 3: Generate checkout URL
+      const checkoutUrl = `https://sandbox.api.getsafepay.com/embedded/checkout/v2/` +
+        `?tracker=${trackerToken}` +
+        `&tbt=${authToken}` +
+        `&environment=sandbox` +
+        `&source=hosted` +
+        `&redirect_url=${encodeURIComponent(window.location.origin + '/safepay-test?success=true')}` +
+        `&cancel_url=${encodeURIComponent(window.location.origin + '/safepay-test?cancelled=true')}`;
+
+      // Step 4: Redirect to SafePay checkout
+      window.location.href = checkoutUrl;
+
+    } catch (error) {
+      console.error('SafePay error:', error);
+    
+      setIsSubmitting(false);
+    }
+  };
+
+  // Check URL parameters for success/cancel
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (urlParams.get('success') === 'true') {
+      setOrderComplete(true);
+      setOrderNumber(formData.orderId);
+      toast.success("Payment completed successfully!");
+    } else if (urlParams.get('cancelled') === 'true') {
+      toast.error("Payment was cancelled");
+    }
+  }, [formData.orderId]);
+
+  if (orderComplete) {
+    return (
+      <Layout>
+        <section className="mx-auto max-w-2xl px-6 py-20 text-center">
+          <div className="rounded-3xl border border-border bg-card p-12 shadow-[var(--shadow-card)]">
+            <CheckCircle className="mx-auto h-16 w-16 text-emerald-500 mb-6" />
+            <h1 className="font-serif text-4xl text-foreground">Payment Successful!</h1>
+            <p className="mt-4 text-muted-foreground">
+              Your test payment has been completed successfully.
+            </p>
+            <div className="mt-8 p-6 bg-secondary/30 rounded-2xl">
+              <p className="text-sm text-muted-foreground uppercase tracking-wider">Order Number</p>
+              <p className="text-2xl font-serif text-primary mt-1">{orderNumber}</p>
+              <p className="text-sm text-muted-foreground mt-2">Amount: Rs. {formData.amount.toLocaleString()}</p>
+            </div>
+            
+            <div className="mt-8 space-y-3">
+              <Button 
+                onClick={() => window.location.reload()} 
+                className="w-full rounded-full"
+              >
+                Test Another Payment
+              </Button>
+              <Button 
+                variant="outline" 
+                asChild
+                className="w-full rounded-full"
+              >
+                <a href="/shop">Back to Shop</a>
+              </Button>
+            </div>
+          </div>
+        </section>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <section className="bg-secondary/30 py-12">
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <span className="label-eyebrow">Payment Gateway Test</span>
+          <h1 className="mt-2 font-serif text-5xl text-foreground">SafePay Test</h1>
+          <p className="mt-2 text-muted-foreground">Test SafePay payment integration with real API calls.</p>
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-3xl px-6 py-12">
+        <div className="rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-card)]">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="grid size-12 place-items-center rounded-full bg-primary/10 text-primary">
+              <CreditCard className="size-6" />
+            </div>
+            <div>
+              <h2 className="font-serif text-2xl">Test Payment Details</h2>
+              <p className="text-sm text-muted-foreground">Fill in test details and click "Pay with SafePay"</p>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label className="label-eyebrow !text-foreground">First Name</Label>
+                <Input
+                  value={formData.firstName}
+                  onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                  className="rounded-full"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="label-eyebrow !text-foreground">Last Name</Label>
+                <Input
+                  value={formData.lastName}
+                  onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                  className="rounded-full"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label className="label-eyebrow !text-foreground">Email</Label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                  className="rounded-full"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="label-eyebrow !text-foreground">Phone</Label>
+                <Input
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                  className="rounded-full"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label className="label-eyebrow !text-foreground">Amount (PKR)</Label>
+                <Input
+                  type="number"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({...formData, amount: parseInt(e.target.value) || 0})}
+                  className="rounded-full"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label className="label-eyebrow !text-foreground">Order ID</Label>
+                <Input
+                  value={formData.orderId}
+                  onChange={(e) => setFormData({...formData, orderId: e.target.value})}
+                  className="rounded-full"
+                />
+              </div>
+            </div>
+
+            <div className="border-t border-border pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Payment Method</p>
+                  <p className="font-medium">SafePay (Cards, Mobile Wallets, Bank Transfer)</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-muted-foreground">Total Amount</p>
+                  <p className="font-serif text-2xl text-primary">Rs. {formData.amount.toLocaleString()}</p>
+                </div>
+              </div>
+
+              <Button
+                onClick={testSafePay}
+                disabled={isSubmitting}
+                className="w-full rounded-full h-12 bg-gradient-to-r from-primary to-primary-soft hover:opacity-90"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Pay with SafePay
+                  </>
+                )}
+              </Button>
+
+              <p className="mt-4 flex items-center justify-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+                <Lock className="size-3" /> Secure encrypted checkout
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 p-4 bg-muted/50 rounded-xl">
+            <h3 className="font-medium mb-2">Test Information:</h3>
+            <ul className="text-sm text-muted-foreground space-y-1">
+              <li>• This will redirect to SafePay's secure checkout page</li>
+              <li>• You can use test cards or real payment methods</li>
+              <li>• After payment, you'll be redirected back to this page</li>
+              <li>• No real orders will be created - this is just testing</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </Layout>
+  );
+}
