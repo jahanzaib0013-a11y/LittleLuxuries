@@ -3,19 +3,5 @@
   "name": "tanstack-start-app",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
-  "vars": {
-    "VITE_SUPABASE_URL": "https://caoawqlqvhakgrgmrgiz.supabase.co",
-    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNhb2F3cWxxdmhha2dyZ21yZ2l6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwMDU2NzAsImV4cCI6MjA5MzU4MTY3MH0.JA6OR7ZIXK_dif6zEjh7U275H66EbOmuxTh1_y_vvt4",
-    "EMAIL_HOST": "smtp.gmail.com",
-    "EMAIL_PORT": "587",
-    "EMAIL_SECURE": "false",
-    "EMAIL_USER": "jahanzaib0013@gmail.com",
-    "EMAIL_PASSWORD": "rwqj nuti jhwe uhkb",
-    "MANUS_API_KEY": "sk-2wV5BhGlYNXbZYAOBEuQhhDkxh-TOyq0HRL_4uzuQ6vsASf-Lq9a80KP2xZopBMvlebCBt3lxjqnrBVRF2UcU18puiyN",
-    "MANUS_IG_CONNECTOR_ID": "4b899211-fd12-410e-a8d2-264a409cbc78",
-    "MANUS_FB_CONNECTOR_ID": "",
-    "VITE_MANUS_FB_ENABLED": "false",
-    "CRON_SECRET": ""
-  }
+  "main": "@tanstack/react-start/server-entry"
 }
