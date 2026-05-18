@@ -60,10 +60,10 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-full lg:max-w-6xl p-0 overflow-hidden border-none shadow-2xl bg-white rounded-[40px] h-[90vh] flex flex-col">
-          <div className="flex flex-1 w-full overflow-hidden">
+        <DialogContent className="max-w-[95vw] w-full lg:max-w-6xl p-0 overflow-y-auto lg:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] lg:rounded-[40px] h-auto lg:h-[90vh] max-h-[95vh] flex flex-col">
+          <div className="flex flex-col lg:flex-row flex-1 w-full overflow-y-auto lg:overflow-hidden">
             {/* Left Column: Visual Showcase */}
-            <div className="w-[450px] bg-muted/20 border-r border-border/50 p-10 flex flex-col gap-8 overflow-y-auto custom-scrollbar shrink-0">
+            <div className="w-full lg:w-[450px] bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50 p-6 lg:p-10 flex flex-col gap-6 lg:gap-8 lg:overflow-y-auto custom-scrollbar shrink-0">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -149,8 +149,8 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
             </div>
 
             {/* Right Column: Administrative Workspace */}
-            <div className="flex-1 flex flex-col bg-white overflow-hidden">
-              <div className="p-10 pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
+            <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
+              <div className="p-6 pb-4 lg:p-10 lg:pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
                 <div className="space-y-1">
                   <h1 className="font-serif text-4xl text-primary tracking-tight">
                     {product.name}
@@ -175,7 +175,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                 </Button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+              <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-10 custom-scrollbar">
                 {/* Navigation Tabs */}
                 <div className="flex gap-10 border-b border-border/30">
                   {(
@@ -315,7 +315,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
               </div>
 
               {/* Admin Controls Footer */}
-              <div className="p-10 border-t border-border/40 bg-muted/5 mt-auto">
+              <div className="p-6 lg:p-10 border-t border-border/40 bg-muted/5 mt-auto">
                 <div className="flex items-center justify-between">
                   <Button
                     variant="outline"

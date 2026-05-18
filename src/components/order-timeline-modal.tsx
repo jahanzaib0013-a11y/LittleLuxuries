@@ -20,7 +20,11 @@ import {
   Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { orderService, type OrderWithItems } from "@/lib/order-service";
+import {
+  orderService,
+  type OrderWithItems,
+  type OrderStatusHistoryItem,
+} from "@/lib/order-service";
 import { sendOrderStatusEmail } from "@/lib/email-server";
 import { toast } from "sonner";
 
@@ -31,7 +35,7 @@ interface OrderTimelineModalProps {
 }
 
 export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelineModalProps) {
-  const [history, setHistory] = React.useState<any[]>([]);
+  const [history, setHistory] = React.useState<OrderStatusHistoryItem[]>([]);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isSendingEmail, setIsSendingEmail] = React.useState(false);
 
@@ -64,7 +68,7 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
   };
 
   const getStatusIcon = (status: string) => {
-    const icons: Record<string, any> = {
+    const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       order_placed: ShoppingBag,
       confirmed: CheckCircle2,
       packed: Package,
@@ -139,7 +143,7 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
           orderNumber: order.order_number,
           customerEmail: order.customer_email,
           customerName: `${order.customer_first_name} ${order.customer_last_name}`,
-          status: order.status as any,
+          status: order.status as string,
           trackingNumber: order.tracking_number,
         },
       });
@@ -154,8 +158,8 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px] rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
-        <DialogHeader className="p-8 bg-linear-to-br from-gold/10 to-transparent">
+      <DialogContent className="max-w-[95vw] sm:max-w-[480px] rounded-[28px] sm:rounded-3xl p-0 overflow-y-auto border-none shadow-2xl">
+        <DialogHeader className="p-6 sm:p-8 bg-linear-to-br from-gold/10 to-transparent">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-1">
@@ -174,7 +178,7 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-8 pb-10 space-y-8 mt-4">
+        <div className="px-6 pb-8 sm:px-8 sm:pb-10 space-y-6 sm:space-y-8 mt-4">
           <div className="relative">
             {/* Timeline Line */}
             <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-muted" />
@@ -241,7 +245,7 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
             <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-4">
               Reach Out & Confirm
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={handleSendWhatsApp}
                 className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition text-xs font-bold border border-emerald-200/50"
@@ -263,7 +267,7 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
               </button>
             </div>
 
-            <div className="bg-muted/30 rounded-2xl p-4 flex items-center justify-between mt-6">
+            <div className="bg-muted/30 rounded-2xl p-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between mt-6">
               <div className="flex items-center gap-3">
                 <Clock className="h-4 w-4 text-primary" />
                 <div className="text-xs">

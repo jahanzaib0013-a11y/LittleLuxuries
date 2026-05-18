@@ -166,7 +166,7 @@ function StorefrontPage() {
                   { name: "Target", icon: Target },
                 ];
 
-                const getPromiseIcon = (promise: any, index: number) => {
+                const getPromiseIcon = (promise: { iconName?: string }, index: number) => {
                   if (promise.iconName) {
                     const foundIcon = availableIcons.find(({ name }) => name === promise.iconName);
                     return foundIcon ? foundIcon.icon : [Leaf, Award, Heart][index % 3];
@@ -307,8 +307,7 @@ function StorefrontPage() {
               ))}
             </h1>
             <p className="mt-6 max-w-md text-base leading-relaxed text-muted-foreground">
-              Thoughtfully designed garments that embrace your baby in softest ethically-sourced
-              materials. Timeless elegance for modern nursery.
+              {content.heroBanner.description}
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Button
@@ -352,9 +351,9 @@ function StorefrontPage() {
                 <img src={logo} alt="" width={48} height={48} />
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                    Hand-crafted
+                    {content.heroBanner.badgeTitle}
                   </p>
-                  <p className="text-sm text-muted-foreground">In small artisan batches</p>
+                  <p className="text-sm text-muted-foreground">{content.heroBanner.badgeSubtitle}</p>
                 </div>
               </div>
             </div>

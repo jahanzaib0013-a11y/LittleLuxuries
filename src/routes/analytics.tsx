@@ -1,9 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { AdminLayout } from "@/components/admin-layout";
 import { formatPkr } from "@/lib/format-currency";
-import { Button } from "@/components/ui/button";
 import {
-  Download,
   DollarSign,
   ShoppingCart,
   UserPlus,
@@ -12,19 +10,20 @@ import {
   Lightbulb,
   FileText,
   DownloadCloud,
+  Package,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import {
   getAnalyticsKPIs,
   getRevenueTrends,
-  getCategoryPerformance,
+  getOrderStatusBreakdown,
   getCustomerAcquisition,
-  getRecentReports,
 } from "@/lib/analytics";
 import {
   getAllReports,
   verifyReportPassword,
   createPasswordProtectedDownload,
-  getReportsByCategory,
 } from "@/lib/comprehensive-reports";
 import { ReportPasswordModal } from "@/components/report-password-modal";
 import { useQuery } from "@tanstack/react-query";
@@ -32,7 +31,7 @@ import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ExportMenu } from "@/components/export-menu";
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DatePickerWithRange } from "@/components/date-range-picker";
 import { DateRange } from "react-day-picker";
@@ -62,9 +61,7 @@ const periods = ["Last 30 Days", "Last Quarter", "Custom Range"] as const;
 
 function AnalyticsPage() {
   const [period, setPeriod] = useState<(typeof periods)[number]>("Last 30 Days");
-  const [selectedCategory, setSelectedCategory] = useState<
-    "all" | "sales" | "inventory" | "marketing" | "support"
-  >("all");
+  const [selectedCategory, setSelectedCategory] = useState<"all" | "sales" | "inventory">("all");
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: addDays(new Date(), -7),
@@ -87,9 +84,9 @@ function AnalyticsPage() {
     queryFn: () => getRevenueTrends(period, customRange),
   });
 
-  const { data: categories, isLoading: categoriesLoading } = useQuery({
-    queryKey: ["category-performance", period, customRange],
-    queryFn: () => getCategoryPerformance(period, customRange),
+  const { data: orderStatuses } = useQuery({
+    queryKey: ["order-status-breakdown"],
+    queryFn: getOrderStatusBreakdown,
   });
 
   const { data: acquisitionData } = useQuery({
@@ -102,32 +99,34 @@ function AnalyticsPage() {
     queryFn: getAllReports,
   });
 
-  const handleExportCSV = () => {
+  const handleExportCSV = useCallback(() => {
     if (!kpis) {
       toast.error("No analytics data to export");
       return;
     }
 
     const headers = ["Metric", "Value", "Change", "Status"];
-    const escapeCSV = (val: any) => {
+    const escapeCSV = (val: unknown) => {
       if (val === null || val === undefined) return "";
       const s = String(val).replace(/"/g, '""');
       return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
     };
 
-    const rows = kpis.map((k: any) => [
-      escapeCSV(k.label),
-      escapeCSV(k.value),
-      escapeCSV(k.change),
-      escapeCSV(k.positive ? "Positive" : "Negative"),
-    ]);
+    const rows = kpis.map(
+      (k: { label: string; value: string; change: string; positive: boolean }) => [
+        escapeCSV(k.label),
+        escapeCSV(k.value),
+        escapeCSV(k.change),
+        escapeCSV(k.positive ? "Positive" : "Negative"),
+      ],
+    );
 
     // Add trend data if available
     if (revenueData && revenueData.length > 0) {
       rows.push([]); // empty row
       rows.push(["Revenue Trend (Monthly)"]);
       rows.push(["Month", "Current Revenue", "Previous Revenue"]);
-      revenueData.forEach((r: any) => {
+      revenueData.forEach((r: { month: string; current: number; previous: number }) => {
         rows.push([escapeCSV(r.month), escapeCSV(r.current), escapeCSV(r.previous)]);
       });
     }
@@ -146,9 +145,9 @@ function AnalyticsPage() {
     link.click();
     document.body.removeChild(link);
     toast.success("Analytics data exported successfully");
-  };
+  }, [kpis, revenueData]);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = useCallback(() => {
     if (!kpis) {
       toast.error("No analytics data to export");
       return;
@@ -183,7 +182,11 @@ function AnalyticsPage() {
     // Revenue Trend Table
     if (revenueData && revenueData.length > 0) {
       doc.setFontSize(14);
-      doc.text("Monthly Revenue Performance", 14, (doc as any).lastAutoTable.finalY + 15);
+      doc.text(
+        "Monthly Revenue Performance",
+        14,
+        (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15,
+      );
       const trendBody = revenueData.map(
         (r: { month: string; current: number; previous: number }) => [
           r.month,
@@ -193,7 +196,7 @@ function AnalyticsPage() {
         ],
       );
       autoTable(doc, {
-        startY: (doc as any).lastAutoTable.finalY + 20,
+        startY: (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20,
         head: [["Month", "Current", "Previous", "YoY Change"]],
         body: trendBody,
         headStyles: { fillColor: [212, 175, 55] }, // gold color
@@ -203,21 +206,36 @@ function AnalyticsPage() {
 
     doc.save(`little_luxuries_analytics_${new Date().toISOString().split("T")[0]}.pdf`);
     toast.success("Analytics PDF Report generated");
-  };
+  }, [kpis, revenueData]);
 
-  // Internal component to handle the context of AnalyticsPage
-  (window as any).triggerAnalyticsExportCSV = handleExportCSV;
-  (window as any).triggerAnalyticsExportPDF = handleExportPDF;
+  useEffect(() => {
+    const win = window as typeof window & {
+      triggerAnalyticsExportCSV?: () => void;
+      triggerAnalyticsExportPDF?: () => void;
+    };
+    win.triggerAnalyticsExportCSV = handleExportCSV;
+    win.triggerAnalyticsExportPDF = handleExportPDF;
+    return () => {
+      delete win.triggerAnalyticsExportCSV;
+      delete win.triggerAnalyticsExportPDF;
+    };
+  }, [handleExportCSV, handleExportPDF]);
 
-  const [passwordModal, setPasswordModal] = useState({
+  const [passwordModal, setPasswordModal] = useState<{
+    isOpen: boolean;
+    reportName: string;
+    reportData: import("@/lib/comprehensive-reports").ReportData | null;
+    isLoading: boolean;
+    error: string;
+  }>({
     isOpen: false,
     reportName: "",
-    reportData: null as any,
+    reportData: null,
     isLoading: false,
     error: "",
   });
 
-  const handleDownloadReport = (report: any) => {
+  const handleDownloadReport = (report: import("@/lib/comprehensive-reports").ReportData) => {
     setPasswordModal({
       isOpen: true,
       reportName: report.name,
@@ -232,8 +250,12 @@ function AnalyticsPage() {
 
     try {
       if (verifyReportPassword(password)) {
+        if (!passwordModal.reportData) {
+          throw new Error("Report data is missing.");
+        }
+
         // Create download link
-        const downloadUrl = createPasswordProtectedDownload(passwordModal.reportData);
+        const downloadUrl = await createPasswordProtectedDownload(passwordModal.reportData);
 
         // Create temporary link and trigger download
         const link = document.createElement("a");
@@ -264,7 +286,7 @@ function AnalyticsPage() {
         setPasswordModal((prev) => ({
           ...prev,
           isLoading: false,
-          error: "Incorrect password. Please try again.",
+          error: "Incorrect password",
         }));
       }
     } catch (error) {
@@ -298,7 +320,7 @@ function AnalyticsPage() {
     return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
   };
 
-  if (kpisLoading || revenueLoading || categoriesLoading) {
+  if (kpisLoading || revenueLoading) {
     return (
       <div className="space-y-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
@@ -358,27 +380,29 @@ function AnalyticsPage() {
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-        {kpis?.map((k: any, i: number) => {
-          const Icon = kpiIcons[i];
-          return (
-            <div key={k.label} className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
-              <div className="flex items-start justify-between">
-                <div className={`h-12 w-12 rounded-xl grid place-items-center ${kpiTones[i]}`}>
-                  <Icon className="h-5 w-5" />
+        {kpis?.map(
+          (k: { label: string; value: string; change: string; positive: boolean }, i: number) => {
+            const Icon = kpiIcons[i];
+            return (
+              <div key={k.label} className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
+                <div className="flex items-start justify-between">
+                  <div className={`h-12 w-12 rounded-xl grid place-items-center ${kpiTones[i]}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <span
+                    className={`text-xs font-medium ${k.positive ? "text-emerald-600" : "text-destructive"}`}
+                  >
+                    {k.change}
+                  </span>
                 </div>
-                <span
-                  className={`text-xs font-medium ${k.positive ? "text-emerald-600" : "text-destructive"}`}
-                >
-                  {k.change}
-                </span>
+                <div className="mt-6 text-xs uppercase tracking-[0.15em] text-muted-foreground">
+                  {k.label}
+                </div>
+                <div className="mt-1 text-2xl font-serif text-primary">{k.value}</div>
               </div>
-              <div className="mt-6 text-xs uppercase tracking-[0.15em] text-muted-foreground">
-                {k.label}
-              </div>
-              <div className="mt-1 text-2xl font-serif text-primary">{k.value}</div>
-            </div>
-          );
-        })}
+            );
+          },
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -403,35 +427,40 @@ function AnalyticsPage() {
           <RevenueChart data={revenueData || []} />
         </div>
 
-        {/* Categories */}
+        {/* Order Status */}
         <div className="rounded-2xl bg-card p-6 shadow-(--shadow-card) flex flex-col">
-          <h2 className="font-serif text-xl text-foreground">Categories</h2>
-          <p className="text-sm text-muted-foreground mt-1">Performance: Onesies vs Accessories</p>
+          <h2 className="font-serif text-xl text-foreground">Order Status</h2>
+          <p className="text-sm text-muted-foreground mt-1">Placed, Delivered &amp; Cancelled</p>
 
           <div className="mt-6 space-y-5 flex-1">
-            {categories?.map((c: any) => (
-              <div key={c.name}>
-                <div className="flex justify-between text-sm">
-                  <span>{c.name}</span>
-                  <span className="font-medium" style={{ color: c.color }}>
-                    {c.value}
-                  </span>
+            {orderStatuses?.map((s) => {
+              const StatusIcon = s.label === "Placed" ? Package : s.label === "Delivered" ? CheckCircle : XCircle;
+              return (
+                <div key={s.label}>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="flex items-center gap-2">
+                      <StatusIcon className="h-4 w-4" style={{ color: s.color }} />
+                      {s.label}
+                    </span>
+                    <span className="font-medium" style={{ color: s.color }}>
+                      {s.count} orders · {s.pct}%
+                    </span>
+                  </div>
+                  <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${s.pct}%`, background: s.color }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{ width: `${c.pct}%`, background: c.color }}
-                  />
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           <div className="mt-6 rounded-xl bg-muted/40 p-4 flex gap-3">
             <Lightbulb className="h-5 w-5 text-gold shrink-0" />
             <p className="text-xs text-foreground/80">
-              <span className="font-semibold">Insight:</span> "Onesies" sales are up 14% this week.
-              Consider featuring "Midnight Blue" in the hero section.
+              <span className="font-semibold">Tip:</span> These counts are live from your database. Update order statuses from the Orders page.
             </p>
           </div>
         </div>
@@ -443,7 +472,7 @@ function AnalyticsPage() {
           <div className="mt-6 flex flex-wrap items-center gap-6 sm:gap-8">
             <DonutChart segments={acquisitionData || []} total="1.2k" />
             <div className="flex-1 min-w-[180px] space-y-3">
-              {acquisitionData?.map((a: any) => (
+              {acquisitionData?.map((a: { source: string; pct: number; color: string }) => (
                 <div key={a.source} className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
                     <span className="h-2 w-2 rounded-full" style={{ background: a.color }} />
@@ -460,7 +489,7 @@ function AnalyticsPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-serif text-xl text-foreground">All Reports</h2>
             <div className="flex gap-2">
-              {(["all", "sales", "inventory", "marketing", "support"] as const).map((category) => (
+              {(["all", "sales", "inventory"] as const).map((category) => (
                 <button
                   key={category}
                   onClick={() => setSelectedCategory(category)}
@@ -478,8 +507,11 @@ function AnalyticsPage() {
 
           <div className="mt-5 space-y-3 max-h-96 overflow-y-auto">
             {reports
-              ?.filter((r: any) => selectedCategory === "all" || r.category === selectedCategory)
-              .map((r: any) => (
+              ?.filter(
+                (r: import("@/lib/comprehensive-reports").ReportData) =>
+                  selectedCategory === "all" || r.category === selectedCategory,
+              )
+              .map((r: import("@/lib/comprehensive-reports").ReportData) => (
                 <div
                   key={r.id}
                   className="flex items-center gap-4 p-3 rounded-xl hover:bg-muted/40"
@@ -537,7 +569,8 @@ function AnalyticsPage() {
               Showing{" "}
               {
                 reports?.filter(
-                  (r: any) => selectedCategory === "all" || r.category === selectedCategory,
+                  (r: import("@/lib/comprehensive-reports").ReportData) =>
+                    selectedCategory === "all" || r.category === selectedCategory,
                 ).length
               }{" "}
               reports
@@ -560,10 +593,10 @@ function AnalyticsPage() {
   );
 }
 
-function RevenueChart({ data }: { data: any[] }) {
-  const max = Math.max(...data.map((r: any) => r.current), 1);
+function RevenueChart({ data }: { data: { current: number; month: string; previous: number }[] }) {
+  const max = Math.max(...data.map((r) => r.current), 1);
   const points = data
-    .map((r: any, i: number) => {
+    .map((r, i: number) => {
       const x = (i / (data.length - 1)) * 100;
       const y = 100 - (r.current / max) * 80;
       return `${x},${y}`;
@@ -590,7 +623,7 @@ function RevenueChart({ data }: { data: any[] }) {
         />
       </svg>
       <div className="grid grid-cols-7 mt-3 text-xs text-muted-foreground">
-        {data.map((r: any) => (
+        {data.map((r) => (
           <span key={r.month} className="text-center">
             {r.month}
           </span>
@@ -646,8 +679,16 @@ function AnalyticsHeaderActions() {
   return (
     <ExportMenu
       label="Export Report"
-      onExportCSV={() => (window as any).triggerAnalyticsExportCSV?.()}
-      onExportPDF={() => (window as any).triggerAnalyticsExportPDF?.()}
+      onExportCSV={() =>
+        (
+          window as typeof window & { triggerAnalyticsExportCSV?: () => void }
+        ).triggerAnalyticsExportCSV?.()
+      }
+      onExportPDF={() =>
+        (
+          window as typeof window & { triggerAnalyticsExportPDF?: () => void }
+        ).triggerAnalyticsExportPDF?.()
+      }
     />
   );
 }
