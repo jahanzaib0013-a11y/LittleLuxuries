@@ -11,6 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+// Dialogs\\\\\\\
+
+
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Plus,
@@ -228,7 +231,7 @@ function DashboardContent() {
       toast.success(`Order status updated to ${status}`);
     } catch (e) {
       console.error(e);
-      toast.error("Failed to update status");
+      toast.error("Failed to update statu");
     }
   };
 
