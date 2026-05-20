@@ -231,7 +231,7 @@ function DashboardContent() {
       toast.success(`Order status updated to ${status}`);
     } catch (e) {
       console.error(e);
-      toast.error("Failed to update statu");
+      toast.error("Failed to update status");
     }
   };
 
