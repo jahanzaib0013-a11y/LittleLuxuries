@@ -3,10 +3,18 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Mail, Send, User, Phone, MapPin } from "lucide-react";
+import { Mail, Send } from "lucide-react";
 import { toast } from "sonner";
-import { sendContactEmail } from "@/lib/email-server";
-import { storeSettingsService, StoreSettings } from "@/lib/store-settings";
+import { sendContactEmail } from "@/lib/email.server";
+import { FieldError, inputWithError } from "@/components/field-error";
+import {
+  validateEmail,
+  validateRequired,
+  hasFieldErrors,
+  type FieldErrors,
+} from "@/lib/form-validation";
+
+type ContactFields = "firstName" | "lastName" | "email" | "subject" | "message";
 
 export function ContactForm() {
   const [formData, setFormData] = useState({
@@ -16,39 +24,40 @@ export function ContactForm() {
     subject: "",
     message: "",
   });
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<ContactFields>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [settings, setSettings] = useState<StoreSettings | null>(null);
-
-  useEffect(() => {
-    storeSettingsService.getSettings().then(setSettings);
-  }, []);
-
-  const handleInputChange =
-    (field: keyof typeof formData) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-    };
+  const updateField = (field: keyof typeof formData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form submit triggered", formData);
 
-    if (!formData.firstName || !formData.lastName || !formData.email || !formData.message) {
-      console.log("Validation failed - missing fields");
-      toast.error("Please fill in all required fields");
+    const errors: FieldErrors<ContactFields> = {
+      firstName: validateRequired(formData.firstName, "First name"),
+      lastName: validateRequired(formData.lastName, "Last name"),
+      email: validateEmail(formData.email),
+      subject: validateRequired(formData.subject, "Subject"),
+      message: validateRequired(formData.message, "Message"),
+    };
+
+    if (hasFieldErrors(errors)) {
+      setFieldErrors(errors);
       return;
     }
-
-    console.log("Validation passed, submitting...");
+    setFieldErrors({});
     setIsSubmitting(true);
 
     try {
       const result = await (sendContactEmail as any)({ data: formData });
-      console.log("Server response:", result);
+
+      if (result?.success === false) {
+        toast.error(result.message || "Failed to send message.");
+        return;
+      }
 
       toast.success("Message sent successfully! We'll get back to you soon.");
-
-      // Reset form
       setFormData({
         firstName: "",
         lastName: "",
@@ -56,9 +65,9 @@ export function ContactForm() {
         subject: "",
         message: "",
       });
-    } catch (error: any) {
-      console.error("Email error caught:", error);
-      toast.error(`Failed to send: ${error?.message || "Unknown error"}`);
+    } catch (error: unknown) {
+      const err = error as Error;
+      toast.error(err?.message || "Failed to send message. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -77,7 +86,7 @@ export function ContactForm() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" noValidate>
           <div className="grid gap-6 sm:grid-cols-2">
             <div className="space-y-2.5">
               <Label
@@ -90,11 +99,15 @@ export function ContactForm() {
                 id="firstName"
                 type="text"
                 value={formData.firstName}
-                onChange={handleInputChange("firstName")}
+                onChange={(e) => updateField("firstName", e.target.value)}
                 placeholder="Eleanor"
-                required
-                className="w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30"
+                aria-invalid={Boolean(fieldErrors.firstName)}
+                className={inputWithError(
+                  Boolean(fieldErrors.firstName),
+                  "w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30",
+                )}
               />
+              <FieldError message={fieldErrors.firstName} />
             </div>
 
             <div className="space-y-2.5">
@@ -108,11 +121,15 @@ export function ContactForm() {
                 id="lastName"
                 type="text"
                 value={formData.lastName}
-                onChange={handleInputChange("lastName")}
+                onChange={(e) => updateField("lastName", e.target.value)}
                 placeholder="Vance"
-                required
-                className="w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30"
+                aria-invalid={Boolean(fieldErrors.lastName)}
+                className={inputWithError(
+                  Boolean(fieldErrors.lastName),
+                  "w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30",
+                )}
               />
+              <FieldError message={fieldErrors.lastName} />
             </div>
           </div>
 
@@ -127,11 +144,15 @@ export function ContactForm() {
               id="email"
               type="email"
               value={formData.email}
-              onChange={handleInputChange("email")}
+              onChange={(e) => updateField("email", e.target.value)}
               placeholder="you@email.com"
-              required
-              className="w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30"
+              aria-invalid={Boolean(fieldErrors.email)}
+              className={inputWithError(
+                Boolean(fieldErrors.email),
+                "w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30",
+              )}
             />
+            <FieldError message={fieldErrors.email} />
           </div>
 
           <div className="space-y-2.5">
@@ -145,11 +166,15 @@ export function ContactForm() {
               id="subject"
               type="text"
               value={formData.subject}
-              onChange={handleInputChange("subject")}
+              onChange={(e) => updateField("subject", e.target.value)}
               placeholder="Gifting inquiry"
-              required
-              className="w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30"
+              aria-invalid={Boolean(fieldErrors.subject)}
+              className={inputWithError(
+                Boolean(fieldErrors.subject),
+                "w-full h-12 rounded-xl border-border/50 bg-secondary/30 px-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30",
+              )}
             />
+            <FieldError message={fieldErrors.subject} />
           </div>
 
           <div className="space-y-2.5">
@@ -162,12 +187,16 @@ export function ContactForm() {
             <Textarea
               id="message"
               value={formData.message}
-              onChange={handleInputChange("message")}
+              onChange={(e) => updateField("message", e.target.value)}
               placeholder="Tell us how we can help..."
               rows={6}
-              required
-              className="w-full rounded-xl border-border/50 bg-secondary/30 p-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30 resize-none"
+              aria-invalid={Boolean(fieldErrors.message)}
+              className={inputWithError(
+                Boolean(fieldErrors.message),
+                "w-full rounded-xl border-border/50 bg-secondary/30 p-4 transition-all focus-visible:border-primary focus-visible:bg-transparent focus-visible:ring-1 focus-visible:ring-primary/30 resize-none",
+              )}
             />
+            <FieldError message={fieldErrors.message} />
           </div>
 
           <Button

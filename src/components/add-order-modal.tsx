@@ -65,6 +65,7 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [validationSummary, setValidationSummary] = useState<string | null>(null);
 
   // Load products list from Supabase
   useEffect(() => {
@@ -173,20 +174,23 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (orderItems.length === 0) {
-      toast.error("Please add at least one product to the order");
-      return;
+    const issues: string[] = [];
+    if (orderItems.length === 0) issues.push("Add at least one product to the order.");
+    if (!customerInfo.firstName.trim()) issues.push("Client first name is required.");
+    if (!customerInfo.lastName.trim()) issues.push("Client last name is required.");
+    if (!customerInfo.email.trim()) issues.push("Client email is required.");
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerInfo.email.trim())) {
+      issues.push("Enter a valid client email.");
     }
+    if (!shippingAddress.streetAddress.trim()) issues.push("Street address is required.");
+    if (!shippingAddress.city.trim()) issues.push("City is required.");
+    if (!shippingAddress.postalCode.trim()) issues.push("Postal code is required.");
 
-    if (!customerInfo.email || !customerInfo.firstName || !customerInfo.lastName) {
-      toast.error("Please fill in the client's email, first name, and last name");
+    if (issues.length > 0) {
+      setValidationSummary(issues.join(" "));
       return;
     }
-
-    if (!shippingAddress.streetAddress || !shippingAddress.city || !shippingAddress.postalCode) {
-      toast.error("Please specify a complete shipping street address, city, and postal code");
-      return;
-    }
+    setValidationSummary(null);
 
     setIsSubmitting(true);
     try {
@@ -298,7 +302,7 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
                         value={selectedSize}
                         onChange={(e) => setSelectedSize(e.target.value)}
                       >
-                        {productSizes.map((s) => (
+                        {productSizes.map((s: string) => (
                           <option key={s} value={s}>
                             {s}
                           </option>
@@ -470,6 +474,14 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
           <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
             <form onSubmit={handleSubmit} className="flex-1 flex flex-col lg:overflow-hidden">
               <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 lg:pt-8 pt-6 space-y-8 lg:space-y-10 custom-scrollbar">
+                {validationSummary && (
+                  <div
+                    className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+                    role="alert"
+                  >
+                    {validationSummary}
+                  </div>
+                )}
                 {/* Section 1: Customer Profile */}
                 <div className="space-y-5">
                   <div className="flex items-center gap-3">

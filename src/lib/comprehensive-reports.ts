@@ -24,7 +24,7 @@ export async function generateMonthlySalesReport(): Promise<ReportData> {
   const now = new Date();
   const currentMonth = now.toLocaleString("default", { month: "long" });
   const year = now.getFullYear();
-
+  
   const reportData: ReportData = {
     id: "monthly-sales",
     name: `Monthly_Sales_and_Revenue_Report_${currentMonth}_${year}.pdf`,
@@ -45,7 +45,7 @@ export async function generateCustomerRetentionReport(): Promise<ReportData> {
   const now = new Date();
   const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
   const monthName = lastMonth.toLocaleString("default", { month: "short" });
-
+  
   const reportData: ReportData = {
     id: "customer-retention",
     name: `Customer_Retention_${monthName}.pdf`,
@@ -306,21 +306,21 @@ export function verifyReportPassword(inputPassword: string): boolean {
   // Trim whitespace and compare case-insensitive for user convenience
   const normalizedInput = inputPassword.trim();
   const correctPassword = DEFAULT_REPORT_PASSWORD;
-
+  
   // Debug logging (remove in production)
   console.log("Password verification:", {
     input: normalizedInput,
     expected: correctPassword,
     match: normalizedInput === correctPassword,
   });
-
+  
   return normalizedInput === correctPassword;
 }
 
 export async function createPasswordProtectedDownload(report: ReportData): Promise<string> {
   let content = "";
   let mimeType = "";
-
+  
   switch (report.format) {
     case "pdf":
       // Using jsPDF returns the full data URL ready to download
@@ -1350,7 +1350,7 @@ TicketID,Customer,Issue,Status,Priority,Created_At,Resolved_At,Encrypted_Data
 1002,Jane Smith,Payment Error,Open,High,2024-08-01 10:22,,"ENCRYPTED:***"
 1003,Bob Johnson,Shipping Question,Resolved,Low,2024-08-01 14:45,2024-08-01 15:20,"ENCRYPTED:***"`;
   }
-
+  
   return `${header}
 Report,Category,Generated,Size,Password,Encrypted
 ${report.name},${report.category},${report.generatedAt.toLocaleDateString()},${report.size},${report.password},"ENCRYPTED:***"`;

@@ -9,25 +9,26 @@ import {
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Rocket,
   Calendar,
-  Share2,
   Sparkles,
   CheckCircle2,
   Clock,
   Globe,
   X,
-  Smartphone,
 } from "lucide-react";
 import { productService } from "@/lib/supabase-service";
+/* Social amplification — re-enable with UI block below
+import { Switch } from "@/components/ui/switch";
+import { Share2, Smartphone } from "lucide-react";
 import {
   publishViaManus,
   type PublishViaManusInput,
   type PublishViaManusResult,
 } from "@/lib/manus-server";
 import { pushAdminNotification } from "@/lib/admin-notifications-bus";
+*/
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { type Database } from "@/lib/supabase";
@@ -53,11 +54,12 @@ export function PublishProductModal({
   const [publishType, setPublishType] = useState<"now" | "schedule">("now");
   const [publishDate, setPublishDate] = useState("");
   const [publishTime, setPublishTime] = useState("");
-  const [enableSocialPost, setEnableSocialPost] = useState(true);
+  /* Social amplification state — disabled for now
+  const [enableSocialPost, setEnableSocialPost] = useState(false);
   const [postDelay, setPostDelay] = useState<"0" | "30" | "60" | "1440" | "custom">("0");
   const [customDelay, setCustomDelay] = useState("120");
-  /** Manus: design 9:16 story + publish to Instagram Stories (same connector as feed). */
   const [addInstagramStory, setAddInstagramStory] = useState(false);
+  */
 
   if (!product) return null;
 
@@ -80,131 +82,13 @@ export function PublishProductModal({
         toast.success(`"${product.name}" scheduled for ${publishDate} at ${publishTime}`);
       }
 
+      /* Social amplification — disabled for now
       if (enableSocialPost && publishType === "now") {
-        if (postDelay === "0") {
-          const caption = `Introducing the ${product.name} ✨\n\n${product.description}\n\nAvailable now at Little Luxuries.`;
-          const candidateImage = product.image_url;
-          const publicImageUrl =
-            typeof candidateImage === "string" && candidateImage.startsWith("http")
-              ? candidateImage
-              : null;
-
-          if (!publicImageUrl) {
-            toast.error(
-              "Product image must be a public URL to publish via Manus. Upload an image first.",
-            );
-            onShowSocialPost?.(product);
-          } else {
-            const platforms: Array<"instagram" | "facebook"> = ["instagram"];
-            if (import.meta.env?.VITE_MANUS_FB_ENABLED === "true") {
-              platforms.push("facebook");
-            }
-
-            for (const platform of platforms) {
-              toast.promise(
-                (
-                  publishViaManus as unknown as (payload: {
-                    data: PublishViaManusInput;
-                  }) => Promise<PublishViaManusResult>
-                )({
-                  data: {
-                    imageUrl: publicImageUrl,
-                    caption,
-                    platform,
-                    productId: product.id,
-                    placement: "feed",
-                  },
-                }).then((r: { ok: boolean; postUrl?: string; error?: string }) => {
-                  if (!r.ok) throw new Error(r.error || "Manus reported failure");
-                  return r;
-                }),
-                {
-                  loading: `Publishing to ${platform === "instagram" ? "Instagram" : "Facebook"} via Manus AI…`,
-                  success: (r: { postUrl?: string }) => {
-                    const label = platform === "instagram" ? "Instagram" : "Facebook";
-                    pushAdminNotification({
-                      id: `manus-feed-${product.id}-${platform}-${Date.now()}`,
-                      type: "social_feed",
-                      message: `${label} post uploaded`,
-                      description: r.postUrl
-                        ? `${product.name} — ${r.postUrl}`
-                        : `${product.name} was published to ${label}.`,
-                      timestamp: new Date(),
-                    });
-                    return r.postUrl
-                      ? `Posted to ${label}: ${r.postUrl}`
-                      : `Posted to ${label} via Manus AI`;
-                  },
-                  error: (e: Error) =>
-                    `${platform === "instagram" ? "Instagram" : "Facebook"} publish failed: ${e.message}`,
-                },
-              );
-            }
-
-            if (addInstagramStory) {
-              toast.promise(
-                (
-                  publishViaManus as unknown as (payload: {
-                    data: PublishViaManusInput;
-                  }) => Promise<PublishViaManusResult>
-                )({
-                  data: {
-                    imageUrl: publicImageUrl,
-                    caption,
-                    platform: "instagram",
-                    productId: product.id,
-                    placement: "story",
-                  },
-                }).then(
-                  (r: {
-                    ok: boolean;
-                    postUrl?: string;
-                    error?: string;
-                    storyDesignSummary?: string;
-                  }) => {
-                    if (!r.ok) throw new Error(r.error || "Manus story failed");
-                    return r;
-                  },
-                ),
-                {
-                  loading: "Manus is designing your Instagram Story and publishing…",
-                  success: (r: { postUrl?: string; storyDesignSummary?: string }) => {
-                    pushAdminNotification({
-                      id: `manus-story-${product.id}-${Date.now()}`,
-                      type: "social_story",
-                      message: "Instagram Story uploaded",
-                      description: r.postUrl
-                        ? `${product.name} — ${r.postUrl}`
-                        : r.storyDesignSummary
-                          ? `${product.name}. ${r.storyDesignSummary}`
-                          : `${product.name} is live on your Story.`,
-                      timestamp: new Date(),
-                    });
-                    return r.postUrl
-                      ? `Instagram Story live: ${r.postUrl}`
-                      : r.storyDesignSummary
-                        ? `Story published. ${r.storyDesignSummary}`
-                        : "Instagram Story published via Manus";
-                  },
-                  error: (e: Error) => `Instagram Story failed: ${e.message}`,
-                },
-              );
-            }
-          }
-        } else {
-          const delayText =
-            postDelay === "custom"
-              ? `${customDelay} minutes`
-              : postDelay === "30"
-                ? "30 minutes"
-                : postDelay === "60"
-                  ? "1 hour"
-                  : "24 hours";
-          toast.info(`Social post queued to go live ${delayText} after publication.`);
-        }
+        ...
       } else if (enableSocialPost) {
         toast.info("Social post scheduled to follow publication");
       }
+      */
 
       onPublished?.();
       onOpenChange(false);
@@ -332,96 +216,12 @@ export function PublishProductModal({
               </div>
             )}
 
-            {/* Social Amplification */}
+            {/* Social Amplification — disabled for now
             <div className="space-y-4">
-              <div className="p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] bg-muted/10 border border-border/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-white shadow-sm grid place-items-center shrink-0">
-                    <Share2 className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-foreground">Social Amplification</p>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
-                      Automatically create social posts after publication.
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={enableSocialPost}
-                  onCheckedChange={setEnableSocialPost}
-                  className="data-[state=checked]:bg-primary"
-                />
-              </div>
-
-              {enableSocialPost && (
-                <div className="px-6 space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
-                    Post Delay
-                  </Label>
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { label: "Instantly", value: "0" },
-                      { label: "30m", value: "30" },
-                      { label: "1h", value: "60" },
-                      { label: "24h", value: "1440" },
-                      { label: "Custom", value: "custom" },
-                    ].map((d) => (
-                      <button
-                        key={d.value}
-                        onClick={() =>
-                          setPostDelay(d.value as "0" | "30" | "60" | "1440" | "custom")
-                        }
-                        className={cn(
-                          "px-4 py-2 rounded-full text-[10px] font-bold border transition-all",
-                          postDelay === d.value
-                            ? "bg-primary text-white border-primary"
-                            : "bg-white text-muted-foreground border-border/50 hover:border-primary/20",
-                        )}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {postDelay === "custom" && (
-                    <div className="flex items-center gap-3 animate-in zoom-in-95 duration-300">
-                      <Input
-                        type="number"
-                        value={customDelay}
-                        onChange={(e) => setCustomDelay(e.target.value)}
-                        className="h-10 w-24 rounded-xl border-none bg-muted/30 text-xs font-bold"
-                      />
-                      <span className="text-[10px] font-bold text-muted-foreground uppercase">
-                        Minutes Delay
-                      </span>
-                    </div>
-                  )}
-
-                  {publishType === "now" && postDelay === "0" && (
-                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/15 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="h-10 w-10 rounded-xl bg-white shadow-sm grid place-items-center shrink-0">
-                          <Smartphone className="h-5 w-5 text-primary" />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-foreground">Add Instagram Story</p>
-                          <p className="text-[10px] text-muted-foreground leading-relaxed mt-0.5">
-                            Richer Story layout (type, margins, accents)—product photo stays exactly
-                            as uploaded; only 9:16 framing and designed chrome around it (after feed
-                            posts).
-                          </p>
-                        </div>
-                      </div>
-                      <Switch
-                        checked={addInstagramStory}
-                        onCheckedChange={setAddInstagramStory}
-                        className="data-[state=checked]:bg-primary shrink-0"
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
+              ...
+              Social Amplification / Post Delay / Add Instagram Story UI
             </div>
+            */}
 
             {/* Intelligence Summary */}
             <div className="flex items-center gap-3 py-2">

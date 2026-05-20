@@ -42,7 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { OrderTimelineModal } from "@/components/order-timeline-modal";
 import { AddOrderModal } from "@/components/add-order-modal";
-import { sendOrderStatusEmail } from "@/lib/email-server";
+import { sendOrderStatusEmail } from "@/lib/email.server";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -119,12 +119,12 @@ function OrdersContent() {
     setError(null);
     try {
       const statusFilter = tab === "All Orders" ? undefined : tab;
-
+      
       const fromDate = new Date();
       if (dateFilter === "Last 7 Days") fromDate.setDate(fromDate.getDate() - 7);
       else if (dateFilter === "Last 30 Days") fromDate.setDate(fromDate.getDate() - 30);
       else if (dateFilter === "This Year") fromDate.setMonth(0, 1);
-
+      
       const dateRange =
         dateFilter !== "All Time"
           ? { from: fromDate.toISOString(), to: new Date().toISOString() }
@@ -403,15 +403,15 @@ function OrdersContent() {
       {/* High-Level KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          {
-            label: "Total Orders",
-            value: stats.total_orders.toLocaleString(),
-            note: dateFilter === "All Time" ? "Lifetime volume" : `In ${dateFilter.toLowerCase()}`,
+          { 
+            label: "Total Orders", 
+            value: stats.total_orders.toLocaleString(), 
+            note: dateFilter === "All Time" ? "Lifetime volume" : `In ${dateFilter.toLowerCase()}`, 
             noteColor: "text-muted-foreground",
           },
-          {
-            label: "Pending Fulfillment",
-            value: stats.pending_fulfillment.toString(),
+          { 
+            label: "Pending Fulfillment", 
+            value: stats.pending_fulfillment.toString(), 
             note:
               stats.pending_fulfillment === 0
                 ? "✅ All caught up"
@@ -427,8 +427,8 @@ function OrdersContent() {
             note: "📈 Trending +12% from last month",
             noteColor: "text-emerald-600",
           },
-          {
-            label: "Revenue (MTD)",
+          { 
+            label: "Revenue (MTD)", 
             value: formatPkr(stats.revenue_mtd),
             note: `🎯 ${Math.min(100, Math.round((stats.revenue_mtd / REVENUE_TARGET_PKR) * 100))}% of ${formatPkr(REVENUE_TARGET_PKR)} target · collected when marked paid`,
             noteColor: "text-emerald-600",
@@ -703,13 +703,13 @@ function OrdersContent() {
                         </div>
                         <div className="ml-3 flex flex-col">
                           <span className="text-xs font-medium text-foreground truncate max-w-[150px]">
-                            {o.order_items?.[0]?.product_name || "Custom Request"}
-                          </span>
-                          {o.order_items && o.order_items.length > 1 && (
+                          {o.order_items?.[0]?.product_name || "Custom Request"}
+                        </span>
+                        {o.order_items && o.order_items.length > 1 && (
                             <span className="text-[10px] text-primary font-bold uppercase tracking-widest mt-0.5">
-                              + {o.order_items.length - 1} more items
-                            </span>
-                          )}
+                            + {o.order_items.length - 1} more items
+                          </span>
+                        )}
                         </div>
                       </div>
                     </td>
@@ -757,21 +757,21 @@ function OrdersContent() {
                               Mark as paid (COD collected)
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem
+                          <DropdownMenuItem 
                             onClick={() => handleUpdateStatus(o.id, "packed")}
                             className="cursor-pointer"
                             disabled={!canMarkOrderPacked(o.status)}
                           >
                             Mark as packed
                           </DropdownMenuItem>
-                          <DropdownMenuItem
+                          <DropdownMenuItem 
                             onClick={() => handleUpdateStatus(o.id, "shipped")}
                             className="cursor-pointer"
                             disabled={!canMarkOrderShipped(o.status)}
                           >
                             Mark as shipped
                           </DropdownMenuItem>
-                          <DropdownMenuItem
+                          <DropdownMenuItem 
                             onClick={() => handleUpdateStatus(o.id, "delivered")}
                             className={`cursor-pointer ${o.status === "delivered" ? "text-emerald-600" : ""}`}
                             disabled={!canMarkOrderDelivered(o.status)}
@@ -840,7 +840,7 @@ function OrdersContent() {
         onOrderAdded={fetchOrders}
       />
 
-      <OrderTimelineModal
+      <OrderTimelineModal 
         isOpen={isTimelineOpen}
         onOpenChange={setIsTimelineOpen}
         order={selectedOrder}

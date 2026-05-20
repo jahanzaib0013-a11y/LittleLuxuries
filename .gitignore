@@ -16,6 +16,7 @@ dist-ssr
 .nitro
 *.local
 .env
+data/admin-auth.json
 
 # Wrangler / Cloudflare
 .wrangler/

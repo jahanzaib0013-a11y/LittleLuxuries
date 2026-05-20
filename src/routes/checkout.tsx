@@ -25,6 +25,13 @@ import { CartSidebar } from "@/components/cart-sidebar";
 import { formatPkr } from "@/lib/format-currency";
 import { getAcquisitionData, storeUTMParameters } from "@/lib/utils";
 import type { Database } from "@/lib/supabase";
+import {
+  validateEmail,
+  validateRequired,
+  hasFieldErrors,
+  type FieldErrors,
+} from "@/lib/form-validation";
+import { useCheckoutPricing } from "@/hooks/use-checkout-pricing";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -124,6 +131,11 @@ function Checkout() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderError, setOrderError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrors<
+      "email" | "firstName" | "lastName" | "phone" | "streetAddress" | "city" | "postalCode"
+    >
+  >({});
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [addressLookup, setAddressLookup] = useState<"idle" | "loading">("idle");
@@ -146,7 +158,7 @@ function Checkout() {
   useEffect(() => {
     // Store UTM parameters when component mounts
     storeUTMParameters();
-
+    
     const loadProducts = async () => {
       try {
         setLoading(true);
@@ -237,13 +249,17 @@ function Checkout() {
     }
   }
 
-  const taxableAmount = subtotal - discount;
-  const tax = +(taxableAmount * 0.08).toFixed(2);
-  const shipping: number = 0; // Free shipping for now
-  const total = taxableAmount + tax + shipping;
+  const { tax, taxLabel, shipping, total } = useCheckoutPricing({
+    subtotal,
+    discount,
+    countryCode: formData.country,
+  });
 
   const handleApplyCoupon = async () => {
-    if (!couponCode.trim()) return;
+    if (!couponCode.trim()) {
+      setCouponError("Enter a coupon code.");
+      return;
+    }
 
     setIsApplyingCoupon(true);
     setCouponError(null);
@@ -273,6 +289,11 @@ function Checkout() {
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({
+      ...prev,
+      [field]: undefined,
+    }));
+    setOrderError(null);
   };
 
   const handleRemoveItem = (id: string, size: string) => {
@@ -284,24 +305,31 @@ function Checkout() {
   };
 
   const handlePlaceOrder = async () => {
-    // Validation
-    if (
-      !formData.email ||
-      !formData.firstName ||
-      !formData.lastName ||
-      !formData.streetAddress ||
-      !formData.city ||
-      !formData.postalCode
-    ) {
-      setOrderError("Please fill in all required fields");
-      return;
-    }
-
     if (items.length === 0) {
-      setOrderError("Your cart is empty");
+      setOrderError("Your cart is empty. Add items before placing an order.");
       return;
     }
 
+    const errors: typeof fieldErrors = {
+      email: validateEmail(formData.email),
+      firstName: validateRequired(formData.firstName, "First name"),
+      lastName: validateRequired(formData.lastName, "Last name"),
+      streetAddress: validateRequired(formData.streetAddress, "Street address"),
+      city: validateRequired(formData.city, "City"),
+      postalCode: validateRequired(formData.postalCode, "Postal code"),
+    };
+
+    if (formData.phone.trim() && !/^\+?[\d\s\-()]{7,20}$/.test(formData.phone.trim())) {
+      errors.phone = "Enter a valid phone number.";
+    }
+
+    if (hasFieldErrors(errors)) {
+      setFieldErrors(errors);
+      setOrderError("Please fix the highlighted fields below.");
+      return;
+    }
+
+    setFieldErrors({});
     setIsSubmitting(true);
     setOrderError(null);
 
@@ -359,6 +387,11 @@ function Checkout() {
 
       // Clear cart after successful order
       clearCart();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Something went wrong while placing your order.";
+      setOrderError(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -415,7 +448,7 @@ function Checkout() {
                     <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-2xl bg-card border border-border shadow-sm">
                       <img
                         src={item.product.image_url}
-                        alt={item.product.name}
+                        alt={item.product.name} 
                         className="h-full w-full object-cover transition-transform hover:scale-105"
                       />
                     </div>
@@ -425,17 +458,17 @@ function Checkout() {
                           <h3 className="font-serif text-lg font-medium text-foreground leading-tight">
                             {item.product.name}
                           </h3>
-                          <div className="mt-1 flex items-center gap-2">
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary-soft text-primary text-xs font-medium">
                               {item.size}
                             </span>
                             {item.product.badge && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gold text-gold-foreground text-xs font-medium ml-2">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gold text-gold-foreground text-xs font-medium">
                                 {item.product.badge}
                               </span>
                             )}
                             {item.product.variant && (
-                              <span className="text-xs text-muted-foreground">
+                              <span className="max-w-full truncate text-xs text-muted-foreground">
                                 {item.product.variant}
                               </span>
                             )}
@@ -450,9 +483,9 @@ function Checkout() {
                           </p>
                         </div>
                       </div>
-                      <div className="mt-3 flex items-center gap-3">
-                        <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-1">
-                          <button
+                      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                        <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-1 w-fit">
+                          <button 
                             onClick={() =>
                               handleQuantityChange(item.id, item.size, Math.max(1, item.qty - 1))
                             }
@@ -462,16 +495,16 @@ function Checkout() {
                             <Minus className="size-3.5" />
                           </button>
                           <span className="w-10 text-center text-sm font-medium">{item.qty}</span>
-                          <button
-                            onClick={() => handleQuantityChange(item.id, item.size, item.qty + 1)}
+                          <button 
+                            onClick={() => handleQuantityChange(item.id, item.size, item.qty + 1)} 
                             className="grid size-8 place-items-center rounded-full hover:bg-muted transition-colors"
                           >
                             <Plus className="size-3.5" />
                           </button>
                         </div>
-                        <button
-                          onClick={() => handleRemoveItem(item.id, item.size)}
-                          className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border text-xs font-medium text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all"
+                        <button 
+                          onClick={() => handleRemoveItem(item.id, item.size)} 
+                          className="flex min-h-11 items-center gap-1.5 self-start px-3 py-2 rounded-full border border-border text-xs font-medium text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all sm:ml-auto"
                           aria-label="Remove item"
                         >
                           <Trash2 className="size-3.5" />
@@ -558,6 +591,7 @@ function Checkout() {
                   onBlur={handleEmailBlur}
                   type="email"
                   required
+                  error={fieldErrors.email}
                 />
                 {addressLookup === "loading" && (
                   <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -581,6 +615,7 @@ function Checkout() {
                     value={formData.firstName}
                     onChange={(v) => handleInputChange("firstName", v)}
                     required
+                    error={fieldErrors.firstName}
                   />
                   <Field
                     label="Last name"
@@ -588,38 +623,43 @@ function Checkout() {
                     value={formData.lastName}
                     onChange={(v) => handleInputChange("lastName", v)}
                     required
+                    error={fieldErrors.lastName}
                   />
-                  <div className="sm:col-span-2">
-                    <Field
-                      label="Phone (optional)"
-                      placeholder="+92-300-1234567"
-                      value={formData.phone}
-                      onChange={(v) => handleInputChange("phone", v)}
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <Field
+              <div className="sm:col-span-2">
+                <Field
+                  label="Phone (optional)"
+                  placeholder="+92-300-1234567"
+                  value={formData.phone}
+                  onChange={(v) => handleInputChange("phone", v)}
+                  error={fieldErrors.phone}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <Field
                       label="Street address"
-                      placeholder="123 Willow Lane, Apartment 4B"
-                      value={formData.streetAddress}
-                      onChange={(v) => handleInputChange("streetAddress", v)}
-                      required
-                    />
-                  </div>
-                  <Field
-                    label="City"
-                    placeholder="Lahore"
-                    value={formData.city}
-                    onChange={(v) => handleInputChange("city", v)}
-                    required
-                  />
-                  <Field
+                  placeholder="123 Willow Lane, Apartment 4B"
+                  value={formData.streetAddress}
+                  onChange={(v) => handleInputChange("streetAddress", v)}
+                  required
+                  error={fieldErrors.streetAddress}
+                />
+              </div>
+              <Field
+                label="City"
+                placeholder="Lahore"
+                value={formData.city}
+                onChange={(v) => handleInputChange("city", v)}
+                required
+                error={fieldErrors.city}
+              />
+              <Field
                     label="Postal code"
-                    placeholder="54000"
-                    value={formData.postalCode}
-                    onChange={(v) => handleInputChange("postalCode", v)}
-                    required
-                  />
+                placeholder="54000"
+                value={formData.postalCode}
+                onChange={(v) => handleInputChange("postalCode", v)}
+                required
+                error={fieldErrors.postalCode}
+              />
                 </div>
               </div>
 
@@ -694,7 +734,7 @@ function Checkout() {
                 </div>
               )}
               <Row label="Shipping" value={shipping === 0 ? "Free" : formatPkr(shipping)} />
-              <Row label="Taxes (8%)" value={formatPkr(tax)} />
+              {tax > 0 && taxLabel && <Row label={taxLabel} value={formatPkr(tax)} />}
             </dl>
 
             {!appliedCoupon && (
@@ -782,6 +822,7 @@ function Field({
   onChange,
   onBlur,
   hint,
+  error,
   type = "text",
   required = false,
 }: {
@@ -791,6 +832,7 @@ function Field({
   onChange?: (value: string) => void;
   onBlur?: () => void;
   hint?: string;
+  error?: string;
   type?: string;
   required?: boolean;
 }) {
@@ -806,9 +848,20 @@ function Field({
         value={value}
         onChange={(e) => onChange?.(e.target.value)}
         onBlur={() => onBlur?.()}
-        className="mt-2 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15"
+        aria-invalid={Boolean(error)}
+        className={`mt-2 w-full rounded-2xl border bg-background px-4 py-3 text-sm outline-none transition-colors focus:ring-2 focus:ring-primary/15 ${
+          error
+            ? "border-destructive focus:border-destructive focus:ring-destructive/20"
+            : "border-border focus:border-primary"
+        }`}
       />
-      {hint ? <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{hint}</p> : null}
+      {error ? (
+        <p className="mt-1.5 text-xs text-destructive" role="alert">
+          {error}
+        </p>
+      ) : hint ? (
+        <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">{hint}</p>
+      ) : null}
     </div>
   );
 }

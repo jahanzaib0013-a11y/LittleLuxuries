@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
-import { Heart, Search, ArrowDownUp, X, SlidersHorizontal } from "lucide-react";
+import { Heart, Search, ArrowDownUp, X, SlidersHorizontal, ShoppingBag } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { products, collections, type Product } from "@/lib/products";
 import { useFavorites } from "@/hooks/use-favorites";
@@ -75,7 +75,7 @@ function Shop() {
         image_url: product.image_url,
       }));
       const finalProducts = productsWithImages.length > 0 ? productsWithImages : products;
-
+      
       const uniqueBadges = Array.from(
         new Set(finalProducts.map((p) => p.badge).filter(Boolean) as string[]),
       );
@@ -157,49 +157,12 @@ function Shop() {
     <Layout>
       {/* HERO BANNER */}
       <section className="relative overflow-hidden" style={{ background: "var(--gradient-hero)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-24 lg:py-32">
-          <div className="mx-auto max-w-xl text-center">
+        <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:py-24">
+          <div className="mx-auto max-w-2xl text-center">
             <p className="label-eyebrow mb-4">The Collection</p>
-            <h1 className="font-serif text-[clamp(2.8rem,6vw,5rem)] leading-[1.05] tracking-[-0.02em] text-foreground">
-              Timeless Baby Garments
+            <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-foreground break-words sm:text-5xl md:text-6xl lg:text-[3.5rem]">
+              Timeless elegance for your little one
             </h1>
-            <p
-              className="mt-5 text-[15px] leading-relaxed"
-              style={{ color: "oklch(0.52 0.025 290)" }}
-            >
-              Handcrafted from the world's softest organic cotton, breathable linen &amp;
-              responsibly sourced merino wool — every piece made to cradle your little one in
-              lasting comfort.
-            </p>
-          </div>
-          {/* Stats strip */}
-          <div className="mt-14 flex items-center justify-center gap-0">
-            {[
-              { value: "100%", label: "Organic Certified" },
-              { value: "Hand", label: "Crafted with Care" },
-              { value: "Free", label: "Delivery Included" },
-              { value: "Soft", label: "Premium Fabrics" },
-            ].map((s, i) => (
-              <div key={i} className="flex items-center">
-                {i > 0 && (
-                  <div className="h-8 w-px mx-8" style={{ background: "oklch(0.87 0.015 300)" }} />
-                )}
-                <div className="text-center">
-                  <p
-                    className="font-serif text-2xl font-light leading-none"
-                    style={{ color: "oklch(0.28 0.04 285)" }}
-                  >
-                    {s.value}
-                  </p>
-                  <p
-                    className="text-[9px] font-black uppercase tracking-[0.18em] mt-1.5"
-                    style={{ color: "oklch(0.60 0.025 290)" }}
-                  >
-                    {s.label}
-                  </p>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
         <div
@@ -210,7 +173,7 @@ function Shop() {
       </section>
 
       {/* ── PREMIUM FILTER TOOLBAR ────────────────────────────────── */}
-      <div id="product-grid" className="sticky top-0 z-30">
+      <div id="product-grid" className="sticky top-16 sm:top-20 z-30">
         <div
           style={{
             background: "oklch(1 0 0 / 0.96)",
@@ -229,8 +192,8 @@ function Shop() {
           />
           <div className="mx-auto max-w-7xl px-6">
             {/* TOP ROW */}
-            <div className="flex items-center gap-5 py-3.5 border-b border-border/25">
-              <div className="relative flex-1 max-w-lg group">
+            <div className="flex flex-col gap-3 py-3.5 border-b border-border/25 md:flex-row md:items-center md:gap-5">
+              <div className="relative w-full md:flex-1 md:max-w-lg group">
                 <Search
                   className="absolute left-4 top-1/2 -translate-y-1/2 size-[15px] pointer-events-none transition-all duration-200"
                   style={{ color: "oklch(0.70 0.020 290)" }}
@@ -259,17 +222,17 @@ function Shop() {
                   }}
                 />
                 {searchQuery && (
-                  <button
+          <button
                     onClick={() => setSearchQuery("")}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 grid size-5 place-items-center rounded-full transition-colors"
                     style={{ background: "oklch(0.91 0.012 300)" }}
                   >
                     <X className="size-3" style={{ color: "oklch(0.50 0.025 290)" }} />
-                  </button>
+          </button>
                 )}
               </div>
-              <div className="flex items-center gap-3 ml-auto">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 md:ml-auto md:justify-end">
+                <div className="flex items-center gap-2 min-w-0">
                   <SlidersHorizontal
                     className="size-3.5"
                     style={{ color: "oklch(0.68 0.020 290)" }}
@@ -294,7 +257,7 @@ function Shop() {
                     <option value="price-desc">Price: High → Low</option>
                   </select>
                 </div>
-                <div className="flex items-baseline gap-1.5 pl-4 border-l border-border/30">
+                <div className="flex items-baseline gap-1.5 md:pl-4 md:border-l md:border-border/30">
                   <span
                     className="font-serif text-3xl font-light leading-none tracking-tight"
                     style={{ color: "oklch(0.22 0.03 285)" }}
@@ -327,8 +290,8 @@ function Shop() {
                 {(["All", ...collections.map((c) => c.name)] as string[]).map((cat) => {
                   const on = cat === "All" ? selectedCategory === "All" : selectedCategory === cat;
                   return (
-                    <button
-                      key={cat}
+            <button
+              key={cat}
                       onClick={() => setSelectedCategory(on && cat !== "All" ? "All" : cat)}
                       className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200"
                       style={
@@ -348,8 +311,8 @@ function Shop() {
                               letterSpacing: "0.06em",
                             }
                       }
-                    >
-                      {cat}
+            >
+              {cat}
                     </button>
                   );
                 })}
@@ -510,8 +473,8 @@ function Shop() {
                     }}
                   >
                     {b} <X className="size-2.5 opacity-50" />
-                  </button>
-                ))}
+            </button>
+          ))}
                 {(priceRange.min !== null || priceRange.max !== null) && (
                   <button
                     onClick={() => setPriceRange({ min: null, max: null })}
@@ -644,7 +607,7 @@ function Shop() {
                       className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
                       style={{ aspectRatio: "3/4" }}
                     >
-                      {p.badge && (
+                {p.badge && (
                         <span
                           className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
                           style={{
@@ -653,9 +616,9 @@ function Shop() {
                             boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
                           }}
                         >
-                          {p.badge}
-                        </span>
-                      )}
+                    {p.badge}
+                  </span>
+                )}
 
                       <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
                         <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
@@ -663,22 +626,22 @@ function Shop() {
                         </span>
                       </div>
 
-                      <img
-                        src={p.image}
-                        alt={p.name}
-                        loading="lazy"
+                  <img
+                    src={p.image}
+                    alt={p.name}
+                    loading="lazy"
                         width={800}
                         height={1067}
                         className="h-full w-full object-cover grayscale-[0.5]"
                       />
-                    </div>
+              </div>
                   ) : (
-                    <Link
-                      to="/product/$id"
-                      params={{ id: p.id }}
+                  <Link
+                    to="/product/$id"
+                    params={{ id: p.id }}
                       className="block relative overflow-hidden rounded-2xl"
                       style={{ aspectRatio: "3/4" }}
-                    >
+                  >
                       {p.badge && (
                         <span
                           className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
@@ -712,23 +675,27 @@ function Shop() {
                             "linear-gradient(to top, oklch(0.12 0.02 285/0.55) 0%, transparent 55%)",
                         }}
                       />
-                      <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0">
+                      <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-100 transition-all duration-300 sm:p-4 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             handleAddToCart(p);
                           }}
-                          className="flex-1 mr-2 text-[10px] font-black uppercase tracking-widest py-2.5 rounded-full transition-all shadow-xl bg-white text-primary hover:bg-primary hover:text-white"
+                          className="flex h-11 min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-xl transition-all hover:bg-primary hover:text-white"
                         >
-                          Add to Cart
+                          <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
+                          <span className="truncate sm:hidden">Add</span>
+                          <span className="truncate hidden sm:inline">Add to Cart</span>
                         </button>
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             toggleFavorite(p.id);
                           }}
-                          className="grid size-9 place-items-center rounded-full shrink-0 transition-all"
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition-all"
                           style={{
                             background: isFavorite(p.id) ? "var(--primary)" : "oklch(1 0 0/0.20)",
                             color: isFavorite(p.id) ? "white" : "#fff",
@@ -769,11 +736,11 @@ function Shop() {
                     >
                       {p.variant}
                     </p>
-                  </div>
-                </article>
+              </div>
+            </article>
               );
             })}
-          </div>
+        </div>
         )}
       </section>
 

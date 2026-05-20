@@ -12,10 +12,12 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StorefrontRouteImport } from './routes/storefront'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CustomersRouteImport } from './routes/customers'
@@ -27,6 +29,10 @@ import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as ApiResetPasswordRouteImport } from './routes/api/reset-password'
+import { Route as ApiForgotPasswordRouteImport } from './routes/api/forgot-password'
+import { Route as ApiCronRouteImport } from './routes/api/cron'
+import { Route as ApiAdminLoginRouteImport } from './routes/api/admin-login'
 
 const StorefrontRoute = StorefrontRouteImport.update({
   id: '/storefront',
@@ -41,6 +47,11 @@ const ShopRoute = ShopRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProductsRoute = ProductsRouteImport.update({
@@ -61,6 +72,11 @@ const LoginRoute = LoginRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FavoritesRoute = FavoritesRouteImport.update({
@@ -118,6 +134,26 @@ const ProductIdRoute = ProductIdRouteImport.update({
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiResetPasswordRoute = ApiResetPasswordRouteImport.update({
+  id: '/api/reset-password',
+  path: '/api/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiForgotPasswordRoute = ApiForgotPasswordRouteImport.update({
+  id: '/api/forgot-password',
+  path: '/api/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronRoute = ApiCronRouteImport.update({
+  id: '/api/cron',
+  path: '/api/cron',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAdminLoginRoute = ApiAdminLoginRouteImport.update({
+  id: '/api/admin-login',
+  path: '/api/admin-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -130,13 +166,19 @@ export interface FileRoutesByFullPath {
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/products': typeof ProductsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/storefront': typeof StorefrontRoute
+  '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/cron': typeof ApiCronRoute
+  '/api/forgot-password': typeof ApiForgotPasswordRoute
+  '/api/reset-password': typeof ApiResetPasswordRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesByTo {
@@ -150,13 +192,19 @@ export interface FileRoutesByTo {
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/products': typeof ProductsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/storefront': typeof StorefrontRoute
+  '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/cron': typeof ApiCronRoute
+  '/api/forgot-password': typeof ApiForgotPasswordRoute
+  '/api/reset-password': typeof ApiResetPasswordRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesById {
@@ -171,13 +219,19 @@ export interface FileRoutesById {
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
   '/favorites': typeof FavoritesRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/products': typeof ProductsRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
   '/storefront': typeof StorefrontRoute
+  '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/cron': typeof ApiCronRoute
+  '/api/forgot-password': typeof ApiForgotPasswordRoute
+  '/api/reset-password': typeof ApiResetPasswordRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRouteTypes {
@@ -193,13 +247,19 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/favorites'
+    | '/forgot-password'
     | '/inbox'
     | '/login'
     | '/orders'
     | '/products'
+    | '/reset-password'
     | '/settings'
     | '/shop'
     | '/storefront'
+    | '/api/admin-login'
+    | '/api/cron'
+    | '/api/forgot-password'
+    | '/api/reset-password'
     | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -213,13 +273,19 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/favorites'
+    | '/forgot-password'
     | '/inbox'
     | '/login'
     | '/orders'
     | '/products'
+    | '/reset-password'
     | '/settings'
     | '/shop'
     | '/storefront'
+    | '/api/admin-login'
+    | '/api/cron'
+    | '/api/forgot-password'
+    | '/api/reset-password'
     | '/product/$id'
   id:
     | '__root__'
@@ -233,13 +299,19 @@ export interface FileRouteTypes {
     | '/customers'
     | '/dashboard'
     | '/favorites'
+    | '/forgot-password'
     | '/inbox'
     | '/login'
     | '/orders'
     | '/products'
+    | '/reset-password'
     | '/settings'
     | '/shop'
     | '/storefront'
+    | '/api/admin-login'
+    | '/api/cron'
+    | '/api/forgot-password'
+    | '/api/reset-password'
     | '/product/$id'
   fileRoutesById: FileRoutesById
 }
@@ -254,13 +326,19 @@ export interface RootRouteChildren {
   CustomersRoute: typeof CustomersRoute
   DashboardRoute: typeof DashboardRoute
   FavoritesRoute: typeof FavoritesRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
   ProductsRoute: typeof ProductsRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   ShopRoute: typeof ShopRoute
   StorefrontRoute: typeof StorefrontRoute
+  ApiAdminLoginRoute: typeof ApiAdminLoginRoute
+  ApiCronRoute: typeof ApiCronRoute
+  ApiForgotPasswordRoute: typeof ApiForgotPasswordRoute
+  ApiResetPasswordRoute: typeof ApiResetPasswordRoute
   ProductIdRoute: typeof ProductIdRoute
 }
 
@@ -285,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/products': {
@@ -313,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/favorites': {
@@ -392,6 +484,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/reset-password': {
+      id: '/api/reset-password'
+      path: '/api/reset-password'
+      fullPath: '/api/reset-password'
+      preLoaderRoute: typeof ApiResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/forgot-password': {
+      id: '/api/forgot-password'
+      path: '/api/forgot-password'
+      fullPath: '/api/forgot-password'
+      preLoaderRoute: typeof ApiForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron': {
+      id: '/api/cron'
+      path: '/api/cron'
+      fullPath: '/api/cron'
+      preLoaderRoute: typeof ApiCronRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/admin-login': {
+      id: '/api/admin-login'
+      path: '/api/admin-login'
+      fullPath: '/api/admin-login'
+      preLoaderRoute: typeof ApiAdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -406,13 +526,19 @@ const rootRouteChildren: RootRouteChildren = {
   CustomersRoute: CustomersRoute,
   DashboardRoute: DashboardRoute,
   FavoritesRoute: FavoritesRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
   ProductsRoute: ProductsRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   ShopRoute: ShopRoute,
   StorefrontRoute: StorefrontRoute,
+  ApiAdminLoginRoute: ApiAdminLoginRoute,
+  ApiCronRoute: ApiCronRoute,
+  ApiForgotPasswordRoute: ApiForgotPasswordRoute,
+  ApiResetPasswordRoute: ApiResetPasswordRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport

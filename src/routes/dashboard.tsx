@@ -40,7 +40,7 @@ import { getCustomerStats } from "@/lib/customers";
 import { VIPPulseFeed } from "@/components/vip-pulse-feed";
 import { AddProductModal } from "@/components/add-product-modal";
 import { OrderTimelineModal } from "@/components/order-timeline-modal";
-import { sendOrderStatusEmail } from "@/lib/email-server";
+import { sendOrderStatusEmail } from "@/lib/email.server";
 import logo from "@/assets/logo.png";
 import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -140,7 +140,7 @@ function DashboardContent() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [isItemsModalOpen, setIsItemsModalOpen] = useState(false);
-
+  
   const chartData = period === "Weekly" ? dailySales : monthlySales;
   const max = Math.max(...chartData.map((d) => d.value));
 
@@ -149,8 +149,8 @@ function DashboardContent() {
       setIsLoading(true);
       try {
         // Fetch recent orders
-        const { orders, error } = await orderService.getAllOrders({
-          limit: ordersPerPage,
+        const { orders, error } = await orderService.getAllOrders({ 
+          limit: ordersPerPage, 
           offset: (page - 1) * ordersPerPage,
         });
         if (!error) {
@@ -167,7 +167,7 @@ function DashboardContent() {
             low_stock_alerts: 5, // Would need inventory tracking
           });
         }
-
+        
         // Fetch top sellers
         const topData = await orderService.getTopSellers(3);
         if (!topData.error && topData.topSellers.length > 0) {
@@ -176,7 +176,7 @@ function DashboardContent() {
 
         // Fetch customer stats for New Customers KPI
         const customerStats = await getCustomerStats();
-
+        
         // Fetch low stock count
         const lowStockCount = await productService.getLowStockCount();
 
@@ -220,8 +220,8 @@ function DashboardContent() {
       }
 
       // Refresh the orders array
-      const { orders } = await orderService.getAllOrders({
-        limit: ordersPerPage,
+      const { orders } = await orderService.getAllOrders({ 
+        limit: ordersPerPage, 
         offset: (page - 1) * ordersPerPage,
       });
       setRecentOrders(orders);
@@ -263,8 +263,8 @@ function DashboardContent() {
       }
 
       // Refresh the orders array
-      const { orders } = await orderService.getAllOrders({
-        limit: ordersPerPage,
+      const { orders } = await orderService.getAllOrders({ 
+        limit: ordersPerPage, 
         offset: (page - 1) * ordersPerPage,
       });
       setRecentOrders(orders);
@@ -547,37 +547,37 @@ function DashboardContent() {
             <div className="mt-6 space-y-4">
               {isLoading
                 ? Array.from({ length: 3 }).map((_, i) => (
-                    <div key={`ts-skel-${i}`} className="flex items-center gap-3">
-                      <Skeleton className="h-12 w-12 rounded-xl" />
-                      <div className="flex-1">
-                        <Skeleton className="h-4 w-32 mb-1" />
-                        <Skeleton className="h-3 w-20" />
-                      </div>
-                      <div className="text-right">
-                        <Skeleton className="h-4 w-10 mb-1 ml-auto" />
-                        <Skeleton className="h-3 w-8 ml-auto" />
-                      </div>
-                    </div>
-                  ))
+                 <div key={`ts-skel-${i}`} className="flex items-center gap-3">
+                   <Skeleton className="h-12 w-12 rounded-xl" />
+                   <div className="flex-1">
+                     <Skeleton className="h-4 w-32 mb-1" />
+                     <Skeleton className="h-3 w-20" />
+                   </div>
+                   <div className="text-right">
+                     <Skeleton className="h-4 w-10 mb-1 ml-auto" />
+                     <Skeleton className="h-3 w-8 ml-auto" />
+                   </div>
+                 </div>
+               ))
                 : realTopSellers.map((p, i) => (
-                    <div key={p.name} className="flex items-center gap-3">
+              <div key={p.name} className="flex items-center gap-3">
                       <div
                         className={`h-12 w-12 rounded-xl grid place-items-center ${i === 0 ? "bg-primary-soft" : i === 1 ? "bg-blush/40" : "bg-gold/20"}`}
                       >
-                        <img src={logo} alt="" className="h-7 w-7 object-contain" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-foreground truncate">{p.name}</div>
-                        <div className="text-xs text-muted-foreground truncate">{p.collection}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-primary font-semibold">{p.sales}</div>
+                  <img src={logo} alt="" className="h-7 w-7 object-contain" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-foreground truncate">{p.name}</div>
+                  <div className="text-xs text-muted-foreground truncate">{p.collection}</div>
+                </div>
+                <div className="text-right">
+                  <div className="text-primary font-semibold">{p.sales}</div>
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           Sales
                         </div>
-                      </div>
-                    </div>
-                  ))}
+                </div>
+              </div>
+            ))}
             </div>
           </div>
           <Button
@@ -780,21 +780,21 @@ function DashboardContent() {
                                 Mark as paid (COD collected)
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem
+                            <DropdownMenuItem 
                               onClick={() => handleUpdateStatus(o.id, "packed")}
                               className="cursor-pointer"
                               disabled={!canMarkOrderPacked(o.status)}
                             >
                               Mark as packed
                             </DropdownMenuItem>
-                            <DropdownMenuItem
+                            <DropdownMenuItem 
                               onClick={() => handleUpdateStatus(o.id, "shipped")}
                               className="cursor-pointer"
                               disabled={!canMarkOrderShipped(o.status)}
                             >
                               Mark as shipped
                             </DropdownMenuItem>
-                            <DropdownMenuItem
+                            <DropdownMenuItem 
                               onClick={() => handleUpdateStatus(o.id, "delivered")}
                               className={`cursor-pointer ${o.status === "delivered" ? "text-emerald-600" : ""}`}
                               disabled={!canMarkOrderDelivered(o.status)}
@@ -825,7 +825,7 @@ function DashboardContent() {
               </tbody>
             </table>
           </div>
-
+          
           <div className="flex items-center justify-between px-2 py-4 mt-2 border-t border-border/50">
             <div className="text-sm text-muted-foreground">
               {recentOrders.length > 0
@@ -833,7 +833,7 @@ function DashboardContent() {
                 : "No orders"}
             </div>
             <div className="flex items-center gap-1">
-              <button
+              <button 
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted disabled:opacity-50 transition"
@@ -843,7 +843,7 @@ function DashboardContent() {
               <button className="h-9 w-9 rounded-full bg-primary text-primary-foreground text-sm font-medium">
                 {page}
               </button>
-              <button
+              <button 
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * ordersPerPage >= stats.total_orders}
                 className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted disabled:opacity-50 transition"

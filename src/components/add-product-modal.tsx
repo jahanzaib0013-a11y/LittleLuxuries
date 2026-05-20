@@ -233,7 +233,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!formData.name || !formData.price || !formData.category || !formData.image_url) {
       toast.error("Please fill in all required fields and upload a main image");
       return;
@@ -272,16 +272,16 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
         care_instructions: formData.care_instructions,
         units: unitsValue,
         gender: formData.gender,
-        status: "published",
+        status: "draft",
       };
 
       const result = await productService.createProduct(productData);
-
+      
       if (result) {
-        toast.success("Luxury product created successfully!");
+        toast.success("Product saved as draft. Publish it when you're ready.");
         onOpenChange(false);
         onProductAdded?.();
-
+        
         setFormData({
           name: "",
           price: "",
@@ -320,53 +320,53 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
 
   return (
     <>
-      <Dialog open={open} onOpenChange={handleClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl p-0 overflow-y-auto lg:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] lg:rounded-[40px] h-auto lg:h-[90vh] max-h-[95vh] flex flex-col">
           <div className="flex flex-col lg:flex-row flex-1 w-full lg:overflow-hidden">
-            {/* Left Column: Media Workspace */}
+          {/* Left Column: Media Workspace */}
             <div className="w-full lg:w-[400px] bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50 p-6 lg:p-10 flex flex-col lg:overflow-y-auto custom-scrollbar shrink-0">
-              <div className="space-y-10">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+            <div className="space-y-10">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold text-primary uppercase tracking-[0.2em]">
                       Primary View
                     </h3>
-                    {imagePreview && (
+                  {imagePreview && (
                       <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase">
                         Selected
                       </span>
-                    )}
-                  </div>
+                  )}
+                </div>
                   <div
                     className={cn(
-                      "relative aspect-square rounded-[32px] overflow-hidden border-2 border-dashed border-primary/10 bg-white transition-all duration-500 shadow-sm",
+                  "relative aspect-square rounded-[32px] overflow-hidden border-2 border-dashed border-primary/10 bg-white transition-all duration-500 shadow-sm",
                       imagePreview && "border-none shadow-xl scale-[1.02]",
                     )}
                   >
-                    {imagePreview ? (
+                  {imagePreview ? (
                       <img
                         src={imagePreview}
                         alt="Preview"
                         className="w-full h-full object-cover animate-in fade-in zoom-in duration-500"
                       />
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-                        <ImageIcon className="h-10 w-10 mb-3 text-primary/20" />
+                  ) : (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
+                      <ImageIcon className="h-10 w-10 mb-3 text-primary/20" />
                         <p className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
                           Main Product Image
                         </p>
-                      </div>
-                    )}
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full rounded-2xl border-primary/20 hover:border-primary/40 h-12 font-semibold text-sm"
-                  >
-                    <Upload className="h-4 w-4 mr-2" />
+                    </div>
+                  )}
+                </div>
+                <Button 
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full rounded-2xl border-primary/20 hover:border-primary/40 h-12 font-semibold text-sm"
+                >
+                  <Upload className="h-4 w-4 mr-2" />
                     {imagePreview ? "Change Main Image" : "Upload Main Image"}
-                  </Button>
+                </Button>
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -374,27 +374,27 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                     onChange={handleMainImageUpload}
                     className="hidden"
                   />
-                </div>
+              </div>
 
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
                     <h3 className="text-xs font-bold text-primary uppercase tracking-[0.2em]">
                       Secondary Gallery
                     </h3>
                     <span
                       className={cn(
-                        "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
                         formData.secondary_images.length < 2
                           ? "text-amber-600 bg-amber-50"
                           : "text-emerald-600 bg-emerald-50",
                       )}
                     >
-                      {formData.secondary_images.length}/5 Images
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    {secondaryPreviews.map((preview, idx) => (
+                    {formData.secondary_images.length}/5 Images
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  {secondaryPreviews.map((preview, idx) => (
                       <div
                         key={idx}
                         className="relative aspect-square rounded-2xl overflow-hidden group shadow-md border border-border/50 bg-white"
@@ -404,30 +404,30 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                           alt={`Gallery ${idx}`}
                           className="w-full h-full object-cover"
                         />
-                        <button
-                          onClick={() => removeSecondaryImage(idx)}
-                          className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                        >
-                          <Trash2 className="h-6 w-6 text-white" />
-                        </button>
-                      </div>
-                    ))}
-
-                    {formData.secondary_images.length < 5 && (
-                      <button
-                        onClick={() => secondaryInputRef.current?.click()}
-                        className="aspect-square rounded-2xl border-2 border-dashed border-primary/10 bg-white hover:bg-primary-soft/10 hover:border-primary/30 transition-all flex flex-col items-center justify-center gap-2 group"
+                      <button 
+                        onClick={() => removeSecondaryImage(idx)}
+                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
                       >
-                        <ImagePlus className="h-6 w-6 text-primary/40 group-hover:scale-110 transition-transform" />
+                        <Trash2 className="h-6 w-6 text-white" />
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {formData.secondary_images.length < 5 && (
+                    <button 
+                      onClick={() => secondaryInputRef.current?.click()}
+                      className="aspect-square rounded-2xl border-2 border-dashed border-primary/10 bg-white hover:bg-primary-soft/10 hover:border-primary/30 transition-all flex flex-col items-center justify-center gap-2 group"
+                    >
+                      <ImagePlus className="h-6 w-6 text-primary/40 group-hover:scale-110 transition-transform" />
                         <span className="text-[10px] font-bold text-primary/40 uppercase tracking-tighter">
                           Add More
                         </span>
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-muted-foreground text-center italic font-medium">
-                    At least 2 required for the premium detail view
-                  </p>
+                    </button>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground text-center italic font-medium">
+                  At least 2 required for the premium detail view
+                </p>
                   <input
                     ref={secondaryInputRef}
                     type="file"
@@ -436,68 +436,68 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                     onChange={handleSecondaryUpload}
                     className="hidden"
                   />
-                </div>
               </div>
             </div>
+          </div>
 
-            {/* Right Column: Detailed Configuration */}
+          {/* Right Column: Detailed Configuration */}
             <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
               <div className="p-6 pb-4 lg:p-10 lg:pb-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
                     <DialogTitle className="text-4xl font-serif text-primary tracking-tight">
                       Luxury Product Suite
                     </DialogTitle>
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2">
                       <p className="text-sm text-muted-foreground font-medium">
                         Define the core, classification, and brand narrative.
                       </p>
                       <span className="px-2 py-0.5 rounded-full bg-muted text-muted-foreground text-[10px] font-bold uppercase tracking-widest border border-border/50">
                         Saving as Draft
                       </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-                    <div className="h-2 w-2 rounded-full bg-primary/20"></div>
-                    <div className="h-2 w-2 rounded-full bg-primary/20"></div>
                   </div>
                 </div>
+                <div className="flex gap-2">
+                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                  <div className="h-2 w-2 rounded-full bg-primary/20"></div>
+                  <div className="h-2 w-2 rounded-full bg-primary/20"></div>
+                </div>
               </div>
+            </div>
 
               <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 lg:pt-4 pt-2 space-y-8 lg:space-y-12 custom-scrollbar">
-                <form id="add-luxury-product" onSubmit={handleSubmit} className="space-y-12">
-                  {/* 1. Core Identity */}
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3">
+              <form id="add-luxury-product" onSubmit={handleSubmit} className="space-y-12">
+                {/* 1. Core Identity */}
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-3">
                       <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                         Product Title
                       </Label>
-                      <Input
-                        value={formData.name}
+                    <Input 
+                      value={formData.name}
                         onChange={(e) => handleInputChange("name", e.target.value)}
-                        placeholder="e.g., Silk-Trimmed Organic Onesie"
-                        className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-3">
+                      placeholder="e.g., Silk-Trimmed Organic Onesie"
+                      className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-3">
                       <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                         Boutique price (PKR)
                       </Label>
-                      <Input
-                        type="number"
-                        value={formData.price}
+                    <Input 
+                      type="number"
+                      value={formData.price}
                         onChange={(e) => handleInputChange("price", e.target.value)}
-                        placeholder="0.00"
-                        className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
-                        required
-                      />
-                    </div>
+                      placeholder="0.00"
+                      className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
+                      required
+                    />
                   </div>
+                </div>
 
-                  <div className="grid grid-cols-2 gap-8">
-                    <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-8">
+                  <div className="space-y-3">
                       <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                         Gender / Classification
                       </Label>
@@ -550,17 +550,17 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                           value={formData.category}
                           onValueChange={(v) => handleInputChange("category", v)}
                         >
-                          <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20">
-                            <SelectValue placeholder="Select Category" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20">
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
                             {categories.map((c) => (
                               <SelectItem key={c.id} value={c.name} className="rounded-xl py-3">
                                 {c.name}
                               </SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                      </SelectContent>
+                    </Select>
                         <div className="flex items-center gap-4">
                           <button
                             type="button"
@@ -578,8 +578,8 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                           </button>
                         </div>
                       </div>
-                    </div>
-                    <div className="space-y-3">
+                  </div>
+                  <div className="space-y-3">
                       <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                         Status Indicator
                       </Label>
@@ -588,10 +588,10 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                           value={formData.badge}
                           onValueChange={(v) => handleInputChange("badge", v)}
                         >
-                          <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20">
-                            <SelectValue placeholder="No Badge" />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20">
+                        <SelectValue placeholder="No Badge" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-none shadow-2xl">
                             <SelectItem value="none" className="rounded-xl py-3 italic">
                               Standard Listing
                             </SelectItem>
@@ -604,8 +604,8 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                                 {b.name}
                               </SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
+                      </SelectContent>
+                    </Select>
                         <div className="flex items-center gap-4">
                           <button
                             type="button"
@@ -623,21 +623,21 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                           </button>
                         </div>
                       </div>
-                    </div>
                   </div>
+                </div>
 
-                  {/* 2. Brand Narrative */}
-                  <div className="space-y-6 bg-muted/10 p-8 rounded-[32px] border border-border/30">
-                    <div className="flex items-center justify-between">
-                      <h4 className="text-xs font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-3">
-                        <Sparkles className="h-4 w-4" />
-                        Premium Content
-                      </h4>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
+                {/* 2. Brand Narrative */}
+                <div className="space-y-6 bg-muted/10 p-8 rounded-[32px] border border-border/30">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-3">
+                      <Sparkles className="h-4 w-4" />
+                      Premium Content
+                    </h4>
+                    <Button 
+                      type="button"
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => {
                           handleInputChange(
                             "description",
                             generateLuxuryNarrative(
@@ -648,22 +648,22 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                           handleInputChange("sustainability", generateSustainabilityPromise());
                           handleInputChange("care_instructions", generateCareInstructions());
                           toast.success("Luxury narrative synchronized");
-                        }}
-                        className="h-8 text-[10px] font-bold text-primary px-3 bg-white hover:bg-primary-soft shadow-sm border border-primary/10 rounded-full"
-                      >
-                        <Sparkles className="h-3 w-3 mr-1.5" /> Full AI Suite
-                      </Button>
-                    </div>
-                    <div className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
+                      }}
+                      className="h-8 text-[10px] font-bold text-primary px-3 bg-white hover:bg-primary-soft shadow-sm border border-primary/10 rounded-full"
+                    >
+                      <Sparkles className="h-3 w-3 mr-1.5" /> Full AI Suite
+                    </Button>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
                           <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
                             Story & Description
                           </Label>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
+                        <Button 
+                          type="button"
+                          variant="ghost" 
+                          size="sm" 
                             onClick={() =>
                               handleInputChange(
                                 "description",
@@ -673,120 +673,120 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                                 ),
                               )
                             }
-                            className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
-                          >
-                            <Wand2 className="h-2.5 w-2.5 mr-1" /> Re-Compose
-                          </Button>
-                        </div>
-                        <Textarea
-                          value={formData.description}
-                          onChange={(e) => handleInputChange("description", e.target.value)}
-                          placeholder="Craft the narrative for this exquisite piece..."
-                          className="rounded-2xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[120px] resize-none p-5 text-base"
-                        />
+                          className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
+                        >
+                          <Wand2 className="h-2.5 w-2.5 mr-1" /> Re-Compose
+                        </Button>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
+                      <Textarea 
+                        value={formData.description}
+                          onChange={(e) => handleInputChange("description", e.target.value)}
+                        placeholder="Craft the narrative for this exquisite piece..."
+                        className="rounded-2xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[120px] resize-none p-5 text-base"
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
                             <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
                               Sustainability Promise
                             </Label>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
+                          <Button 
+                            type="button"
+                            variant="ghost" 
+                            size="sm" 
                               onClick={() =>
                                 handleInputChange("sustainability", generateSustainabilityPromise())
                               }
-                              className="h-6 text-[9px] font-bold text-emerald-600 px-2 hover:bg-emerald-50"
-                            >
-                              <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
-                            </Button>
-                          </div>
-                          <Textarea
-                            value={formData.sustainability}
-                            onChange={(e) => handleInputChange("sustainability", e.target.value)}
-                            placeholder="e.g., GOTS certified organic materials..."
-                            className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
-                          />
+                            className="h-6 text-[9px] font-bold text-emerald-600 px-2 hover:bg-emerald-50"
+                          >
+                            <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
+                          </Button>
                         </div>
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between">
+                        <Textarea 
+                          value={formData.sustainability}
+                            onChange={(e) => handleInputChange("sustainability", e.target.value)}
+                          placeholder="e.g., GOTS certified organic materials..."
+                          className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
                             <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
                               Care Instructions
                             </Label>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
+                          <Button 
+                            type="button"
+                            variant="ghost" 
+                            size="sm" 
                               onClick={() =>
                                 handleInputChange("care_instructions", generateCareInstructions())
                               }
-                              className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
-                            >
-                              <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
-                            </Button>
-                          </div>
-                          <Textarea
-                            value={formData.care_instructions}
-                            onChange={(e) => handleInputChange("care_instructions", e.target.value)}
-                            placeholder="e.g., Hand wash with organic detergent..."
-                            className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
-                          />
+                            className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
+                          >
+                            <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
+                          </Button>
                         </div>
+                        <Textarea 
+                          value={formData.care_instructions}
+                            onChange={(e) => handleInputChange("care_instructions", e.target.value)}
+                          placeholder="e.g., Hand wash with organic detergent..."
+                          className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
+                        />
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* 3. Logistics */}
-                  <div className="space-y-6">
-                    <div className="flex items-center justify-between">
+                {/* 3. Logistics */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
                       <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
                         Sizing Matrix
                       </h4>
                       <span className="text-[10px] font-bold text-primary bg-primary-soft px-3 py-1 rounded-full uppercase">
                         Global Standards
                       </span>
-                    </div>
-                    <div className="flex flex-wrap gap-3">
+                  </div>
+                  <div className="flex flex-wrap gap-3">
                       {sizeOptions.map((size) => {
                         const active = formData.sizes.includes(size);
-                        return (
-                          <button
-                            key={size}
-                            type="button"
-                            onClick={() => handleSizeToggle(size)}
-                            className={cn(
-                              "px-6 py-3 rounded-full text-sm font-bold border-2 transition-all duration-300",
-                              active
-                                ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105"
+                      return (
+                        <button 
+                          key={size}
+                          type="button"
+                          onClick={() => handleSizeToggle(size)}
+                          className={cn(
+                            "px-6 py-3 rounded-full text-sm font-bold border-2 transition-all duration-300",
+                            active 
+                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105" 
                                 : "bg-white text-muted-foreground border-muted/20 hover:border-primary/30",
-                            )}
-                          >
-                            {size}
-                          </button>
+                          )}
+                        >
+                          {size}
+                        </button>
                         );
-                      })}
-                    </div>
+                    })}
                   </div>
-                </form>
-              </div>
+                </div>
+              </form>
+            </div>
 
-              {/* Premium Footer */}
+            {/* Premium Footer */}
               <div className="p-6 lg:p-10 border-t border-border/40 bg-muted/5 rounded-b-[32px] lg:rounded-b-[40px]">
                 <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                    <div className="flex -space-x-2">
+                <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
+                  <div className="flex -space-x-2">
                       <div className="w-8 h-8 rounded-full border-2 border-white bg-primary-soft flex items-center justify-center text-primary">
                         <CheckCircle2 className="h-4 w-4" />
                       </div>
                       <div className="w-8 h-8 rounded-full border-2 border-white bg-emerald-50 flex items-center justify-center text-emerald-600">
                         <CheckCircle2 className="h-4 w-4" />
                       </div>
-                    </div>
-                    <span>Validation Passed & Ready for Launch</span>
                   </div>
+                  <span>Validation Passed & Ready for Launch</span>
+                </div>
                   <div className="flex items-center justify-end gap-4 w-full sm:w-auto">
                     <Button
                       variant="ghost"
@@ -795,21 +795,21 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                     >
                       Discard
                     </Button>
-                    <Button
-                      type="submit"
-                      form="add-luxury-product"
-                      disabled={isSubmitting || isUploading}
-                      className="rounded-full px-12 h-14 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[220px] transition-transform active:scale-95"
-                    >
+                  <Button 
+                    type="submit" 
+                    form="add-luxury-product"
+                    disabled={isSubmitting || isUploading}
+                    className="rounded-full px-12 h-14 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[220px] transition-transform active:scale-95"
+                  >
                       {isSubmitting ? "Launching Piece..." : "Launch Product"}
-                    </Button>
-                  </div>
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </DialogContent>
+    </Dialog>
 
       {/* Add Category Modal */}
       <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>

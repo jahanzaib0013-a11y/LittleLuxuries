@@ -60,9 +60,32 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useState, useEffect, useRef } from "react";
-import { loadContent, saveContent, SiteContent } from "@/lib/content-data";
-import { products } from "@/lib/products";
-import { formatPkr } from "@/lib/format-currency";
+import {
+  loadPublishedContent,
+  loadPublishedContentAsync,
+  mergeSiteContent,
+  publishContentPreview,
+  saveContentAsync,
+  CATEGORY_LAYOUTS,
+  SITE_CONTENT_LIMITS,
+  SiteContent,
+  withinCharLimit,
+  type PromoBanner,
+  type PromoBannerPlacements,
+  type PromoBannerTheme,
+  type PromoBannerVariant,
+  defaultPromoPlacements,
+} from "@/lib/content-data";
+import { PromoBannerStrip } from "@/components/promo-banner-strip";
+import {
+  CONTENT_ICONS,
+  getContentIcon,
+  getPromiseIcon,
+  isStarIcon,
+} from "@/lib/content-icons";
+import { toast } from "sonner";
+import { CategorySection } from "@/components/category-section";
+import { useCategories } from "@/hooks/use-categories";
 import hero from "@/assets/hero-baby.jpg";
 
 export const Route = createFileRoute("/content")({
@@ -85,45 +108,52 @@ export const Route = createFileRoute("/content")({
   ),
 });
 
+function CharCount({ value, max }: { value: string; max: number }) {
+  return (
+    <div className="mt-1 text-xs text-muted-foreground text-right">
+      {value.length}/{max} characters
+    </div>
+  );
+}
+
 function ContentPage() {
-  const [content, setContent] = useState<SiteContent>(loadContent());
+  const [content, setContent] = useState<SiteContent>(loadPublishedContent());
   const [hasChanges, setHasChanges] = useState(false);
   const [saving, setSaving] = useState(false);
   const [heroImage, setHeroImage] = useState<string>(hero);
   const [editingBadge, setEditingBadge] = useState(false);
-  const [iconSelector, setIconSelector] = useState<{
-    promiseIndex: number | null;
-    isOpen: boolean;
-  }>({ promiseIndex: null, isOpen: false });
+  const [iconSelector, setIconSelector] = useState<
+    | { target: "promise"; promiseIndex: number }
+    | { target: "socialProof" }
+    | { target: "promo" }
+    | null
+  >(null);
   const [isClient, setIsClient] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const previewSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const { categories } = useCategories();
+  const heroImageRef = useRef(hero);
+
+  useEffect(() => {
+    heroImageRef.current = heroImage;
+  }, [heroImage]);
 
   // Prevent hydration mismatch
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  const scrollCarousel = (direction: "left" | "right") => {
-    if (carouselRef.current) {
-      const scrollAmount = 140; // Width of one card + gap
-      if (direction === "left") {
-        carouselRef.current.scrollBy({ left: -scrollAmount, behavior: "smooth" });
-      } else {
-        carouselRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
-      }
-    }
-  };
-
   useEffect(() => {
-    const savedContent = loadContent();
-    setContent(savedContent);
+    loadPublishedContentAsync().then((savedContent) => {
+      setContent(savedContent);
+      setHeroImage(savedContent.heroBanner.imageUrl ?? hero);
+    });
   }, []);
 
   // Ensure content state is always fresh
   useEffect(() => {
     const handleStorageChange = () => {
-      const savedContent = loadContent();
+      const savedContent = loadPublishedContent();
       setContent(savedContent);
     };
 
@@ -131,24 +161,40 @@ function ContentPage() {
     return () => window.removeEventListener("storage", handleStorageChange);
   }, []);
 
-  const updateContent = (updates: Partial<SiteContent>) => {
-    console.log("📝 updateContent called with:", updates);
+  const buildPreviewSnapshot = (next: SiteContent): SiteContent => ({
+    ...next,
+    heroBanner: { ...next.heroBanner, imageUrl: heroImageRef.current },
+  });
+
+  const syncPreview = (snapshot: SiteContent, immediate = false) => {
+    const run = () => publishContentPreview(snapshot);
+    if (immediate) {
+      if (previewSyncTimerRef.current) clearTimeout(previewSyncTimerRef.current);
+      run();
+      return;
+    }
+    if (previewSyncTimerRef.current) clearTimeout(previewSyncTimerRef.current);
+    previewSyncTimerRef.current = setTimeout(run, 150);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (previewSyncTimerRef.current) clearTimeout(previewSyncTimerRef.current);
+    };
+  }, []);
+
+  const updateContent = (
+    updates: Partial<SiteContent>,
+    options?: { immediatePreview?: boolean; skipPreview?: boolean },
+  ) => {
     setContent((prev) => {
-      const newContent = { ...prev, ...updates };
-      console.log("🔄 New content state:", newContent);
-      // Save immediately for layout changes
-      if ("layout" in updates) {
-        console.log("💾 Saving layout change:", updates.layout);
-        saveContent(newContent);
-        console.log("✅ Layout saved to localStorage");
+      const newContent = mergeSiteContent(prev, updates);
+      if (!options?.skipPreview) {
+        syncPreview(buildPreviewSnapshot(newContent), options?.immediatePreview ?? false);
       }
       return newContent;
     });
     setHasChanges(true);
-    // Reset hasChanges immediately for layout since we saved
-    if ("layout" in updates) {
-      setHasChanges(false);
-    }
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -156,7 +202,16 @@ function ContentPage() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setHeroImage(reader.result as string);
+        const imageUrl = reader.result as string;
+        setHeroImage(imageUrl);
+        heroImageRef.current = imageUrl;
+        setContent((prev) => {
+          const newContent = mergeSiteContent(prev, {
+            heroBanner: { ...prev.heroBanner, imageUrl },
+          });
+          syncPreview(newContent, true);
+          return newContent;
+        });
         setHasChanges(true);
       };
       reader.readAsDataURL(file);
@@ -167,78 +222,108 @@ function ContentPage() {
     fileInputRef.current?.click();
   };
 
-  const availableIcons = [
-    { name: "Leaf", icon: Leaf },
-    { name: "Award", icon: Award },
-    { name: "Heart", icon: Heart },
-    { name: "Shield", icon: Shield },
-    { name: "Sparkles", icon: Sparkles },
-    { name: "Gem", icon: Gem },
-    { name: "Cloud", icon: Cloud },
-    { name: "Sun", icon: Sun },
-    { name: "Moon", icon: Moon },
-    { name: "Flower", icon: Flower },
-    { name: "Trees", icon: Trees },
-    { name: "Droplet", icon: Droplet },
-    { name: "Wind", icon: Wind },
-    { name: "Flame", icon: Flame },
-    { name: "Zap", icon: Zap },
-    { name: "Package", icon: Package },
-    { name: "Truck", icon: Truck },
-    { name: "RefreshCw", icon: RefreshCw },
-    { name: "Clock", icon: Clock },
-    { name: "Calendar", icon: Calendar },
-    { name: "MapPin", icon: MapPin },
-    { name: "Phone", icon: Phone },
-    { name: "Mail", icon: Mail },
-    { name: "Globe", icon: Globe },
-    { name: "Users", icon: Users },
-    { name: "Building", icon: Building },
-    { name: "Home", icon: Home },
-    { name: "ShoppingBag", icon: ShoppingBag },
-    { name: "CreditCard", icon: CreditCard },
-    { name: "Tag", icon: Tag },
-    { name: "Percent", icon: Percent },
-    { name: "Gift", icon: Gift },
-    { name: "Bell", icon: Bell },
-    { name: "AlertCircle", icon: AlertCircle },
-    { name: "CheckCircle", icon: CheckCircle },
-    { name: "Info", icon: Info },
-    { name: "HelpCircle", icon: HelpCircle },
-    { name: "TrendingUp", icon: TrendingUp },
-    { name: "Target", icon: Target },
-  ];
-
   const updatePromiseIcon = (promiseIndex: number, iconName: string) => {
-    const iconMap: { [key: string]: any } = {};
-    availableIcons.forEach(({ name, icon }) => {
-      iconMap[name] = icon;
-    });
-
     const newPromises = [...content.announcementBar.promises];
-    // Store icon name instead of icon component
     newPromises[promiseIndex] = { ...newPromises[promiseIndex], iconName };
     updateContent({ announcementBar: { ...content.announcementBar, promises: newPromises } });
-    setIconSelector({ promiseIndex: null, isOpen: false });
+    setIconSelector(null);
   };
 
-  const getPromiseIcon = (promise: any, index: number) => {
-    if (promise.iconName) {
-      const foundIcon = availableIcons.find(({ name }) => name === promise.iconName);
-      return foundIcon ? foundIcon.icon : [Leaf, Award, Heart][index % 3];
+  const updateSocialProofIcon = (iconName: string) => {
+    updateContent(
+      { heroBanner: { ...content.heroBanner, socialProofIconName: iconName } },
+      { immediatePreview: true },
+    );
+    setIconSelector(null);
+  };
+
+  const updatePromoIcon = (iconName: string) => {
+    updateContent(
+      { promoBanner: { ...content.promoBanner, iconName } },
+      { immediatePreview: true },
+    );
+    setIconSelector(null);
+  };
+
+  const promoPlacements = content.promoBanner.placements ?? defaultPromoPlacements;
+
+  const PLACEMENT_OPTIONS: {
+    key: keyof PromoBannerPlacements;
+    label: string;
+    hint: string;
+  }[] = [
+    {
+      key: "top",
+      label: "Page top",
+      hint: "Above the site header and primary hero",
+    },
+    {
+      key: "stickyBottom",
+      label: "Below screen (sticky)",
+      hint: "Fixed to the bottom of the viewport while scrolling",
+    },
+    {
+      key: "aboveBrandPromises",
+      label: "Above brand promises",
+      hint: "Below the logo, above the three columns",
+    },
+    {
+      key: "belowBrandPromises",
+      label: "Below brand promises",
+      hint: "Under the promise columns",
+    },
+  ];
+
+  const updatePromoBanner = (
+    partial: Partial<PromoBanner>,
+    options?: { immediatePreview?: boolean; skipPreview?: boolean },
+  ) => {
+    setContent((prev) => {
+      const newContent = mergeSiteContent(prev, {
+        promoBanner: { ...prev.promoBanner, ...partial },
+      });
+      if (!options?.skipPreview) {
+        syncPreview(buildPreviewSnapshot(newContent), options?.immediatePreview ?? false);
+      }
+      return newContent;
+    });
+    setHasChanges(true);
+  };
+
+  const handleIconSelect = (iconName: string) => {
+    if (!iconSelector) return;
+    if (iconSelector.target === "promise") {
+      updatePromiseIcon(iconSelector.promiseIndex, iconName);
+    } else if (iconSelector.target === "socialProof") {
+      updateSocialProofIcon(iconName);
+    } else if (iconSelector.target === "promo") {
+      updatePromoIcon(iconName);
     }
-    return [Leaf, Award, Heart][index % 3];
   };
 
   const saveAllChanges = async () => {
     setSaving(true);
     try {
-      saveContent(content);
+      const payload: SiteContent = {
+        ...content,
+        heroBanner: { ...content.heroBanner, imageUrl: heroImage },
+      };
+      publishContentPreview(payload);
+      const result = await saveContentAsync(payload);
+      setContent(payload);
       setHasChanges(false);
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (result.success) {
+        if (result.error) {
+          toast.warning(result.error);
+        } else {
+          toast.success("Homepage saved. Promo banner, hero, and all sections are updated.");
+        }
+      } else {
+        toast.error(result.error ?? "Failed to save content.");
+      }
     } catch (error) {
       console.error("Failed to save content:", error);
+      toast.error("Failed to save content.");
     } finally {
       setSaving(false);
     }
@@ -255,7 +340,9 @@ function ContentPage() {
           Homepage Editor
         </h1>
         <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
-          Curate the boutique experience with high-end visuals and targeted announcements.
+          Curate the boutique experience. <strong className="font-medium text-foreground">Storefront</strong>{" "}
+          (/storefront) previews edits live. The public homepage (/) and cloud copy update only when
+          you press Save Changes.
         </p>
       </div>
 
@@ -263,11 +350,11 @@ function ContentPage() {
         <div className="lg:col-span-2 space-y-6">
           {/* Hero banner card */}
           <div className="rounded-2xl bg-card p-7 shadow-(--shadow-card)">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
               <div>
                 <h2 className="font-serif text-2xl text-foreground">Primary Hero Banner</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Visible on mobile and desktop storefronts.
+                  Visible on / after Save Changes. Storefront preview updates live while you edit.
                 </p>
               </div>
               <Button
@@ -286,7 +373,7 @@ function ContentPage() {
                   <div className="text-xs uppercase tracking-[0.2em] text-primary font-semibold">
                     {content.heroBanner.seasonTag}
                   </div>
-                  <div className="mt-5 font-serif text-5xl leading-[1.05] text-foreground md:text-6xl lg:text-7xl whitespace-pre max-w-full h-[3.5em] md:h-[3.2em] lg:h-[3em] overflow-hidden">
+                  <div className="mt-5 font-serif text-4xl leading-[1.05] text-foreground break-words sm:text-5xl md:text-6xl lg:text-7xl whitespace-pre-wrap max-w-full">
                     {content.heroBanner.headline.split("\n").map((line, i) => (
                       <span key={i}>
                         {i === 0 ? line : <em className="text-primary">{line}</em>}
@@ -309,16 +396,30 @@ function ContentPage() {
                       Explore Our Story
                     </button>
                   </div>
-                  <div className="mt-12 flex items-center gap-3">
-                    <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className="size-3.5 fill-gold text-gold" />
-                      ))}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Loved by 12,000+ families worldwide
-                    </p>
-                  </div>
+                  {content.heroBanner.showSocialProof && (() => {
+                    const SocialProofIcon = getContentIcon(content.heroBanner.socialProofIconName);
+                    const starStyle = isStarIcon(content.heroBanner.socialProofIconName);
+                    return (
+                      <div className="mt-12 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setIconSelector({ target: "socialProof" })}
+                          className="flex rounded-lg p-1 -m-1 hover:bg-primary/10 transition-colors cursor-pointer"
+                          title="Click to change icons"
+                        >
+                          {[...Array(5)].map((_, i) => (
+                            <SocialProofIcon
+                              key={i}
+                              className={`size-3.5 ${starStyle ? "fill-gold text-gold" : "text-primary"}`}
+                            />
+                          ))}
+                        </button>
+                        <p className="text-xs text-muted-foreground">
+                          {content.heroBanner.socialProofText}
+                        </p>
+                      </div>
+                    );
+                  })()}
                 </div>
                 <div className="relative">
                   <div className="absolute -inset-6 rounded-[2.5rem] bg-linear-to-br from-lilac/40 via-blush/30 to-gold/20 blur-2xl" />
@@ -353,6 +454,10 @@ function ContentPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setHeroImage(hero);
+                          setContent((prev) => ({
+                            ...prev,
+                            heroBanner: { ...prev.heroBanner, imageUrl: undefined },
+                          }));
                           setHasChanges(true);
                         }}
                         className="absolute top-3 right-3 h-8 w-8 rounded-full bg-card/90 hover:bg-card text-foreground shadow-md flex items-center justify-center z-10 transition-colors"
@@ -370,11 +475,13 @@ function ContentPage() {
                           <input
                             type="text"
                             value={content.heroBanner.badgeTitle}
-                            onChange={(e) =>
+                            maxLength={SITE_CONTENT_LIMITS.badgeTitle}
+                            onChange={(e) => {
+                              if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeTitle)) return;
                               updateContent({
                                 heroBanner: { ...content.heroBanner, badgeTitle: e.target.value },
-                              })
-                            }
+                              });
+                            }}
                             className="text-xs font-semibold uppercase tracking-wider text-primary bg-transparent border-b border-primary/30 outline-none w-36"
                             onKeyDown={(e) => e.key === "Enter" && setEditingBadge(false)}
                             autoFocus
@@ -382,14 +489,16 @@ function ContentPage() {
                           <input
                             type="text"
                             value={content.heroBanner.badgeSubtitle}
-                            onChange={(e) =>
+                            maxLength={SITE_CONTENT_LIMITS.badgeSubtitle}
+                            onChange={(e) => {
+                              if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeSubtitle)) return;
                               updateContent({
                                 heroBanner: {
                                   ...content.heroBanner,
                                   badgeSubtitle: e.target.value,
                                 },
-                              })
-                            }
+                              });
+                            }}
                             className="text-sm text-muted-foreground bg-transparent border-b border-border outline-none w-48"
                             onBlur={() => setEditingBadge(false)}
                             onKeyDown={(e) => e.key === "Enter" && setEditingBadge(false)}
@@ -418,24 +527,39 @@ function ContentPage() {
             <div className="mt-6 space-y-4">
               <div>
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Season Tag (eyebrow)
+                </Label>
+                <Input
+                  value={content.heroBanner.seasonTag}
+                  maxLength={SITE_CONTENT_LIMITS.seasonTag}
+                  onChange={(e) => {
+                    if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.seasonTag)) return;
+                    updateContent({
+                      heroBanner: { ...content.heroBanner, seasonTag: e.target.value },
+                    });
+                  }}
+                  className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                  placeholder="New Collection 2026"
+                />
+                <CharCount value={content.heroBanner.seasonTag} max={SITE_CONTENT_LIMITS.seasonTag} />
+              </div>
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
                   Banner Headline
                 </Label>
                 <Textarea
                   value={content.heroBanner.headline}
                   onChange={(e) => {
-                    if (e.target.value.length <= 36) {
-                      updateContent({
-                        heroBanner: { ...content.heroBanner, headline: e.target.value },
-                      });
-                    }
+                    if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.headline)) return;
+                    updateContent({
+                      heroBanner: { ...content.heroBanner, headline: e.target.value },
+                    });
                   }}
                   className="mt-2 h-12 bg-muted/40 border-0 rounded-xl resize-none"
                   placeholder="Enter headline with newline for second line..."
-                  maxLength={36}
+                  maxLength={SITE_CONTENT_LIMITS.headline}
                 />
-                <div className="mt-1 text-xs text-muted-foreground text-right">
-                  {content.heroBanner.headline.length}/36 characters
-                </div>
+                <CharCount value={content.heroBanner.headline} max={SITE_CONTENT_LIMITS.headline} />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -443,13 +567,16 @@ function ContentPage() {
                 </Label>
                 <Input
                   value={content.heroBanner.description}
-                  onChange={(e) =>
+                  maxLength={SITE_CONTENT_LIMITS.description}
+                  onChange={(e) => {
+                    if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.description)) return;
                     updateContent({
                       heroBanner: { ...content.heroBanner, description: e.target.value },
-                    })
-                  }
+                    });
+                  }}
                   className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                 />
+                <CharCount value={content.heroBanner.description} max={SITE_CONTENT_LIMITS.description} />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -458,13 +585,16 @@ function ContentPage() {
                   </Label>
                   <Input
                     value={content.heroBanner.badgeTitle}
-                    onChange={(e) =>
+                    maxLength={SITE_CONTENT_LIMITS.badgeTitle}
+                    onChange={(e) => {
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeTitle)) return;
                       updateContent({
                         heroBanner: { ...content.heroBanner, badgeTitle: e.target.value },
-                      })
-                    }
+                      });
+                    }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                   />
+                  <CharCount value={content.heroBanner.badgeTitle} max={SITE_CONTENT_LIMITS.badgeTitle} />
                 </div>
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -472,12 +602,18 @@ function ContentPage() {
                   </Label>
                   <Input
                     value={content.heroBanner.badgeSubtitle}
-                    onChange={(e) =>
+                    maxLength={SITE_CONTENT_LIMITS.badgeSubtitle}
+                    onChange={(e) => {
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeSubtitle)) return;
                       updateContent({
                         heroBanner: { ...content.heroBanner, badgeSubtitle: e.target.value },
-                      })
-                    }
+                      });
+                    }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                  />
+                  <CharCount
+                    value={content.heroBanner.badgeSubtitle}
+                    max={SITE_CONTENT_LIMITS.badgeSubtitle}
                   />
                 </div>
               </div>
@@ -488,13 +624,16 @@ function ContentPage() {
                   </Label>
                   <Input
                     value={content.heroBanner.buttonLabel}
-                    onChange={(e) =>
+                    maxLength={SITE_CONTENT_LIMITS.buttonLabel}
+                    onChange={(e) => {
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLabel)) return;
                       updateContent({
                         heroBanner: { ...content.heroBanner, buttonLabel: e.target.value },
-                      })
-                    }
+                      });
+                    }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                   />
+                  <CharCount value={content.heroBanner.buttonLabel} max={SITE_CONTENT_LIMITS.buttonLabel} />
                 </div>
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -502,36 +641,172 @@ function ContentPage() {
                   </Label>
                   <Input
                     value={content.heroBanner.buttonLink}
-                    onChange={(e) =>
+                    maxLength={SITE_CONTENT_LIMITS.buttonLink}
+                    onChange={(e) => {
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLink)) return;
                       updateContent({
                         heroBanner: { ...content.heroBanner, buttonLink: e.target.value },
-                      })
-                    }
+                      });
+                    }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                    placeholder="/shop or https://..."
                   />
+                  <CharCount value={content.heroBanner.buttonLink} max={SITE_CONTENT_LIMITS.buttonLink} />
                 </div>
+              </div>
+              <div className="rounded-xl border border-border/20 p-4 mt-2">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Social proof (stars + line)
+                    </Label>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Show the rating row below the hero buttons on the live site.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updateContent(
+                        {
+                          heroBanner: {
+                            ...content.heroBanner,
+                            showSocialProof: !content.heroBanner.showSocialProof,
+                          },
+                        },
+                        { immediatePreview: true },
+                      )
+                    }
+                    className={`h-6 w-11 shrink-0 rounded-full relative transition-colors ${
+                      content.heroBanner.showSocialProof ? "bg-gold" : "bg-muted-foreground/30"
+                    }`}
+                    aria-label={
+                      content.heroBanner.showSocialProof
+                        ? "Hide social proof"
+                        : "Show social proof"
+                    }
+                  >
+                    <div
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-transform ${
+                        content.heroBanner.showSocialProof ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+                {content.heroBanner.showSocialProof && (
+                  <div className="mt-4 space-y-4">
+                    <div>
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        Social proof icons
+                      </Label>
+                      <p className="mt-1 text-xs text-muted-foreground mb-2">
+                        Shown 5× in a row (default: stars). Click to pick from the icon library.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIconSelector({ target: "socialProof" })}
+                        className="inline-flex items-center gap-3 rounded-xl border border-border/30 bg-muted/30 px-4 py-3 hover:bg-primary/10 transition-colors"
+                      >
+                        <div className="flex">
+                          {(() => {
+                            const Icon = getContentIcon(content.heroBanner.socialProofIconName);
+                            const starStyle = isStarIcon(content.heroBanner.socialProofIconName);
+                            return [...Array(5)].map((_, i) => (
+                              <Icon
+                                key={i}
+                                className={`size-4 ${starStyle ? "fill-gold text-gold" : "text-primary"}`}
+                              />
+                            ));
+                          })()}
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {content.heroBanner.socialProofIconName} — Change icon
+                        </span>
+                      </button>
+                    </div>
+                    <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Social proof text
+                    </Label>
+                    <Input
+                      value={content.heroBanner.socialProofText}
+                      maxLength={SITE_CONTENT_LIMITS.socialProofText}
+                      onChange={(e) => {
+                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.socialProofText))
+                          return;
+                        updateContent({
+                          heroBanner: {
+                            ...content.heroBanner,
+                            socialProofText: e.target.value,
+                          },
+                        });
+                      }}
+                      className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                      placeholder="Loved by 12,000+ families worldwide"
+                    />
+                    <CharCount
+                      value={content.heroBanner.socialProofText}
+                      max={SITE_CONTENT_LIMITS.socialProofText}
+                    />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
 
           {/* Promises Section */}
           <div className="rounded-2xl bg-card p-7 shadow-(--shadow-card)">
-            <div className="flex items-start justify-between gap-4">
-              <h2 className="font-serif text-2xl text-foreground">Brand Promises</h2>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">Live Status:</span>
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl text-foreground">Brand Promises</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Edit titles, descriptions, and icons below. Press Save Changes to update the live
+                  site and preview.
+                </p>
+              </div>
+              <Button
+                onClick={saveAllChanges}
+                disabled={!hasChanges || saving}
+                className="rounded-full shrink-0"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-border/20 bg-muted/20 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Show section on site</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Off hides the section on / after Save Changes. Storefront preview updates live
+                  while you edit.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-muted-foreground">
+                  {content.announcementBar.isActive ? "On" : "Off"}
+                </span>
                 <button
+                  type="button"
                   onClick={() =>
-                    updateContent({
-                      announcementBar: {
-                        ...content.announcementBar,
-                        isActive: !content.announcementBar.isActive,
+                    updateContent(
+                      {
+                        announcementBar: {
+                          ...content.announcementBar,
+                          isActive: !content.announcementBar.isActive,
+                        },
                       },
-                    })
+                      { skipPreview: true },
+                    )
                   }
                   className={`h-6 w-11 rounded-full relative transition-colors ${
                     content.announcementBar.isActive ? "bg-gold" : "bg-muted-foreground/30"
                   }`}
+                  aria-label={
+                    content.announcementBar.isActive
+                      ? "Hide brand promises on site"
+                      : "Show brand promises on site"
+                  }
                 >
                   <div
                     className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-transform ${
@@ -551,7 +826,7 @@ function ContentPage() {
                     return (
                       <div key={index} className="text-center">
                         <button
-                          onClick={() => setIconSelector({ promiseIndex: index, isOpen: true })}
+                          onClick={() => setIconSelector({ target: "promise", promiseIndex: index })}
                           className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4 hover:bg-primary/20 transition-colors cursor-pointer group"
                           title="Click to change icon"
                         >
@@ -576,7 +851,7 @@ function ContentPage() {
                   <div key={index} className="rounded-xl border border-border/20 p-6">
                     <div className="flex items-center gap-3 mb-4">
                       <button
-                        onClick={() => setIconSelector({ promiseIndex: index, isOpen: true })}
+                        onClick={() => setIconSelector({ target: "promise", promiseIndex: index })}
                         className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center hover:bg-primary/20 transition-colors cursor-pointer group"
                         title="Click to change icon"
                       >
@@ -591,7 +866,9 @@ function ContentPage() {
                         </Label>
                         <Input
                           value={promise.title}
+                          maxLength={SITE_CONTENT_LIMITS.promiseTitle}
                           onChange={(e) => {
+                            if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promiseTitle)) return;
                             const newPromises = [...content.announcementBar.promises];
                             newPromises[index] = { ...promise, title: e.target.value };
                             updateContent({
@@ -603,6 +880,7 @@ function ContentPage() {
                           }}
                           className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                         />
+                        <CharCount value={promise.title} max={SITE_CONTENT_LIMITS.promiseTitle} />
                       </div>
                       <div>
                         <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -610,7 +888,10 @@ function ContentPage() {
                         </Label>
                         <Input
                           value={promise.description}
+                          maxLength={SITE_CONTENT_LIMITS.promiseDescription}
                           onChange={(e) => {
+                            if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promiseDescription))
+                              return;
                             const newPromises = [...content.announcementBar.promises];
                             newPromises[index] = { ...promise, description: e.target.value };
                             updateContent({
@@ -622,6 +903,10 @@ function ContentPage() {
                           }}
                           className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                         />
+                        <CharCount
+                          value={promise.description}
+                          max={SITE_CONTENT_LIMITS.promiseDescription}
+                        />
                       </div>
                     </div>
                   </div>
@@ -630,195 +915,509 @@ function ContentPage() {
             </div>
 
             {/* Icon Selector Modal */}
-            {iconSelector.isOpen && (
+            {iconSelector && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                 <div className="bg-card rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-serif text-xl text-foreground">Choose Icon</h3>
+                    <h3 className="font-serif text-xl text-foreground">
+                      {iconSelector.target === "socialProof"
+                        ? "Choose social proof icon"
+                        : iconSelector.target === "promo"
+                          ? "Choose promo banner icon"
+                          : "Choose promise icon"}
+                    </h3>
                     <button
-                      onClick={() => setIconSelector({ promiseIndex: null, isOpen: false })}
-                      className="h-8 w-8 rounded-full bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors"
+                      type="button"
+                      onClick={() => setIconSelector(null)}
+                      className="flex min-h-10 min-w-10 items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors"
                     >
                       ×
                     </button>
                   </div>
-                  <div className="grid grid-cols-6 sm:grid-cols-8 gap-3">
-                    {availableIcons.map(({ name, icon: Icon }) => (
-                      <button
-                        key={name}
-                        onClick={() =>
-                          iconSelector.promiseIndex !== null &&
-                          updatePromiseIcon(iconSelector.promiseIndex, name)
-                        }
-                        className="h-12 w-12 rounded-full bg-muted/40 hover:bg-primary/10 flex items-center justify-center transition-colors group"
-                        title={name}
-                      >
-                        <Icon className="h-6 w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-3">
+                    {CONTENT_ICONS.map(({ name, icon: Icon }) => {
+                      const isSelected =
+                        iconSelector.target === "socialProof"
+                          ? content.heroBanner.socialProofIconName === name
+                          : iconSelector.target === "promo"
+                            ? content.promoBanner.iconName === name
+                            : content.announcementBar.promises[iconSelector.promiseIndex]?.iconName ===
+                              name;
+                      return (
+                        <button
+                          key={name}
+                          type="button"
+                          onClick={() => handleIconSelect(name)}
+                          className={`h-12 w-12 rounded-full flex items-center justify-center transition-colors group ${
+                            isSelected
+                              ? "bg-primary/20 ring-2 ring-primary"
+                              : "bg-muted/40 hover:bg-primary/10"
+                          }`}
+                          title={name}
+                        >
+                          <Icon
+                            className={`h-6 w-6 transition-colors ${
+                              isSelected
+                                ? "text-primary"
+                                : "text-muted-foreground group-hover:text-primary"
+                            }`}
+                          />
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
             )}
           </div>
+          {/* Sale / Festival promo banner */}
+          <div className="rounded-2xl bg-card p-7 shadow-(--shadow-card)">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <h2 className="font-serif text-2xl text-foreground">Sale / Festival Banner</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Promo strip for sales and festivals. Turn on and choose where it appears on / and
+                  /storefront (same content can show in multiple spots).
+                </p>
+              </div>
+              <Button
+                onClick={saveAllChanges}
+                disabled={!hasChanges || saving}
+                className="rounded-full shrink-0"
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </Button>
+            </div>
+
+            <div className="mt-6 flex items-center justify-between gap-4 rounded-xl border border-border/20 bg-muted/20 px-4 py-3">
+              <div>
+                <p className="text-sm font-medium text-foreground">Show banner on site</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Must be on for placements below. Storefront preview updates live; the homepage (/)
+                  and cloud update when you Save Changes.
+                </p>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs text-muted-foreground">
+                  {content.promoBanner.isActive ? "On" : "Off"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    updatePromoBanner(
+                      { isActive: !content.promoBanner.isActive },
+                      { immediatePreview: true },
+                    )
+                  }
+                  className="rounded-full p-3 -m-3"
+                  aria-label={
+                    content.promoBanner.isActive ? "Hide promo banner on site" : "Show promo banner on site"
+                  }
+                >
+                  <span
+                    className={`relative block h-6 w-11 rounded-full transition-colors ${
+                      content.promoBanner.isActive ? "bg-gold" : "bg-muted-foreground/30"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-transform ${
+                        content.promoBanner.isActive ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 space-y-3 rounded-xl border border-border/20 bg-muted/20 px-4 py-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Where to show</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Enable one or more locations. Same banner copy appears in each selected spot.
+                </p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {PLACEMENT_OPTIONS.map(({ key, label, hint }) => (
+                  <label
+                    key={key}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors ${
+                      promoPlacements[key]
+                        ? "border-primary/40 bg-primary/5"
+                        : "border-border/30 bg-card/50"
+                    } ${!content.promoBanner.isActive ? "opacity-60" : ""}`}
+                  >
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={promoPlacements[key]}
+                      disabled={!content.promoBanner.isActive}
+                      onChange={() =>
+                        updatePromoBanner(
+                          {
+                            placements: {
+                              ...promoPlacements,
+                              [key]: !promoPlacements[key],
+                            },
+                          },
+                          { immediatePreview: true },
+                        )
+                      }
+                    />
+                    <span>
+                      <span className="text-sm font-medium text-foreground">{label}</span>
+                      <span className="mt-0.5 block text-xs text-muted-foreground">{hint}</span>
+                    </span>
+                  </label>
+                ))}
+              </div>
+              {content.promoBanner.isActive &&
+                !Object.values(promoPlacements).some(Boolean) && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
+                    Turn on at least one location or the banner will not appear on the storefront.
+                  </p>
+                )}
+            </div>
+
+            <div className="mt-6 space-y-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                In-page preview
+              </p>
+              <div className="overflow-hidden rounded-xl border border-border/40 shadow-(--shadow-card)">
+                <PromoBannerStrip banner={content.promoBanner} preview />
+              </div>
+              {promoPlacements.stickyBottom && (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    Sticky bottom preview
+                  </p>
+                  <div className="overflow-hidden rounded-t-xl border border-border/40 shadow-(--shadow-card)">
+                    <PromoBannerStrip banner={content.promoBanner} preview sticky />
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div className="mt-6 space-y-6">
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Banner style
+                </Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(["sale", "festival", "minimal"] as PromoBannerVariant[]).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      onClick={() => updatePromoBanner({ variant: v }, { immediatePreview: true })}
+                      className={`rounded-full px-4 py-2 text-sm capitalize transition-colors ${
+                        content.promoBanner.variant === v
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/40 text-foreground hover:bg-primary/10"
+                      }`}
+                    >
+                      {v}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Background theme
+                </Label>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(["gold", "primary", "blush", "lilac"] as PromoBannerTheme[]).map((t) => (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => updatePromoBanner({ backgroundTheme: t }, { immediatePreview: true })}
+                      className={`rounded-full px-4 py-2 text-sm capitalize transition-colors ${
+                        content.promoBanner.backgroundTheme === t
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/40 text-foreground hover:bg-primary/10"
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Text alignment
+                </Label>
+                <div className="mt-2 flex gap-2">
+                  {(["center", "left"] as const).map((align) => (
+                    <button
+                      key={align}
+                      type="button"
+                      onClick={() => updatePromoBanner({ textAlign: align }, { immediatePreview: true })}
+                      className={`rounded-full px-4 py-2 text-sm capitalize transition-colors ${
+                        content.promoBanner.textAlign === align
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted/40 text-foreground hover:bg-primary/10"
+                      }`}
+                    >
+                      {align}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Icon</Label>
+                <button
+                  type="button"
+                  onClick={() => setIconSelector({ target: "promo" })}
+                  className="mt-2 inline-flex items-center gap-2 rounded-xl border border-border/30 bg-muted/30 px-4 py-3 hover:bg-primary/10 transition-colors"
+                >
+                  {(() => {
+                    const Icon = getContentIcon(content.promoBanner.iconName);
+                    return <Icon className="h-5 w-5 text-primary" />;
+                  })()}
+                  <span className="text-sm text-muted-foreground">
+                    {content.promoBanner.iconName} — Change icon
+                  </span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Eyebrow
+                  </Label>
+                  <Input
+                    value={content.promoBanner.eyebrow}
+                    maxLength={SITE_CONTENT_LIMITS.promoEyebrow}
+                    onChange={(e) => {
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoEyebrow)) return;
+                      updatePromoBanner({ eyebrow: e.target.value });
+                    }}
+                    className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                  />
+                  <CharCount value={content.promoBanner.eyebrow} max={SITE_CONTENT_LIMITS.promoEyebrow} />
+                </div>
+                <div>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                    Headline
+                  </Label>
+                  <Input
+                    value={content.promoBanner.headline}
+                    maxLength={SITE_CONTENT_LIMITS.promoHeadline}
+                    onChange={(e) => {
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoHeadline)) return;
+                      updatePromoBanner({ headline: e.target.value });
+                    }}
+                    className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                  />
+                  <CharCount value={content.promoBanner.headline} max={SITE_CONTENT_LIMITS.promoHeadline} />
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Description
+                </Label>
+                <Input
+                  value={content.promoBanner.description}
+                  maxLength={SITE_CONTENT_LIMITS.promoDescription}
+                  onChange={(e) => {
+                    if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoDescription)) return;
+                    updatePromoBanner({ description: e.target.value });
+                  }}
+                  className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                />
+                <CharCount
+                  value={content.promoBanner.description}
+                  max={SITE_CONTENT_LIMITS.promoDescription}
+                />
+              </div>
+
+              <div className="rounded-xl border border-border/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Promo code</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Shown as a pill on the banner</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updatePromoBanner(
+                        { showPromoCode: !content.promoBanner.showPromoCode },
+                        { immediatePreview: true },
+                      )
+                    }
+                    className={`h-6 w-11 shrink-0 rounded-full relative transition-colors ${
+                      content.promoBanner.showPromoCode ? "bg-gold" : "bg-muted-foreground/30"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-transform ${
+                        content.promoBanner.showPromoCode ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+                <Input
+                  value={content.promoBanner.promoCode}
+                  maxLength={SITE_CONTENT_LIMITS.promoCode}
+                  onChange={(e) => {
+                    if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoCode)) return;
+                    updatePromoBanner({ promoCode: e.target.value.toUpperCase() });
+                  }}
+                  className="h-12 bg-muted/40 border-0 rounded-xl font-mono uppercase"
+                  placeholder="LUXE10"
+                />
+                <CharCount value={content.promoBanner.promoCode} max={SITE_CONTENT_LIMITS.promoCode} />
+              </div>
+
+              <div className="rounded-xl border border-border/20 p-4 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm font-medium text-foreground">Call-to-action button</p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      updatePromoBanner(
+                        { showButton: !content.promoBanner.showButton },
+                        { immediatePreview: true },
+                      )
+                    }
+                    className={`h-6 w-11 shrink-0 rounded-full relative transition-colors ${
+                      content.promoBanner.showButton ? "bg-gold" : "bg-muted-foreground/30"
+                    }`}
+                  >
+                    <div
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-transform ${
+                        content.promoBanner.showButton ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Button label
+                    </Label>
+                    <Input
+                      value={content.promoBanner.buttonLabel}
+                      maxLength={SITE_CONTENT_LIMITS.buttonLabel}
+                      onChange={(e) => {
+                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLabel)) return;
+                        updatePromoBanner({ buttonLabel: e.target.value });
+                      }}
+                      className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                      Button link
+                    </Label>
+                    <Input
+                      value={content.promoBanner.buttonLink}
+                      maxLength={SITE_CONTENT_LIMITS.buttonLink}
+                      onChange={(e) => {
+                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLink)) return;
+                        updatePromoBanner({ buttonLink: e.target.value });
+                      }}
+                      className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                      placeholder="/shop"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Countdown end (optional)
+                </Label>
+                <p className="mt-1 text-xs text-muted-foreground mb-2">
+                  Leave empty to hide the timer. Shows days/hours remaining when set.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Input
+                    type="datetime-local"
+                    value={
+                      content.promoBanner.endsAt
+                        ? content.promoBanner.endsAt.slice(0, 16)
+                        : ""
+                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      updatePromoBanner(
+                        { endsAt: val ? new Date(val).toISOString() : null },
+                        { immediatePreview: true },
+                      );
+                    }}
+                    className="h-12 bg-muted/40 border-0 rounded-xl max-w-xs"
+                  />
+                  {content.promoBanner.endsAt && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="rounded-full"
+                      onClick={() => updatePromoBanner({ endsAt: null }, { immediatePreview: true })}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         {/* Right rail */}
         <div className="space-y-5">
-          {/* Product Preview Cards */}
+          {/* Category layout preview */}
           <div className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
             <div className="flex items-center gap-2 text-sm mb-4">
-              <Eye className="h-4 w-4 text-primary" /> Product Preview
+              <Eye className="h-4 w-4 text-primary" /> Category layout preview
             </div>
-            <div className="space-y-4">
-              {/* Dynamic Product Layout Display */}
-              {isClient && content.layout === "Editorial Grid" && (
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground text-center">
-                    Editorial Grid Layout
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    {products.slice(0, 4).map((product, index) => (
-                      <div
-                        key={product.id}
-                        className="rounded-lg overflow-hidden border border-border/20"
-                      >
-                        <div className="aspect-square bg-card overflow-hidden">
-                          <img
-                            src={product.image_url || product.image}
-                            alt={product.name}
-                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                          />
-                        </div>
-                        <div className="p-3">
-                          <h4 className="text-sm font-medium text-foreground">{product.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{product.variant}</p>
-                          <p className="text-sm font-medium text-primary mt-2">
-                            {formatPkr(Number(product.price))}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+            <div className="space-y-4 overflow-hidden">
+              {isClient ? (
+                <CategorySection
+                  layout={content.layout}
+                  categories={categories}
+                  compact
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground text-center py-4">Loading preview…</p>
               )}
-
-              {isClient && content.layout === "Minimal Carousel" && (
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground text-center">
-                    Minimal Carousel Layout
-                  </div>
-                  <div className="relative">
-                    <div
-                      className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar"
-                      ref={carouselRef}
-                    >
-                      {products.slice(0, 4).map((product) => (
-                        <div
-                          key={product.id}
-                          className="flex-none w-32 rounded-lg overflow-hidden border border-border/20"
-                        >
-                          <div className="aspect-square bg-card overflow-hidden">
-                            <img
-                              src={product.image_url || product.image}
-                              alt={product.name}
-                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                            />
-                          </div>
-                          <div className="p-2">
-                            <h4 className="text-xs font-medium text-foreground truncate">
-                              {product.name}
-                            </h4>
-                            <p className="text-[10px] text-muted-foreground mt-1 truncate">
-                              {product.variant}
-                            </p>
-                            <p className="text-xs font-medium text-primary mt-1">
-                              {formatPkr(Number(product.price))}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => scrollCarousel("left")}
-                      className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1 h-6 w-6 rounded-full bg-card shadow-md flex items-center justify-center text-xs hover:bg-muted transition-colors"
-                    >
-                      ‹
-                    </button>
-                    <button
-                      onClick={() => scrollCarousel("right")}
-                      className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1 h-6 w-6 rounded-full bg-card shadow-md flex items-center justify-center text-xs hover:bg-muted transition-colors"
-                    >
-                      ›
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {isClient && content.layout === "Full Width Stacks" && (
-                <div className="space-y-3">
-                  <div className="text-xs text-muted-foreground text-center">
-                    Full Width Stacks Layout
-                  </div>
-                  <div className="space-y-3">
-                    {products.slice(0, 2).map((product, index) => (
-                      <div
-                        key={product.id}
-                        className="grid grid-cols-2 gap-3 items-center rounded-lg border border-border/20 p-3"
-                      >
-                        <div className={index % 2 === 0 ? "order-2" : ""}>
-                          <div className="aspect-square bg-card overflow-hidden rounded">
-                            <img
-                              src={product.image_url || product.image}
-                              alt={product.name}
-                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                            />
-                          </div>
-                        </div>
-                        <div className={index % 2 === 0 ? "order-1" : ""}>
-                          <h4 className="text-sm font-medium text-foreground">{product.name}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {product.description}
-                          </p>
-                          <p className="text-sm font-medium text-primary mt-2">
-                            {formatPkr(Number(product.price))}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {/* Layout Preview Note */}
               <div className="text-center py-3 border-t border-border/20">
-                <p className="text-xs text-muted-foreground">Click layouts below to see preview</p>
+                <p className="text-xs text-muted-foreground">
+                  Storefront preview updates live. The homepage (/) updates when you Save Changes.
+                </p>
               </div>
             </div>
           </div>
 
           <div className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
-            <div className="text-sm font-medium text-foreground">Layout Configuration</div>
+            <div className="text-sm font-medium text-foreground">Category layout</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shop by category section on the landing page.
+            </p>
             <div className="mt-4 space-y-2">
               {[
                 {
-                  name: "Editorial Grid",
+                  name: CATEGORY_LAYOUTS[0],
                   icon: LayoutGrid,
-                  description: "Grid-based product layout",
+                  description: "Grid-based category cards",
                 },
                 {
-                  name: "Minimal Carousel",
+                  name: CATEGORY_LAYOUTS[1],
                   icon: GalleryThumbnails,
-                  description: "Sliding product showcase",
+                  description: "Horizontal category carousel",
                 },
                 {
-                  name: "Full Width Stacks",
+                  name: CATEGORY_LAYOUTS[2],
                   icon: Layers,
-                  description: "Full-width product sections",
+                  description: "Full-width category rows",
                 },
               ].map(({ name, icon: Icon, description }) => (
                 <button
                   key={name}
-                  onClick={() => updateContent({ layout: name })}
+                  onClick={() => updateContent({ layout: name }, { immediatePreview: true })}
                   className={`w-full flex items-center gap-3 p-3 rounded-xl transition-colors text-left ${
                     isClient && content.layout === name
                       ? "bg-primary/10 border border-primary/20"

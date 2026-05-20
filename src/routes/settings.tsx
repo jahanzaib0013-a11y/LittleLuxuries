@@ -12,6 +12,7 @@ import { useAdminSettings } from "@/hooks/use-admin-settings";
 import { useShippingZones } from "@/hooks/use-shipping-zones";
 import { useTaxSettings } from "@/hooks/use-tax-settings";
 import { ShippingZone } from "@/lib/shipping-zones";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Store Settings — Little Luxuries Admin" }] }),
@@ -29,13 +30,9 @@ function SettingsPage() {
     updateSetting: updateAdminSetting,
     updateMultipleSettings,
   } = useAdminSettings();
-  const {
-    zones,
-    loading: zonesLoading,
-    updateZone,
-    updateMultipleZones,
-    toggleZoneStatus,
-  } = useShippingZones();
+  const { zones, loading: zonesLoading, updateMultipleZones } = useShippingZones();
+  const [localZones, setLocalZones] = useState<ShippingZone[]>([]);
+  const [zonesDirty, setZonesDirty] = useState(false);
   const {
     settings: taxSettings,
     loading: taxLoading,
@@ -127,23 +124,20 @@ function SettingsPage() {
         { key: "business_hours_end" as const, value: storeInfo.closingTime },
       ];
 
+      let failed = false;
       for (const update of updates) {
-        console.log(`Updating ${update.key}:`, update.value);
         const result = await updateSetting(update.key, update.value);
         if (!result.success) {
-          console.error(`Failed to update ${update.key}:`, result.error);
-        } else {
-          console.log(`Successfully updated ${update.key}`);
+          failed = true;
+          toast.error(result.error || `Failed to save ${update.key}`);
         }
       }
 
-      // Refresh settings to get latest data
       await refresh();
-
-      // Show success feedback (you could add a toast notification here)
-      console.log("Store information saved successfully!");
+      if (!failed) toast.success("Store information saved.");
     } catch (error) {
       console.error("Error saving store information:", error);
+      toast.error("Failed to save store information.");
     } finally {
       setIsSaving(false);
     }
@@ -163,22 +157,20 @@ function SettingsPage() {
         { key: "logo_url" as const, value: logoUrl },
       ];
 
+      let failed = false;
       for (const update of updates) {
-        console.log(`Updating ${update.key}:`, update.value);
         const result = await updateSetting(update.key, update.value);
         if (!result.success) {
-          console.error(`Failed to update ${update.key}:`, result.error);
-        } else {
-          console.log(`Successfully updated ${update.key}`);
+          failed = true;
+          toast.error(result.error || `Failed to save ${update.key}`);
         }
       }
 
-      // Refresh settings to get latest data
       await refresh();
-
-      console.log("Store profile saved successfully!");
+      if (!failed) toast.success("Store profile saved.");
     } catch (error) {
       console.error("Error saving store profile:", error);
+      toast.error("Failed to save store profile.");
     } finally {
       setIsSavingProfile(false);
     }
@@ -190,13 +182,12 @@ function SettingsPage() {
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
-      alert("Please select an image file (PNG, JPG, etc.)");
+      toast.error("Please select an image file (PNG, JPG, etc.).");
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      alert("Image size must be less than 5MB");
+      toast.error("Image size must be less than 5MB.");
       return;
     }
 
@@ -225,7 +216,7 @@ function SettingsPage() {
     } catch (error) {
       console.error("Error uploading logo:", error);
       setIsUploadingLogo(false);
-      alert("Failed to upload logo. Please try again.");
+      toast.error("Failed to upload logo. Please try again.");
     }
   };
 
@@ -233,28 +224,37 @@ function SettingsPage() {
     fileInputRef.current?.click();
   };
 
-  const handleUpdateZone = async (id: string, field: string, value: any) => {
-    const zone = zones.find((z) => z.id === id);
-    if (!zone) return;
-
-    const updates = { [field]: value };
-    const result = await updateZone(id, updates);
-    if (!result.success) {
-      console.error("Error updating zone:", result.error);
+  useEffect(() => {
+    if (!zonesLoading && zones.length > 0) {
+      setLocalZones(zones);
+      setZonesDirty(false);
     }
+  }, [zones, zonesLoading]);
+
+  const handleToggleZoneLocal = (id: string) => {
+    setLocalZones((prev) =>
+      prev.map((z) =>
+        z.id === id
+          ? { ...z, status: z.status === "ACTIVE" ? "INACTIVE" : "ACTIVE" }
+          : z,
+      ),
+    );
+    setZonesDirty(true);
   };
 
   const handleSaveZones = async () => {
     setIsSavingZones(true);
     try {
-      const result = await updateMultipleZones(zones);
+      const result = await updateMultipleZones(localZones);
       if (result.success) {
-        console.log("Shipping zones saved successfully!");
+        toast.success("Shipping zones saved.");
+        setZonesDirty(false);
       } else {
-        console.error("Error saving shipping zones:", result.error);
+        toast.error(result.error || "Failed to save shipping zones.");
       }
     } catch (error) {
       console.error("Error saving shipping zones:", error);
+      toast.error("Failed to save shipping zones.");
     } finally {
       setIsSavingZones(false);
     }
@@ -282,13 +282,14 @@ function SettingsPage() {
     try {
       const result = await updateMultipleTaxSettings(taxSettings);
       if (result.success) {
-        console.log("Tax settings saved successfully!");
+        toast.success("Tax settings saved.");
         setShowTaxSettings(false);
       } else {
-        console.error("Error saving tax settings:", result.error);
+        toast.error(result.error || "Failed to save tax settings.");
       }
     } catch (error) {
       console.error("Error saving tax settings:", error);
+      toast.error("Failed to save tax settings.");
     }
   };
 
@@ -310,13 +311,14 @@ function SettingsPage() {
 
       const result = await updateMultipleSettings(updates);
       if (result.success) {
-        console.log("Admin profile saved successfully!");
+        toast.success("Admin profile saved.");
         setShowEditProfile(false);
       } else {
-        console.error("Error saving admin profile:", result.error);
+        toast.error(result.error || "Failed to save admin profile.");
       }
     } catch (error) {
       console.error("Error saving admin profile:", error);
+      toast.error("Failed to save admin profile.");
     }
   };
 
@@ -516,11 +518,23 @@ function SettingsPage() {
             >
               Tax Settings
             </Button>
-            <Button className="rounded-full" onClick={handleSaveZones} disabled={isSavingZones}>
-              {isSavingZones ? "Saving..." : "Save Zones"}
+            <Button
+              className="rounded-full"
+              onClick={handleSaveZones}
+              disabled={isSavingZones || !zonesDirty}
+            >
+              {isSavingZones ? "Saving..." : zonesDirty ? "Save Zones" : "Saved"}
             </Button>
           </div>
         </div>
+
+        <p className="mt-4 text-sm text-muted-foreground max-w-3xl">
+          Click a zone to toggle Active or Inactive, then press{" "}
+          <span className="font-medium text-foreground">Save Zones</span>. Changes are not written
+          until you save. Pakistan domestic shipping (PKR 250, free from PKR 10,000) still applies
+          on checkout for local orders even when Pakistan is Inactive — Active only marks the zone
+          as enabled for international destinations.
+        </p>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {zonesLoading
@@ -537,15 +551,23 @@ function SettingsPage() {
                 </div>
               ))
             : // Country zone cards
-              zones.map((zone) => (
+              localZones.map((zone) => (
                 <div
                   key={zone.id}
+                  role="button"
+                  tabIndex={0}
                   className={`rounded-2xl bg-card border-2 cursor-pointer transition-all hover:shadow-lg ${
                     zone.status === "ACTIVE"
                       ? "border-primary/20 bg-primary-soft/10"
                       : "border-muted/30 bg-muted/20"
                   }`}
-                  onClick={() => toggleZoneStatus(zone.id!)}
+                  onClick={() => handleToggleZoneLocal(zone.id!)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      handleToggleZoneLocal(zone.id!);
+                    }
+                  }}
                 >
                   <div className="p-5">
                     <div className="flex items-start justify-between mb-4">
@@ -578,6 +600,11 @@ function SettingsPage() {
                     <div className="font-serif text-xl text-foreground">{zone.name}</div>
                     <p className="text-sm text-muted-foreground mt-1">{zone.description}</p>
                     <div className="mt-4 text-sm text-foreground/80">🚚 {zone.delivery_info}</div>
+                    {zone.id === "pakistan" && zone.status === "INACTIVE" && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Domestic PK checkout still uses PKR 250 / free from 10k.
+                      </p>
+                    )}
                   </div>
                 </div>
               ))}

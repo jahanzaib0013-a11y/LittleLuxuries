@@ -129,14 +129,16 @@ function FavoritesPage() {
                         />
                         <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />
                         <button
+                          type="button"
                           onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
                             handleAddToCart(p);
                           }}
-                          className="absolute bottom-3 left-3 right-3 z-10 flex items-center justify-center gap-2 rounded-full bg-white/90 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary opacity-0 transition-all group-hover:opacity-100 backdrop-blur-sm"
+                          className="absolute bottom-3 left-3 right-3 z-10 flex min-h-11 items-center justify-center gap-2 rounded-full bg-white/90 py-2.5 text-[10px] font-black uppercase tracking-widest text-primary opacity-100 shadow-sm backdrop-blur-sm transition-all hover:bg-white sm:opacity-0 sm:group-hover:opacity-100"
                         >
-                          <ShoppingBag className="size-3" /> Add to Cart
+                          <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
+                          Add to Cart
                         </button>
                       </div>
                     </Link>

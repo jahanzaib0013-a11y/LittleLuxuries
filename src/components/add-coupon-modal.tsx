@@ -16,6 +16,14 @@ import { couponService } from "@/lib/coupon-service";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatPkr } from "@/lib/format-currency";
+import { FieldError, inputWithError } from "@/components/field-error";
+import {
+  validateRequired,
+  validatePercentage,
+  validatePositiveNumber,
+  hasFieldErrors,
+  type FieldErrors,
+} from "@/lib/form-validation";
 
 interface AddCouponModalProps {
   open: boolean;
@@ -25,6 +33,7 @@ interface AddCouponModalProps {
 
 export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponModalProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<"code" | "discount_value">>({});
   const [formData, setFormData] = useState({
     code: "",
     type: "percentage" as "percentage" | "fixed",
@@ -35,10 +44,18 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.code || !formData.discount_value) {
-      toast.error("Please fill in all required fields");
+    const errors: FieldErrors<"code" | "discount_value"> = {
+      code: validateRequired(formData.code, "Coupon code"),
+      discount_value:
+        formData.type === "percentage"
+          ? validatePercentage(formData.discount_value)
+          : validatePositiveNumber(formData.discount_value, "Discount amount"),
+    };
+    if (hasFieldErrors(errors)) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     setIsLoading(true);
     try {
@@ -113,11 +130,19 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
                     <Input
                       id="code"
                       placeholder="e.g. LUXE20"
-                      className="pl-10 h-12 rounded-xl bg-white border-border/50 focus:ring-primary/20"
                       value={formData.code}
-                      onChange={(e) => setFormData((prev) => ({ ...prev, code: e.target.value }))}
+                      onChange={(e) => {
+                        setFormData((prev) => ({ ...prev, code: e.target.value }));
+                        setFieldErrors((prev) => ({ ...prev, code: undefined }));
+                      }}
+                      aria-invalid={Boolean(fieldErrors.code)}
+                      className={inputWithError(
+                        Boolean(fieldErrors.code),
+                        "pl-10 h-12 rounded-xl bg-white border-border/50 focus:ring-primary/20",
+                      )}
                     />
                   </div>
+                  <FieldError message={fieldErrors.code} />
                 </div>
 
                 <div className="space-y-2">
@@ -158,12 +183,18 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
                     id="value"
                     type="number"
                     placeholder={formData.type === "percentage" ? "e.g. 20" : "e.g. 50"}
-                    className="h-12 rounded-xl bg-white border-border/50 focus:ring-primary/20"
                     value={formData.discount_value}
-                    onChange={(e) =>
-                      setFormData((prev) => ({ ...prev, discount_value: e.target.value }))
-                    }
+                    onChange={(e) => {
+                      setFormData((prev) => ({ ...prev, discount_value: e.target.value }));
+                      setFieldErrors((prev) => ({ ...prev, discount_value: undefined }));
+                    }}
+                    aria-invalid={Boolean(fieldErrors.discount_value)}
+                    className={inputWithError(
+                      Boolean(fieldErrors.discount_value),
+                      "h-12 rounded-xl bg-white border-border/50 focus:ring-primary/20",
+                    )}
                   />
+                  <FieldError message={fieldErrors.discount_value} />
                 </div>
               </div>
 
