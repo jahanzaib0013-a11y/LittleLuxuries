@@ -29,7 +29,9 @@ import {
   FileText,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAdminProducts, invalidateProductQueries } from "@/lib/product-queries";
 import { productService } from "@/lib/supabase-service";
+import { useQueryClient } from "@tanstack/react-query";
 import { AddProductModal } from "@/components/add-product-modal";
 import { DeleteConfirmationModal } from "@/components/delete-confirmation-modal";
 import { ViewProductModal } from "@/components/view-product-modal";
@@ -66,11 +68,11 @@ function ProductsPage() {
 }
 
 function ProductsContent({ search }: { search: string }) {
-  const [products, setProducts] = useState<Database["public"]["Tables"]["products"]["Row"][]>([]);
+  const queryClient = useQueryClient();
+  const { data: products = [], isLoading: loading, refetch: refetchProducts } = useAdminProducts();
   const [filteredProducts, setFilteredProducts] = useState<
     Database["public"]["Tables"]["products"]["Row"][]
   >([]);
-  const [loading, setLoading] = useState(true);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
@@ -139,37 +141,25 @@ function ProductsContent({ search }: { search: string }) {
     setFilteredProducts(filtered);
   }, [products, categoryFilter, genderFilter, statusFilter, search]);
 
-  const loadProducts = React.useCallback(async () => {
-    setLoading(true);
-    try {
-      const fetched = await productService.getProducts("all");
-      setProducts(fetched);
-    } catch (error) {
-      console.error("Failed to load products:", error);
-      toast.error("Failed to load boutique inventory");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadProducts();
-  }, [loadProducts]);
+  const refreshProducts = React.useCallback(async () => {
+    await invalidateProductQueries(queryClient);
+    await refetchProducts();
+  }, [queryClient, refetchProducts]);
 
   useEffect(() => {
     applyFilters();
   }, [applyFilters]);
 
   const handleProductUpdated = React.useCallback(() => {
-    loadProducts();
+    void refreshProducts();
     setIsEditModalOpen(false);
     setSelectedProduct(null);
-  }, [loadProducts]);
+  }, [refreshProducts]);
 
   const handleProductAdded = React.useCallback(() => {
-    loadProducts();
+    void refreshProducts();
     setIsAddModalOpen(false);
-  }, [loadProducts]);
+  }, [refreshProducts]);
 
   const handleViewProduct = (p: Database["public"]["Tables"]["products"]["Row"]) => {
     setSelectedProduct(p);
@@ -207,7 +197,7 @@ function ProductsContent({ search }: { search: string }) {
     try {
       await productService.updateProduct(product.id, { status: "draft" });
       toast.success(`"${product.name}" has been unpublished and moved to drafts.`);
-      loadProducts();
+      refreshProducts();
     } catch (error) {
       toast.error("Failed to unpublish product.");
     }
@@ -221,7 +211,7 @@ function ProductsContent({ search }: { search: string }) {
       );
       toast.success(`${selectedItems.length} products published.`);
       setSelectedItems([]);
-      loadProducts();
+      refreshProducts();
     } catch (e) {
       toast.error("Failed to publish products");
     }
@@ -235,7 +225,7 @@ function ProductsContent({ search }: { search: string }) {
       );
       toast.success(`${selectedItems.length} products unpublished.`);
       setSelectedItems([]);
-      loadProducts();
+      refreshProducts();
     } catch (e) {
       toast.error("Failed to unpublish products");
     }
@@ -249,7 +239,7 @@ function ProductsContent({ search }: { search: string }) {
       toast.success(`"${selectedProduct.name}" has been removed from your boutique.`);
       setIsDeleteModalOpen(false);
       setSelectedProduct(null);
-      loadProducts();
+      refreshProducts();
     } catch (error) {
       toast.error("Failed to delete product.");
     } finally {
@@ -508,8 +498,8 @@ function ProductsContent({ search }: { search: string }) {
 
       {/* Table */}
       <div className="rounded-2xl bg-card shadow-(--shadow-card) overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border bg-muted/30">
                 <th className="px-6 py-4 text-left w-10">
@@ -819,7 +809,7 @@ function ProductsContent({ search }: { search: string }) {
           open={isPublishModalOpen}
           onOpenChange={setIsPublishModalOpen}
           product={selectedProduct}
-          onPublished={loadProducts}
+          onPublished={refreshProducts}
           onShowSocialPost={(p) => {
             setSelectedProduct(p);
             setIsSocialModalOpen(true);

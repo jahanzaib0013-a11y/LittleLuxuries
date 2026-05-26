@@ -104,7 +104,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                   </div>
                 </div>
 
-                <div className="grid grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-4">
                   {gallery.map((img, i) => (
                     <button
                       key={i}
@@ -150,9 +150,9 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
 
             {/* Right Column: Administrative Workspace */}
             <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
-              <div className="p-6 pb-4 lg:p-10 lg:pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
+              <div className="p-6 pb-4 lg:p-10 lg:pb-6 border-b border-border/30 flex flex-wrap items-start justify-between gap-3 bg-white sticky top-0 z-10">
                 <div className="space-y-1">
-                  <h1 className="font-serif text-4xl text-primary tracking-tight">
+                  <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-primary tracking-tight break-words">
                     {product.name}
                   </h1>
                   <div className="flex items-center gap-3">
@@ -177,7 +177,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
 
               <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-10 custom-scrollbar">
                 {/* Navigation Tabs */}
-                <div className="flex gap-10 border-b border-border/30">
+                <div className="flex flex-wrap gap-4 sm:gap-6 lg:gap-10 border-b border-border/30">
                   {(
                     [
                       { id: "details", label: "Overview", icon: FileText },
@@ -217,7 +217,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-8">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                         <div className="space-y-4">
                           <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
                             Inventory Allocation
@@ -339,7 +339,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                           onEdit();
                           onOpenChange(false);
                         }}
-                        className="rounded-full px-10 h-12 font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 min-w-[180px]"
+                        className="rounded-full px-10 h-12 font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 w-full sm:w-auto sm:min-w-[180px]"
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Refine Details

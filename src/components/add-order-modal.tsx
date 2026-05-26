@@ -288,7 +288,7 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
                 </div>
 
                 {currentProduct && (
-                  <div className="grid grid-cols-3 gap-3 animate-in fade-in-50 duration-200">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 animate-in fade-in-50 duration-200">
                     <div className="space-y-1.5 col-span-2">
                       <Label
                         htmlFor="size-select"
@@ -692,7 +692,7 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="rounded-full px-10 h-12 text-xs font-bold bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 min-w-[160px] transition-all active:scale-95"
+                      className="rounded-full px-10 h-12 text-xs font-bold bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 w-full sm:w-auto sm:min-w-[160px] transition-all active:scale-95"
                     >
                       {isSubmitting ? "Placing Order..." : "Create Order"}
                     </Button>

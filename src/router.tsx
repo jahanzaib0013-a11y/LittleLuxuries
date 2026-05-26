@@ -3,7 +3,8 @@ import { routeTree } from "./routeTree.gen";
 import { CartProvider } from "@/context/CartContext";
 import { FavoritesProvider } from "@/context/FavoritesContext";
 import { StoreSettingsProvider } from "@/context/StoreSettingsContext";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "@/lib/query-client";
 
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
@@ -57,8 +58,6 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
     </div>
   );
 }
-
-const queryClient = new QueryClient();
 
 export const getRouter = () => {
   const router = createRouter({

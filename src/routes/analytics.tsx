@@ -356,15 +356,15 @@ function AnalyticsPage() {
             Monitoring your boutique's growth and customer engagement.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           {period === "Custom Range" && (
             <DatePickerWithRange
               date={dateRange}
               onApply={setDateRange}
-              className="animate-in fade-in slide-in-from-right-2 duration-300"
+              className="animate-in fade-in slide-in-from-right-2 duration-300 w-full sm:w-auto"
             />
           )}
-          <div className="inline-flex bg-card rounded-full p-1 shadow-(--shadow-card)">
+          <div className="inline-flex flex-wrap bg-card rounded-full p-1 shadow-(--shadow-card) max-w-full overflow-x-auto">
             {periods.map((p) => (
               <button
                 key={p}
@@ -471,7 +471,7 @@ function AnalyticsPage() {
           <h2 className="font-serif text-xl text-foreground">Customer Acquisition</h2>
           <div className="mt-6 flex flex-wrap items-center gap-6 sm:gap-8">
             <DonutChart segments={acquisitionData || []} total="1.2k" />
-            <div className="flex-1 min-w-[180px] space-y-3">
+            <div className="flex-1 min-w-0 sm:min-w-[180px] space-y-3">
               {acquisitionData?.map((a: { source: string; pct: number; color: string }) => (
                 <div key={a.source} className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2">
@@ -622,9 +622,12 @@ function RevenueChart({ data }: { data: { current: number; month: string; previo
           vectorEffect="non-scaling-stroke"
         />
       </svg>
-      <div className="grid grid-cols-7 mt-3 text-xs text-muted-foreground">
+      <div
+        className="grid mt-3 text-[10px] sm:text-xs text-muted-foreground gap-1"
+        style={{ gridTemplateColumns: `repeat(${Math.min(data.length, 7)}, minmax(0, 1fr))` }}
+      >
         {data.map((r) => (
-          <span key={r.month} className="text-center">
+          <span key={r.month} className="text-center truncate px-0.5">
             {r.month}
           </span>
         ))}

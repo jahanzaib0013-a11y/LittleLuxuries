@@ -36,6 +36,7 @@ import {
   generateCareInstructions,
 } from "@/lib/luxury-engine";
 import { productService } from "@/lib/supabase-service";
+import { useInvalidateProducts } from "@/lib/product-queries";
 import { imageService } from "@/lib/image-service";
 import { type Database } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -67,7 +68,8 @@ interface ProductFormData {
 
 const sizeOptions = ["Newborn", "0–3M", "3–6M", "6–12M", "12–18M", "18–24M", "One Size"];
 
-export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProductModalProps) {
+export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess }: AddProductModalProps) {
+  const invalidateProducts = useInvalidateProducts();
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     price: "",
@@ -278,8 +280,10 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
       const result = await productService.createProduct(productData);
       
       if (result) {
+        await invalidateProducts();
         toast.success("Product saved as draft. Publish it when you're ready.");
         onOpenChange(false);
+        onSuccess?.(result);
         onProductAdded?.();
         
         setFormData({
@@ -393,7 +397,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                   {secondaryPreviews.map((preview, idx) => (
                       <div
                         key={idx}
@@ -468,7 +472,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
               <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 lg:pt-4 pt-2 space-y-8 lg:space-y-12 custom-scrollbar">
               <form id="add-luxury-product" onSubmit={handleSubmit} className="space-y-12">
                 {/* 1. Core Identity */}
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
                       <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                         Product Title
@@ -496,7 +500,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
                       <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                         Gender / Classification
@@ -540,7 +544,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                     stock".
                   </p>
 
-                  <div className="grid grid-cols-2 gap-8">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                     <div className="space-y-3">
                       <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                         Category
@@ -799,7 +803,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded }: AddProdu
                     type="submit" 
                     form="add-luxury-product"
                     disabled={isSubmitting || isUploading}
-                    className="rounded-full px-12 h-14 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[220px] transition-transform active:scale-95"
+                    className="rounded-full px-8 sm:px-12 h-14 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 w-full sm:w-auto sm:min-w-[220px] transition-transform active:scale-95"
                   >
                       {isSubmitting ? "Launching Piece..." : "Launch Product"}
                   </Button>

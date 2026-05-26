@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { productService } from "@/lib/supabase-service";
+import { useInvalidateProducts } from "@/lib/product-queries";
 /* Social amplification — re-enable with UI block below
 import { Switch } from "@/components/ui/switch";
 import { Share2, Smartphone } from "lucide-react";
@@ -50,6 +51,7 @@ export function PublishProductModal({
   onPublished,
   onShowSocialPost,
 }: PublishProductModalProps) {
+  const invalidateProducts = useInvalidateProducts();
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishType, setPublishType] = useState<"now" | "schedule">("now");
   const [publishDate, setPublishDate] = useState("");
@@ -90,6 +92,7 @@ export function PublishProductModal({
       }
       */
 
+      await invalidateProducts();
       onPublished?.();
       onOpenChange(false);
     } catch (error) {

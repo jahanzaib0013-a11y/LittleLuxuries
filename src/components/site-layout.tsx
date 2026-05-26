@@ -103,7 +103,7 @@ export function Header() {
         <div className="flex items-center gap-1.5 shrink-0">
           <Link
             to="/favorites"
-            className="hidden relative rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex"
+            className="relative flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex"
             aria-label="Wishlist"
           >
             <Heart className="size-4" />
@@ -161,7 +161,7 @@ export function Footer({ className }: { className?: string }) {
 
   return (
     <footer className={cn("mt-24 border-t border-border/60 bg-secondary/40", className)}>
-      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-4">
+      <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 py-12 sm:py-16 md:grid-cols-2 lg:grid-cols-4">
         <div>
           <img src={logo} alt={storeName} width={80} height={80} className="mb-3" />
           <p className="font-serif text-xl italic text-primary">{storeName}</p>
@@ -220,7 +220,7 @@ export function Footer({ className }: { className?: string }) {
                   <button
                     type="submit"
                     disabled={status === "loading"}
-                    className="min-w-[70px] flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
+                    className="w-full sm:w-auto sm:min-w-[70px] flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
                   >
                     {status === "loading" ? <Loader2 className="size-4 animate-spin" /> : "Join"}
                   </button>

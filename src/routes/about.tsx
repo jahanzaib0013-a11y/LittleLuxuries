@@ -24,9 +24,9 @@ function About() {
   return (
     <Layout>
       <section className="bg-secondary/30 py-20">
-        <div className="mx-auto max-w-3xl px-6 text-center">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
           <span className="label-eyebrow">Our Story</span>
-          <h1 className="mt-3 font-serif text-5xl text-foreground md:text-6xl">
+          <h1 className="mt-3 font-serif text-4xl sm:text-5xl text-foreground md:text-6xl">
             A gentle inheritance
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-muted-foreground">
@@ -36,7 +36,7 @@ function About() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-20">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="aspect-4/5 overflow-hidden rounded-3xl shadow-(--shadow-soft)">
             <img src={hero} alt="Baby" className="h-full w-full object-cover" />
@@ -53,7 +53,7 @@ function About() {
               artisan partners across Portugal and Italy. We use only certified organic cottons,
               French linen, and pure merino wool — never plastics, never shortcuts.
             </p>
-            <div className="mt-8 grid grid-cols-3 gap-6 border-t border-border pt-8">
+            <div className="mt-8 grid grid-cols-3 gap-3 sm:gap-6 border-t border-border pt-8">
               <Stat n="12k+" l="Families" />
               <Stat n="100%" l="Organic" />
               <Stat n="0" l="Plastic" />
@@ -63,7 +63,7 @@ function About() {
       </section>
 
       <section className="bg-secondary/40 py-24">
-        <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
           <div className="mb-12 text-center">
             <span className="label-eyebrow">Our Values</span>
             <h2 className="mt-3 font-serif text-4xl md:text-5xl">What we believe in</h2>
@@ -88,7 +88,7 @@ function About() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-3xl px-6 py-24 text-center">
+      <section className="mx-auto max-w-3xl px-4 sm:px-6 py-16 sm:py-24 text-center">
         <img src={logo} alt="" width={100} height={100} className="mx-auto" />
         <blockquote className="mt-6 font-serif text-2xl italic leading-relaxed text-foreground md:text-3xl">
           "We are not making clothes. We are wrapping a beginning."

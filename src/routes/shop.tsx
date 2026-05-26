@@ -1,15 +1,15 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
 import { Heart, Search, ArrowDownUp, X, SlidersHorizontal, ShoppingBag } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
-import { products, collections, type Product } from "@/lib/products";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { collections, type Product } from "@/lib/products";
 import { useFavorites } from "@/hooks/use-favorites";
-import { productService } from "@/lib/supabase-service";
+import { usePublishedProducts } from "@/lib/product-queries";
 import { formatPkr } from "@/lib/format-currency";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { type Database } from "@/lib/supabase";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/shop")({
   head: () => ({
@@ -30,6 +30,47 @@ export const Route = createFileRoute("/shop")({
   component: Shop,
 });
 
+function ProductCardImage({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+}) {
+  const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    setLoaded(false);
+  }, [src]);
+
+  useEffect(() => {
+    const img = imgRef.current;
+    if (img?.complete && img.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, [src]);
+
+  return (
+    <>
+      {!loaded && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
+      <img
+        ref={imgRef}
+        src={src}
+        alt={alt}
+        loading="lazy"
+        width={800}
+        height={1067}
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(true)}
+        className={cn(className, "transition-opacity duration-300", loaded ? "opacity-100" : "opacity-0")}
+      />
+    </>
+  );
+}
+
 function Shop() {
   const { category: initialCategory } = Route.useSearch();
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || "All");
@@ -37,15 +78,22 @@ function Shop() {
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc" | "newest">(
     "featured",
   );
-  const [shopProducts, setShopProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [badges, setBadges] = useState<string[]>([]);
+  const { data: shopProducts = [], isLoading: loading } = usePublishedProducts();
+  const badges = useMemo(
+    () =>
+      Array.from(new Set(shopProducts.map((p) => p.badge).filter(Boolean) as string[])),
+    [shopProducts],
+  );
 
   const [priceRange, setPriceRange] = useState<{ min: number | null; max: number | null }>({
     min: null,
     max: null,
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [mobileFilterType, setMobileFilterType] = useState<"category" | "status" | "budget">(
+    "category",
+  );
   const { addToCart, openCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
 
@@ -60,36 +108,6 @@ function Shop() {
     setSelectedBadges((prev) =>
       prev.includes(badge) ? prev.filter((b) => b !== badge) : [...prev, badge],
     );
-  };
-
-  useEffect(() => {
-    loadProducts();
-  }, []);
-
-  const loadProducts = async () => {
-    try {
-      const fetchedProducts = await productService.getProducts("published");
-      const productsWithImages = fetchedProducts.map((product: Product) => ({
-        ...product,
-        image: product.image_url || products[0]?.image,
-        image_url: product.image_url,
-      }));
-      const finalProducts = productsWithImages.length > 0 ? productsWithImages : products;
-      
-      const uniqueBadges = Array.from(
-        new Set(finalProducts.map((p) => p.badge).filter(Boolean) as string[]),
-      );
-      setBadges(uniqueBadges);
-      setShopProducts(finalProducts);
-    } catch {
-      setShopProducts(products);
-      const uniqueBadges = Array.from(
-        new Set(products.map((p) => p.badge).filter(Boolean) as string[]),
-      );
-      setBadges(uniqueBadges);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const priceMin = useMemo(() => Math.min(...shopProducts.map((p) => p.price), 0), [shopProducts]);
@@ -153,11 +171,23 @@ function Shop() {
     priceRange.max !== null ||
     searchQuery !== "";
 
+  const activeFilterCount =
+    (selectedCategory !== "All" ? 1 : 0) +
+    selectedBadges.length +
+    (priceRange.min !== null || priceRange.max !== null ? 1 : 0);
+
+  const clearAllFilters = () => {
+    setSelectedCategory("All");
+    setSelectedBadges([]);
+    setPriceRange({ min: null, max: null });
+    setSearchQuery("");
+  };
+
   return (
     <Layout>
       {/* HERO BANNER */}
       <section className="relative overflow-hidden" style={{ background: "var(--gradient-hero)" }}>
-        <div className="mx-auto max-w-7xl px-6 py-16 sm:py-20 lg:py-24">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 py-16 sm:py-20 lg:py-24">
           <div className="mx-auto max-w-2xl text-center">
             <p className="label-eyebrow mb-4">The Collection</p>
             <h1 className="font-serif text-4xl leading-[1.08] tracking-tight text-foreground break-words sm:text-5xl md:text-6xl lg:text-[3.5rem]">
@@ -169,12 +199,13 @@ function Shop() {
           className="absolute bottom-0 left-0 right-0 h-16 pointer-events-none"
           style={{ background: "linear-gradient(to bottom, transparent, oklch(0.985 0.004 300))" }}
         />
-        <div className="absolute -right-20 top-1/2 -translate-y-1/2 h-[400px] w-[400px] rounded-full bg-primary/8 blur-[120px]" />
+        <div className="pointer-events-none absolute -right-20 top-1/2 -translate-y-1/2 h-[min(400px,80vw)] w-[min(400px,80vw)] rounded-full bg-primary/8 blur-[120px]" />
       </section>
 
       {/* ── PREMIUM FILTER TOOLBAR ────────────────────────────────── */}
-      <div id="product-grid" className="sticky top-16 sm:top-20 z-30">
+      <div id="product-grid" className="z-30 min-w-0 overflow-x-clip md:sticky md:top-20">
         <div
+          className="min-w-0"
           style={{
             background: "oklch(1 0 0 / 0.96)",
             backdropFilter: "blur(28px) saturate(180%)",
@@ -190,7 +221,7 @@ function Shop() {
                 "linear-gradient(90deg, transparent 0%, oklch(0.78 0.13 85) 30%, oklch(0.45 0.13 295) 65%, transparent 100%)",
             }}
           />
-          <div className="mx-auto max-w-7xl px-6">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
             {/* TOP ROW */}
             <div className="flex flex-col gap-3 py-3.5 border-b border-border/25 md:flex-row md:items-center md:gap-5">
               <div className="relative w-full md:flex-1 md:max-w-lg group">
@@ -232,11 +263,27 @@ function Shop() {
                 )}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 md:ml-auto md:justify-end">
-                <div className="flex items-center gap-2 min-w-0">
-                  <SlidersHorizontal
-                    className="size-3.5"
+                <div className="flex min-w-0 items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen((open) => !open)}
+                    aria-expanded={filtersOpen}
+                    aria-label={filtersOpen ? "Hide filters" : "Show filters"}
+                    className={cn(
+                      "relative inline-flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-2xl transition-all touch-manipulation",
+                      filtersOpen || activeFilterCount > 0
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-primary",
+                    )}
                     style={{ color: "oklch(0.68 0.020 290)" }}
-                  />
+                  >
+                    <SlidersHorizontal className="size-3.5" />
+                    {activeFilterCount > 0 && (
+                      <span className="absolute -right-0.5 -top-0.5 flex size-3.5 items-center justify-center rounded-full bg-primary text-[8px] font-bold text-primary-foreground">
+                        {activeFilterCount}
+                      </span>
+                    )}
+                  </button>
                   <select
                     value={sortBy}
                     onChange={(e) =>
@@ -244,7 +291,7 @@ function Shop() {
                         e.target.value as "featured" | "price-asc" | "price-desc" | "newest",
                       )
                     }
-                    className="py-2.5 px-4 text-[11px] font-bold uppercase tracking-widest outline-none cursor-pointer rounded-2xl transition-all"
+                    className="cursor-pointer rounded-2xl py-2.5 px-4 text-[11px] font-bold uppercase tracking-widest outline-none transition-all"
                     style={{
                       background: "oklch(0.975 0.005 300)",
                       border: "1px solid oklch(0.91 0.012 300)",
@@ -274,172 +321,214 @@ function Shop() {
               </div>
             </div>
 
-            {/* FILTER ROW — 3 labeled sections */}
-            <div className="flex items-center gap-0 py-2.5 flex-wrap">
-              {/* CATEGORY */}
-              <div
-                className="flex items-center gap-2.5 pr-5 mr-5"
-                style={{ borderRight: "1px solid oklch(0.91 0.010 300)" }}
-              >
-                <span
-                  className="font-serif italic text-[12px] shrink-0"
-                  style={{ color: "oklch(0.60 0.03 290)" }}
-                >
-                  Category
-                </span>
-                {(["All", ...collections.map((c) => c.name)] as string[]).map((cat) => {
-                  const on = cat === "All" ? selectedCategory === "All" : selectedCategory === cat;
-                  return (
-            <button
-              key={cat}
-                      onClick={() => setSelectedCategory(on && cat !== "All" ? "All" : cat)}
-                      className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200"
-                      style={
-                        on
-                          ? {
-                              background: "oklch(0.18 0.025 285)",
-                              color: "#fff",
-                              border: "1px solid oklch(0.18 0.025 285)",
-                              boxShadow:
-                                "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
-                              letterSpacing: "0.06em",
-                            }
-                          : {
-                              background: "transparent",
-                              color: "oklch(0.52 0.025 290)",
-                              border: "1px solid oklch(0.89 0.012 300)",
-                              letterSpacing: "0.06em",
-                            }
-                      }
-            >
-              {cat}
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* STATUS */}
-              <div
-                className="flex items-center gap-2.5 pr-5 mr-5"
-                style={{ borderRight: "1px solid oklch(0.91 0.010 300)" }}
-              >
-                <span
-                  className="font-serif italic text-[12px] shrink-0"
-                  style={{ color: "oklch(0.60 0.03 290)" }}
-                >
-                  Status
-                </span>
-                {badges.map((badge) => {
-                  const on = selectedBadges.includes(badge);
-                  const ct = shopProducts.filter((p) => p.badge === badge).length;
-                  return (
-                    <button
-                      key={badge}
-                      onClick={() => toggleBadge(badge)}
-                      className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200"
-                      style={
-                        on
-                          ? {
-                              background: "oklch(0.18 0.025 285)",
-                              color: "#fff",
-                              border: "1px solid oklch(0.18 0.025 285)",
-                              boxShadow:
-                                "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
-                              letterSpacing: "0.06em",
-                            }
-                          : {
-                              background: "transparent",
-                              color: "oklch(0.52 0.025 290)",
-                              border: "1px solid oklch(0.89 0.012 300)",
-                              letterSpacing: "0.06em",
-                            }
-                      }
-                    >
-                      {badge}
-                      <span
-                        className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full text-[9px] font-black tracking-tight transition-all"
-                        style={{
-                          background: on ? "oklch(1 0 0/0.18)" : "oklch(0.93 0.010 300)",
-                          color: on ? "#fff" : "oklch(0.50 0.025 290)",
-                        }}
+            {/* FILTER ROW — toggled by sliders icon */}
+            {filtersOpen && (
+              <div className="min-w-0 space-y-4 border-t border-border/25 py-3 animate-in fade-in slide-in-from-top-2 duration-200 xl:flex xl:flex-wrap xl:items-start xl:gap-x-6 xl:space-y-0">
+                <div className="md:hidden">
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { id: "category", label: "Category" },
+                        { id: "status", label: "Status" },
+                        { id: "budget", label: "Budget" },
+                      ] as const
+                    ).map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setMobileFilterType(item.id)}
+                        className={cn(
+                          "inline-flex min-h-9 items-center rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200 touch-manipulation",
+                          mobileFilterType === item.id
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-border bg-card text-muted-foreground",
+                        )}
                       >
-                        {ct}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
 
-              {/* BUDGET */}
-              <div className="flex items-center gap-2.5">
-                <span
-                  className="font-serif italic text-[12px] shrink-0"
-                  style={{ color: "oklch(0.60 0.03 290)" }}
+                <div
+                  className={cn(
+                    "min-w-0 border-b border-border/25 pb-4 xl:flex xl:max-w-full xl:flex-1 xl:flex-col xl:gap-2.5 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-6",
+                    mobileFilterType !== "category" && "hidden md:block xl:flex",
+                  )}
                 >
-                  Budget
-                </span>
-                {(
-                  [
-                    { label: "Under 2K", min: null, max: 2000 },
-                    { label: "2K – 5K", min: 2000, max: 5000 },
-                    { label: "5K+", min: 5000, max: null },
-                  ] as { label: string; min: number | null; max: number | null }[]
-                ).map((q) => {
-                  const on = priceRange.min === q.min && priceRange.max === q.max;
-                  return (
-                    <button
-                      key={q.label}
-                      onClick={() =>
-                        setPriceRange(on ? { min: null, max: null } : { min: q.min, max: q.max })
-                      }
-                      className="inline-flex items-center rounded-full px-4 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200"
-                      style={
-                        on
-                          ? {
-                              background:
-                                "linear-gradient(135deg, oklch(0.80 0.14 85) 0%, oklch(0.70 0.12 72) 100%)",
-                              color: "oklch(0.22 0.05 75)",
-                              border: "1px solid oklch(0.68 0.12 74)",
-                              boxShadow:
-                                "0 2px 12px oklch(0.75 0.13 83/0.35), inset 0 1px 0 oklch(1 0 0/0.30)",
-                              letterSpacing: "0.06em",
-                            }
-                          : {
-                              background: "transparent",
-                              color: "oklch(0.52 0.025 290)",
-                              border: "1px solid oklch(0.89 0.012 300)",
-                              letterSpacing: "0.06em",
-                            }
-                      }
-                    >
-                      {q.label}
-                    </button>
-                  );
-                })}
-              </div>
+                  <span
+                    className="mb-2 block font-serif text-[12px] italic xl:mb-0"
+                    style={{ color: "oklch(0.60 0.03 290)" }}
+                  >
+                    Category
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {(["All", ...collections.map((c) => c.name)] as string[]).map((cat) => {
+                      const on =
+                        cat === "All" ? selectedCategory === "All" : selectedCategory === cat;
+                      return (
+                        <button
+                          type="button"
+                          key={cat}
+                          onClick={() => setSelectedCategory(on && cat !== "All" ? "All" : cat)}
+                          className="inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200 touch-manipulation sm:px-4"
+                          style={
+                            on
+                              ? {
+                                  background: "oklch(0.18 0.025 285)",
+                                  color: "#fff",
+                                  border: "1px solid oklch(0.18 0.025 285)",
+                                  boxShadow:
+                                    "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
+                                  letterSpacing: "0.06em",
+                                }
+                              : {
+                                  background: "transparent",
+                                  color: "oklch(0.52 0.025 290)",
+                                  border: "1px solid oklch(0.89 0.012 300)",
+                                  letterSpacing: "0.06em",
+                                }
+                          }
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-              {hasActiveFilters && (
-                <button
-                  onClick={() => {
-                    setSelectedCategory("All");
-                    setSelectedBadges([]);
-                    setPriceRange({ min: null, max: null });
-                    setSearchQuery("");
-                  }}
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-200"
-                  style={{
-                    color: "oklch(0.58 0.025 290)",
-                    border: "1px solid oklch(0.89 0.012 300)",
-                  }}
+                <div
+                  className={cn(
+                    "min-w-0 border-b border-border/25 pb-4 xl:flex xl:flex-col xl:gap-2.5 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-6",
+                    mobileFilterType !== "status" && "hidden md:block xl:flex",
+                  )}
                 >
-                  <X className="size-3" /> Reset all
-                </button>
-              )}
-            </div>
+                  <span
+                    className="mb-2 block font-serif text-[12px] italic xl:mb-0"
+                    style={{ color: "oklch(0.60 0.03 290)" }}
+                  >
+                    Status
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {badges.map((badge) => {
+                      const on = selectedBadges.includes(badge);
+                      const ct = shopProducts.filter((p) => p.badge === badge).length;
+                      return (
+                        <button
+                          type="button"
+                          key={badge}
+                          onClick={() => toggleBadge(badge)}
+                          className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200 touch-manipulation sm:px-4"
+                          style={
+                            on
+                              ? {
+                                  background: "oklch(0.18 0.025 285)",
+                                  color: "#fff",
+                                  border: "1px solid oklch(0.18 0.025 285)",
+                                  boxShadow:
+                                    "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
+                                  letterSpacing: "0.06em",
+                                }
+                              : {
+                                  background: "transparent",
+                                  color: "oklch(0.52 0.025 290)",
+                                  border: "1px solid oklch(0.89 0.012 300)",
+                                  letterSpacing: "0.06em",
+                                }
+                          }
+                        >
+                          {badge}
+                          <span
+                            className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black tracking-tight transition-all"
+                            style={{
+                              background: on ? "oklch(1 0 0/0.18)" : "oklch(0.93 0.010 300)",
+                              color: on ? "#fff" : "oklch(0.50 0.025 290)",
+                            }}
+                          >
+                            {ct}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div
+                  className={cn(
+                    "min-w-0 xl:flex xl:flex-col xl:gap-2.5",
+                    mobileFilterType !== "budget" && "hidden md:block xl:flex",
+                  )}
+                >
+                  <span
+                    className="mb-2 block font-serif text-[12px] italic xl:mb-0"
+                    style={{ color: "oklch(0.60 0.03 290)" }}
+                  >
+                    Budget
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {(
+                      [
+                        { label: "Under 2K", min: null, max: 2000 },
+                        { label: "2K – 5K", min: 2000, max: 5000 },
+                        { label: "5K+", min: 5000, max: null },
+                      ] as { label: string; min: number | null; max: number | null }[]
+                    ).map((q) => {
+                      const on = priceRange.min === q.min && priceRange.max === q.max;
+                      return (
+                        <button
+                          type="button"
+                          key={q.label}
+                          onClick={() =>
+                            setPriceRange(
+                              on ? { min: null, max: null } : { min: q.min, max: q.max },
+                            )
+                          }
+                          className="inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200 touch-manipulation sm:px-4"
+                          style={
+                            on
+                              ? {
+                                  background:
+                                    "linear-gradient(135deg, oklch(0.80 0.14 85) 0%, oklch(0.70 0.12 72) 100%)",
+                                  color: "oklch(0.22 0.05 75)",
+                                  border: "1px solid oklch(0.68 0.12 74)",
+                                  boxShadow:
+                                    "0 2px 12px oklch(0.75 0.13 83/0.35), inset 0 1px 0 oklch(1 0 0/0.30)",
+                                  letterSpacing: "0.06em",
+                                }
+                              : {
+                                  background: "transparent",
+                                  color: "oklch(0.52 0.025 290)",
+                                  border: "1px solid oklch(0.89 0.012 300)",
+                                  letterSpacing: "0.06em",
+                                }
+                          }
+                        >
+                          {q.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {activeFilterCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAllFilters}
+                    className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-200 touch-manipulation sm:w-auto xl:ml-auto xl:self-center"
+                    style={{
+                      color: "oklch(0.58 0.025 290)",
+                      border: "1px solid oklch(0.89 0.012 300)",
+                    }}
+                  >
+                    <X className="size-3" /> Reset all
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* ACTIVE CHIPS */}
             {hasActiveFilters && (
-              <div className="flex items-center gap-2 flex-wrap pb-2.5">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 pb-2.5">
                 <span
                   className="text-[9px] font-black uppercase tracking-[0.2em]"
                   style={{ color: "oklch(0.72 0.025 290)" }}
@@ -448,8 +537,9 @@ function Shop() {
                 </span>
                 {selectedCategory !== "All" && (
                   <button
+                    type="button"
                     onClick={() => setSelectedCategory("All")}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-[11px] font-semibold"
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold touch-manipulation"
                     style={{
                       background:
                         "linear-gradient(135deg, oklch(0.94 0.04 300), oklch(0.91 0.05 290))",
@@ -462,9 +552,10 @@ function Shop() {
                 )}
                 {selectedBadges.map((b) => (
                   <button
+                    type="button"
                     key={b}
                     onClick={() => toggleBadge(b)}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-[11px] font-semibold"
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold touch-manipulation"
                     style={{
                       background:
                         "linear-gradient(135deg, oklch(0.94 0.04 300), oklch(0.91 0.05 290))",
@@ -477,8 +568,9 @@ function Shop() {
           ))}
                 {(priceRange.min !== null || priceRange.max !== null) && (
                   <button
+                    type="button"
                     onClick={() => setPriceRange({ min: null, max: null })}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-[11px] font-semibold"
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold touch-manipulation"
                     style={{
                       background:
                         "linear-gradient(135deg, oklch(0.95 0.10 85), oklch(0.92 0.08 80))",
@@ -492,8 +584,9 @@ function Shop() {
                 )}
                 {searchQuery && (
                   <button
+                    type="button"
                     onClick={() => setSearchQuery("")}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-[11px] font-semibold"
+                    className="inline-flex min-h-8 items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold touch-manipulation"
                     style={{
                       background: "oklch(0.95 0.005 300)",
                       border: "1px solid oklch(0.89 0.015 300)",
@@ -510,7 +603,7 @@ function Shop() {
       </div>
 
       {/* PRODUCT GRID */}
-      <section className="mx-auto max-w-7xl px-6 pb-28 pt-8">
+      <section className="mx-auto max-w-7xl px-4 sm:px-6 pb-28 pt-8">
         {/* Section header */}
         <div
           className="flex items-center justify-between mb-8 pb-5"
@@ -626,12 +719,9 @@ function Shop() {
                         </span>
                       </div>
 
-                  <img
-                    src={p.image}
-                    alt={p.name}
-                    loading="lazy"
-                        width={800}
-                        height={1067}
+                      <ProductCardImage
+                        src={p.image}
+                        alt={p.name}
                         className="h-full w-full object-cover grayscale-[0.5]"
                       />
               </div>
@@ -660,12 +750,9 @@ function Shop() {
                         </span>
                       )}
 
-                      <img
+                      <ProductCardImage
                         src={p.image}
                         alt={p.name}
-                        loading="lazy"
-                        width={800}
-                        height={1067}
                         className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                       />
                       <div
@@ -745,7 +832,7 @@ function Shop() {
       </section>
 
       {/* CTA SECTION */}
-      <section className="mx-auto max-w-7xl my-16 px-6">
+      <section className="mx-auto max-w-7xl my-16 px-4 sm:px-6">
         <div
           className="relative overflow-hidden rounded-[40px] px-8 py-20 text-center"
           style={{
