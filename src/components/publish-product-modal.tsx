@@ -32,6 +32,8 @@ import { pushAdminNotification } from "@/lib/admin-notifications-bus";
 */
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { sheetModalClass, sheetModalInnerClass, modalFooterClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 import { type Database } from "@/lib/supabase";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
@@ -105,8 +107,10 @@ export function PublishProductModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 overflow-y-auto md:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] md:rounded-[40px] max-h-[95vh] h-auto md:h-auto flex flex-col">
-        <div className="flex flex-col h-full">
+      <DialogContent className={cn(sheetModalClass, "sm:max-w-2xl")}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} />
+        <div className={cn(sheetModalInnerClass, "flex min-h-0 flex-1 flex-col p-0! sm:p-0!")}>
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Header Section */}
           <div className="p-6 pb-4 md:p-10 md:pb-6 bg-primary-soft/30 relative">
             <div className="flex items-center justify-between mb-6">
@@ -274,6 +278,7 @@ export function PublishProductModal({
               </div>
             </div>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

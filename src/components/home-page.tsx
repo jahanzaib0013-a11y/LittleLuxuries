@@ -110,17 +110,22 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
 
   const primaryCtaClass =
     "group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-medium text-primary-foreground shadow-(--shadow-soft) transition-all hover:shadow-lg hover:-translate-y-0.5";
+  const homepageCategories = categories
+    .filter((category, index, self) =>
+      index === self.findIndex((c) => c.name === category.name)
+    )
+    .slice(0, 5);
 
   const promo = content.promoBanner;
   const stickyPromoActive = useStickyPromoActive(contentSource);
 
   return (
-    <div className={cn(stickyPromoActive && "pb-28 sm:pb-32")}>
+    <div className={cn(stickyPromoActive && "pb-28 sm:pb-32", "min-w-0 overflow-x-clip")}>
       <section className="relative overflow-hidden" style={{ background: "var(--gradient-hero)" }}>
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-20 lg:grid-cols-[1.1fr_1fr] lg:py-28">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 py-16 sm:px-6 sm:py-20 lg:grid-cols-[1.1fr_1fr] lg:py-28">
           <div className="relative z-10">
             <span className="label-eyebrow">{content.heroBanner.seasonTag}</span>
-            <h1 className="mt-5 font-serif text-4xl leading-[1.05] text-foreground break-words sm:text-5xl md:text-6xl lg:text-7xl">
+            <h1 className="mt-5 font-serif text-4xl leading-[1.05] text-foreground break-words sm:text-5xl md:text-6xl lg:text-6xl xl:text-7xl">
               {content.heroBanner.headline.split("\n").map((line, i) => (
                 <span key={i}>
                   {i === 0 ? line : <em className="text-primary">{line}</em>}
@@ -235,13 +240,15 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
 
       <PromoAt banner={promo} placement="belowBrandPromises" />
 
-      <section className="mx-auto max-w-7xl px-6 py-24">
+      <section className="mx-auto min-w-0 max-w-7xl overflow-x-clip px-4 py-16 sm:px-6 sm:py-24">
         <div className="mb-12">
           <span className="label-eyebrow">Curated Collections</span>
-          <h2 className="mt-3 font-serif text-4xl text-foreground md:text-5xl">Shop by category</h2>
+          <h2 className="mt-3 font-serif text-3xl text-foreground break-words sm:text-4xl md:text-5xl">
+            Shop by category
+          </h2>
         </div>
 
-        <CategorySection layout={content.layout} categories={categories} />
+        <CategorySection layout={content.layout} categories={homepageCategories} />
       </section>
 
       {badges.map((badge, index) => {
@@ -255,24 +262,30 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
         return (
           <section
             key={badge.id}
-            className={`py-24 ${index % 2 === 0 ? "bg-secondary/40" : "bg-background"}`}
+            className={cn(
+              "overflow-x-clip py-16 sm:py-24",
+              index % 2 === 0 ? "bg-secondary/40" : "bg-background",
+            )}
           >
-            <div className="mx-auto max-w-7xl px-6">
+            <div className="mx-auto min-w-0 max-w-7xl px-4 sm:px-6">
               <div className="mb-12 text-center">
                 <span className="label-eyebrow">Curated for you</span>
-                <h2 className="mt-3 font-serif text-4xl text-foreground md:text-5xl">
+                <h2 className="mt-3 font-serif text-3xl text-foreground break-words sm:text-4xl md:text-5xl">
                   {badge.name === "New" ? "New Arrivals" : badge.name}
                 </h2>
               </div>
 
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid min-w-0 grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {badgeProducts.map((p) => {
                   const isOutOfStock =
                     p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
                   return (
-                    <div key={p.id} className={cn("group block", isOutOfStock && "opacity-80")}>
+                    <div
+                      key={p.id}
+                      className={cn("group min-w-0 max-w-full", isOutOfStock && "opacity-80")}
+                    >
                       {isOutOfStock ? (
-                        <div className="relative aspect-square overflow-hidden rounded-2xl bg-card cursor-not-allowed">
+                        <div className="relative aspect-square w-full max-w-full overflow-hidden rounded-2xl bg-card cursor-not-allowed">
                           <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
                             <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
                               Sold Out
@@ -284,18 +297,24 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                             loading="lazy"
                             width={1024}
                             height={1024}
-                            className="h-full w-full object-cover grayscale-[0.5]"
+                            draggable={false}
+                            className="h-full w-full max-w-full object-cover grayscale-[0.5]"
                           />
                         </div>
                       ) : (
-                        <Link to="/product/$id" params={{ id: p.id }}>
-                          <div className="relative aspect-square overflow-hidden rounded-2xl bg-card">
+                        <Link
+                          to="/product/$id"
+                          params={{ id: p.id }}
+                          className="block min-w-0 max-w-full"
+                        >
+                          <div className="relative aspect-square w-full max-w-full overflow-hidden rounded-2xl bg-card">
                             {p.badge && (
                               <span className="absolute left-3 top-3 z-10 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
                                 {p.badge}
                               </span>
                             )}
                             <button
+                              type="button"
                               onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -313,7 +332,8 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                               loading="lazy"
                               width={1024}
                               height={1024}
-                              className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                              draggable={false}
+                              className="h-full w-full max-w-full object-cover transition-transform duration-700 md:group-hover:scale-105"
                             />
                           </div>
                         </Link>

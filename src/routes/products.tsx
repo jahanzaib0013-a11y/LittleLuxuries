@@ -43,6 +43,7 @@ import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ExportMenu } from "@/components/export-menu";
+import { HorizontalScrollArea } from "@/components/horizontal-scroll-area";
 import { cn } from "@/lib/utils";
 import { formatPkr } from "@/lib/format-currency";
 import logo from "@/assets/logo.png";
@@ -346,6 +347,19 @@ function ProductsContent({ search }: { search: string }) {
   const lowStock = products.filter(
     (p: Database["public"]["Tables"]["products"]["Row"]) => p.badge === "Low stock",
   ).length;
+  const categoryOptions = React.useMemo(
+    () => [
+      "All Categories",
+      ...Array.from(
+        new Set(
+          products
+            .map((p: Database["public"]["Tables"]["products"]["Row"]) => p.category?.trim())
+            .filter((category): category is string => Boolean(category)),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    ],
+    [products],
+  );
 
   return (
     <div className="space-y-6">
@@ -383,20 +397,18 @@ function ProductsContent({ search }: { search: string }) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="w-48 rounded-xl shadow-(--shadow-card)">
-            {["All Categories", "Onesies", "Sleepwear", "Knitwear", "Accessories", "Gift Sets"].map(
-              (opt) => (
-                <DropdownMenuItem
-                  key={opt}
-                  onClick={() => setCategoryFilter(opt)}
-                  className="rounded-lg py-2.5 font-medium focus:bg-primary-soft focus:text-primary cursor-pointer"
-                >
-                  <div className="flex items-center justify-between w-full">
-                    <span>{opt}</span>
-                    {categoryFilter === opt && <CheckCircle2 className="h-4 w-4" />}
-                  </div>
-                </DropdownMenuItem>
-              ),
-            )}
+            {categoryOptions.map((opt) => (
+              <DropdownMenuItem
+                key={opt}
+                onClick={() => setCategoryFilter(opt)}
+                className="rounded-lg py-2.5 font-medium focus:bg-primary-soft focus:text-primary cursor-pointer"
+              >
+                <div className="flex items-center justify-between w-full">
+                  <span>{opt}</span>
+                  {categoryFilter === opt && <CheckCircle2 className="h-4 w-4" />}
+                </div>
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -498,11 +510,15 @@ function ProductsContent({ search }: { search: string }) {
 
       {/* Table */}
       <div className="rounded-2xl bg-card shadow-(--shadow-card) overflow-hidden">
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[640px] text-sm">
+        <HorizontalScrollArea
+          className="px-1 pt-1 sm:px-2"
+          scrollClassName="-mx-1 px-1 sm:mx-0 sm:px-2"
+          sliderLabel="Slide to browse table"
+        >
+          <table className="w-full min-w-[1100px] text-sm border-collapse">
             <thead>
               <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border bg-muted/30">
-                <th className="px-6 py-4 text-left w-10">
+                <th className="w-12 px-4 py-4 text-left align-middle">
                   <input
                     type="checkbox"
                     className="rounded border-border/40 text-primary focus:ring-primary/20 cursor-pointer"
@@ -519,55 +535,71 @@ function ProductsContent({ search }: { search: string }) {
                     }}
                   />
                 </th>
-                <th className="px-2 py-4 text-left font-medium">Product</th>
-                <th className="px-4 py-4 text-left font-medium">Category</th>
-                <th className="px-4 py-4 text-left font-medium">Gender</th>
-                <th className="px-4 py-4 text-left font-medium">Size Range</th>
-                <th className="px-4 py-4 text-left font-medium">Price</th>
-                <th className="px-4 py-4 text-left font-medium">Availability</th>
-                <th className="px-4 py-4 text-left font-medium">Status</th>
-                <th className="px-4 py-4 text-left font-medium">Badges</th>
-                <th className="px-6 py-4 text-right font-medium w-16">Actions</th>
+                <th className="min-w-[220px] px-3 py-4 text-left font-medium align-middle">
+                  Product
+                </th>
+                <th className="min-w-[120px] px-3 py-4 text-left font-medium align-middle">
+                  Category
+                </th>
+                <th className="w-24 px-3 py-4 text-left font-medium align-middle">Gender</th>
+                <th className="min-w-[140px] px-3 py-4 text-left font-medium align-middle">
+                  Size Range
+                </th>
+                <th className="w-28 px-3 py-4 text-left font-medium align-middle whitespace-nowrap">
+                  Price
+                </th>
+                <th className="min-w-[130px] px-3 py-4 text-left font-medium align-middle">
+                  Availability
+                </th>
+                <th className="w-28 px-3 py-4 text-left font-medium align-middle">Status</th>
+                <th className="min-w-[100px] px-3 py-4 text-left font-medium align-middle">
+                  Badges
+                </th>
+                <th className="w-14 px-4 py-4 text-right font-medium align-middle">Actions</th>
               </tr>
             </thead>
+            <tbody>
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={`skel-${i}`} className="border-b border-border/40">
-                  <td className="px-6 py-5">
+                  <td className="px-4 py-4 align-middle">
                     <Skeleton className="h-4 w-4" />
                   </td>
-                  <td className="px-2 py-5">
+                  <td className="px-3 py-4 align-middle">
                     <div className="flex items-center gap-3">
-                      <Skeleton className="h-12 w-12 rounded-xl" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-32" />
-                        <Skeleton className="h-3 w-24" />
-                      </div>
+                      <Skeleton className="h-12 w-12 shrink-0 rounded-xl" />
+                      <Skeleton className="h-4 w-36" />
                     </div>
                   </td>
-                  <td className="px-4 py-5">
+                  <td className="px-3 py-4 align-middle">
                     <Skeleton className="h-4 w-20" />
                   </td>
-                  <td className="px-4 py-5">
-                    <Skeleton className="h-4 w-24" />
+                  <td className="px-3 py-4 align-middle">
+                    <Skeleton className="h-5 w-14 rounded-full" />
                   </td>
-                  <td className="px-4 py-5">
-                    <Skeleton className="h-4 w-12" />
+                  <td className="px-3 py-4 align-middle">
+                    <Skeleton className="h-4 w-28" />
                   </td>
-                  <td className="px-4 py-5">
+                  <td className="px-3 py-4 align-middle">
+                    <Skeleton className="h-4 w-16" />
+                  </td>
+                  <td className="px-3 py-4 align-middle">
+                    <Skeleton className="h-8 w-24 rounded-full" />
+                  </td>
+                  <td className="px-3 py-4 align-middle">
                     <Skeleton className="h-6 w-20 rounded-full" />
                   </td>
-                  <td className="px-4 py-5">
+                  <td className="px-3 py-4 align-middle">
                     <Skeleton className="h-6 w-16 rounded-full" />
                   </td>
-                  <td className="px-6 py-5 text-right">
-                    <Skeleton className="h-8 w-8 rounded-full ml-auto" />
+                  <td className="px-4 py-4 text-right align-middle">
+                    <Skeleton className="ml-auto h-8 w-8 rounded-full" />
                   </td>
                 </tr>
               ))
             ) : filteredProducts.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-4 py-12">
+                <td colSpan={10} className="px-4 py-12">
                   <div className="flex items-center justify-center">
                     <div className="text-center">
                       <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
@@ -592,13 +624,22 @@ function ProductsContent({ search }: { search: string }) {
                 </td>
               </tr>
             ) : (
-              filteredProducts.map((p: Database["public"]["Tables"]["products"]["Row"]) => (
+              filteredProducts.map((p: Database["public"]["Tables"]["products"]["Row"]) => {
+                const variantLabel =
+                  p.variant?.trim() &&
+                  p.variant.trim().toLowerCase() !== p.name?.trim().toLowerCase()
+                    ? p.variant.trim()
+                    : null;
+                const isOutOfStock =
+                  p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
+
+                return (
                 <tr
                   key={p.id}
                   className="border-b border-border/50 last:border-0 hover:bg-muted/30 cursor-pointer transition-colors"
                   onClick={() => handleViewProduct(p)}
                 >
-                  <td className="px-6 py-5" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-4 align-middle" onClick={(e) => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       className="rounded border-border/40 text-primary focus:ring-primary/20 cursor-pointer"
@@ -614,54 +655,62 @@ function ProductsContent({ search }: { search: string }) {
                       onClick={(e) => e.stopPropagation()}
                     />
                   </td>
-                  <td className="px-2 py-5">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-xl bg-primary-soft grid place-items-center">
+                  <td className="px-3 py-4 align-middle">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl bg-primary-soft">
                         {p.image_url ? (
                           <img
                             src={p.image_url}
-                            alt={p.name}
-                            className="h-7 w-7 object-contain rounded"
+                            alt=""
+                            className="h-full w-full object-cover"
                           />
                         ) : (
-                          <img src={logo} alt="" className="h-7 w-7 object-contain" />
+                          <img src={logo} alt="" className="h-full w-full object-cover p-2" />
                         )}
                       </div>
-                      <div>
-                        <div className="font-medium text-foreground">{p.name}</div>
-                        <div className="text-xs text-muted-foreground">{p.variant}</div>
+                      <div className="min-w-0">
+                        <div className="font-medium text-foreground truncate max-w-[200px] sm:max-w-[260px]">
+                          {p.name}
+                        </div>
+                        {variantLabel ? (
+                          <div className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-[260px]">
+                            {variantLabel}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-5 text-muted-foreground">{p.category}</td>
-                  <td className="px-4 py-5">
+                  <td className="px-3 py-4 align-middle text-muted-foreground whitespace-nowrap">
+                    {p.category}
+                  </td>
+                  <td className="px-3 py-4 align-middle whitespace-nowrap">
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-soft/30 text-primary">
                       {p.gender || "Unisex"}
                     </span>
                   </td>
-                  <td className="px-4 py-5 text-muted-foreground">
-                    {p.sizes?.join(", ") || "N/A"}
+                  <td className="px-3 py-4 align-middle text-muted-foreground text-xs leading-snug max-w-[180px]">
+                    <span className="line-clamp-2">{p.sizes?.join(", ") || "—"}</span>
                   </td>
-                  <td className="px-4 py-5 font-medium text-foreground">
+                  <td className="px-3 py-4 align-middle font-medium text-foreground whitespace-nowrap">
                     {formatPkr(Number(p.price))}
                   </td>
-                  <td className="px-4 py-5">
-                    {p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0) ? (
+                  <td className="px-3 py-4 align-middle whitespace-nowrap">
+                    {isOutOfStock ? (
                       <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
                         Out of Stock
                       </span>
                     ) : (
-                      <div className="space-y-1">
+                      <div className="leading-tight">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                           In Stock
                         </span>
-                        <div className="text-[10px] text-muted-foreground font-medium pl-1">
-                          {p.units ?? 0} units available
-                        </div>
+                        <p className="mt-1 text-[10px] text-muted-foreground font-medium">
+                          {p.units ?? 0} units
+                        </p>
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-5">
+                  <td className="px-3 py-4 align-middle whitespace-nowrap">
                     <span
                       className={cn(
                         "inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-tight",
@@ -675,14 +724,16 @@ function ProductsContent({ search }: { search: string }) {
                       {p.status || "Draft"}
                     </span>
                   </td>
-                  <td className="px-4 py-5">
-                    {p.badge && p.badge !== "Out of Stock" && (
-                      <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-soft text-primary">
+                  <td className="px-3 py-4 align-middle">
+                    {p.badge && p.badge !== "Out of Stock" ? (
+                      <span className="inline-flex max-w-[140px] items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-soft text-primary truncate">
                         {p.badge}
                       </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground/50">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-5 text-right w-16" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-4 text-right align-middle" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="h-8 w-8 grid place-items-center rounded-full hover:bg-muted transition-colors">
@@ -746,10 +797,12 @@ function ProductsContent({ search }: { search: string }) {
                     </DropdownMenu>
                   </td>
                 </tr>
-              ))
+              );
+              })
             )}
+            </tbody>
           </table>
-        </div>
+        </HorizontalScrollArea>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-border">
           <div className="text-sm text-muted-foreground">

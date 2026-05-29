@@ -408,8 +408,8 @@ function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Revenue trends */}
         <div className="lg:col-span-2 rounded-2xl bg-card p-6 shadow-(--shadow-card)">
-          <div className="flex items-start justify-between">
-            <div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <h2 className="font-serif text-xl text-foreground">Revenue Trends</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 Monthly revenue performance across all channels

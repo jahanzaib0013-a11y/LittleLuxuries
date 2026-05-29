@@ -6,6 +6,7 @@ import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { getProductDisplayImage } from "@/lib/product-colors";
 import { useCheckoutPricing } from "@/hooks/use-checkout-pricing";
 export function CartSidebar({
   isOpen,
@@ -81,7 +82,7 @@ export function CartSidebar({
             <div className="space-y-4">
               {items.map((item) => (
                 <div
-                  key={`${item.id}-${item.size}`}
+                  key={`${item.id}-${item.size}-${item.color || ""}`}
                   className="flex min-w-0 gap-3 rounded-xl border border-border bg-card p-3 sm:gap-4 sm:p-4"
                 >
                   <div className="relative aspect-square w-16 shrink-0 overflow-hidden rounded-lg bg-muted sm:w-20">
@@ -105,6 +106,11 @@ export function CartSidebar({
                       <span className="inline-flex items-center rounded-md bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary">
                         {item.size}
                       </span>
+                      {item.color ? (
+                        <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                          {item.color}
+                        </span>
+                      ) : null}
                       {item.product.badge && (
                         <span className="inline-flex items-center rounded-md bg-gold px-2 py-0.5 text-xs font-medium text-gold-foreground">
                           {item.product.badge}
@@ -127,7 +133,12 @@ export function CartSidebar({
                         <button
                           type="button"
                           onClick={() =>
-                            updateQuantity(item.id, item.size, Math.max(1, item.qty - 1))
+                            updateQuantity(
+                              item.id,
+                              item.size,
+                              Math.max(1, item.qty - 1),
+                              item.color || "",
+                            )
                           }
                           className="grid min-h-11 min-w-11 place-items-center rounded-full hover:bg-muted transition-colors disabled:opacity-40"
                           disabled={item.qty <= 1}
@@ -140,7 +151,9 @@ export function CartSidebar({
                         </span>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.size, item.qty + 1)}
+                          onClick={() =>
+                            updateQuantity(item.id, item.size, item.qty + 1, item.color || "")
+                          }
                           className="grid min-h-11 min-w-11 place-items-center rounded-full hover:bg-muted transition-colors"
                           aria-label="Increase quantity"
                         >
@@ -149,7 +162,7 @@ export function CartSidebar({
                       </div>
                       <button
                         type="button"
-                        onClick={() => removeFromCart(item.id, item.size)}
+                        onClick={() => removeFromCart(item.id, item.size, item.color || "")}
                         className="ml-auto grid min-h-11 min-w-11 place-items-center rounded-full text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                         aria-label="Remove item"
                       >

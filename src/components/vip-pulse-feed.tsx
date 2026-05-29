@@ -26,17 +26,18 @@ export function VIPPulseFeed() {
   const itemsPerPage = 2;
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["real-vip-pulse"],
+    queryKey: ["vip-activity"],
     queryFn: () => orderService.getVIPActivity(),
-    refetchInterval: 30000, // Refresh every 30 seconds for "live" feel
+    staleTime: 60_000,
+    refetchInterval: 60_000,
   });
 
   const activities = data?.activities || [];
 
   return (
     <div className="bg-card rounded-[32px] border border-border/50 shadow-(--shadow-card) overflow-hidden flex flex-col h-full min-h-[280px] sm:min-h-[400px] lg:min-h-[500px]">
-      <div className="p-6 border-b border-border/30 flex items-center justify-between bg-primary-soft/30">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/30 bg-primary-soft/30 p-4 sm:p-6">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="h-10 w-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
             <Zap className="h-5 w-5 text-white" />
           </div>
@@ -50,12 +51,13 @@ export function VIPPulseFeed() {
             </div>
           </div>
         </div>
-        <div className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-2 py-1 rounded-full">
-          {activities.length} Recent VIP Actions
+        <div className="shrink-0 rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+          <span className="hidden sm:inline">{activities.length} Recent VIP Actions</span>
+          <span className="sm:hidden">{activities.length} VIP</span>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="hide-scrollbar flex-1 overflow-y-auto p-4 space-y-4">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center h-full py-20 gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-primary/50" />
@@ -190,9 +192,9 @@ export function VIPPulseFeed() {
                   </div>
 
                   <div className="flex-1 min-w-0 text-left">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <h4 className="text-sm font-bold text-foreground truncate max-w-full sm:max-w-[140px]">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="flex min-w-0 flex-1 items-center gap-2">
+                        <h4 className="truncate text-sm font-bold text-foreground">
                           {act.name}
                         </h4>
                         <span
@@ -205,25 +207,25 @@ export function VIPPulseFeed() {
                           {act.tier}
                         </span>
                       </div>
-                      <span className="text-[10px] font-medium text-muted-foreground whitespace-nowrap">
+                      <span className="shrink-0 text-[10px] font-medium text-muted-foreground whitespace-nowrap">
                         {formatTimeAgo(act.date)}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-2 mt-1.5">
+                    <div className="mt-1.5 flex items-center gap-2">
                       <div className={cn("p-1.5 rounded-lg bg-muted/50", iconColor)}>
                         <Icon className="h-3 w-3" />
                       </div>
                       <p className="text-xs font-medium text-foreground/80">{act.action}</p>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-between bg-muted/30 p-2.5 rounded-xl border border-border/20">
-                      <div className="flex-1">
+                    <div className="mt-4 flex flex-col gap-3 rounded-xl border border-border/20 bg-muted/30 p-2.5 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="min-w-0 flex-1">
                         <span className="text-[9px] uppercase tracking-widest text-muted-foreground font-bold leading-none mb-1">
                           Transaction Detail
                         </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-primary truncate max-w-full sm:max-w-[120px]">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="truncate text-sm font-bold text-primary">
                             {act.detail}
                           </span>
                           <span
@@ -237,8 +239,8 @@ export function VIPPulseFeed() {
                           </span>
                         </div>
                       </div>
-                      <div className="h-8 w-px bg-border/40 mx-2" />
-                      <div className="flex gap-2">
+                      <div className="hidden h-8 w-px bg-border/40 sm:mx-2 sm:block" />
+                      <div className="flex flex-wrap gap-2">
                         <Button
                           variant="default"
                           size="sm"

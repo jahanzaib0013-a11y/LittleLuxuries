@@ -20,6 +20,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { fullScreenModalWideClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 
 interface ShareProductModalProps {
   open: boolean;
@@ -99,10 +101,11 @@ export function ShareProductModal({ open, onOpenChange, product }: ShareProductM
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0 overflow-y-auto md:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] md:rounded-[40px] max-h-[95vh] h-auto md:h-[90vh] flex flex-col">
-        <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden">
+      <DialogContent className={cn(fullScreenModalWideClass, "lg:max-w-4xl")}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden md:flex-row">
           {/* Left Side: QR & Preview */}
-          <div className="w-full md:w-[340px] bg-muted/20 border-b md:border-b-0 md:border-r border-border/50 p-6 md:p-10 flex flex-col items-center justify-center gap-6 md:gap-8 shrink-0">
+          <div className="flex min-h-0 w-full shrink-0 flex-col items-center justify-center gap-6 overflow-y-auto overscroll-contain border-b border-border/50 bg-muted/20 p-4 sm:p-6 md:w-[340px] md:border-b-0 md:border-r md:p-10 md:gap-8">
             <div className="space-y-2 text-center">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
                 Campaign QR Code
@@ -159,8 +162,8 @@ export function ShareProductModal({ open, onOpenChange, product }: ShareProductM
           </div>
 
           {/* Right Side: UTM Configuration */}
-          <div className="flex-1 flex flex-col bg-white md:overflow-hidden">
-            <div className="p-6 pb-4 md:p-10 md:pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/30 bg-white p-4 pb-3 sm:p-6 md:p-10 md:pb-6">
               <div className="space-y-1">
                 <DialogTitle className="text-3xl font-serif text-primary tracking-tight">
                   Link Architect

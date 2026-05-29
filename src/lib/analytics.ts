@@ -420,13 +420,14 @@ export async function getOrderStatusBreakdown(): Promise<OrderStatusBreakdown[]>
 
   const total = orders.length;
 
-  // "Placed" = order_placed, pending_payment, payment_initiated, paid, confirmed, packed
+  // "Placed" = order_placed, order_confirmed, payment_confirmed, pending_payment, payment_initiated, paid, packed
   const placedStatuses = [
     "order_placed",
+    "order_confirmed",
+    "payment_confirmed",
     "pending_payment",
     "payment_initiated",
     "paid",
-    "confirmed",
     "packed",
   ];
   // "Delivered" = shipped + delivered

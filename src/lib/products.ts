@@ -1,3 +1,4 @@
+import type { ProductColor } from "@/lib/product-colors";
 import onesie from "@/assets/product-onesie.jpg";
 import booties from "@/assets/product-booties.jpg";
 import swaddle from "@/assets/product-swaddle.jpg";
@@ -16,6 +17,7 @@ export type Product = {
   badge?: "New" | "Bestseller" | "Low stock" | "Out of Stock";
   description: string;
   sizes: string[];
+  colors?: ProductColor[];
   secondary_images?: string[];
   sustainability?: string;
   care_instructions?: string;

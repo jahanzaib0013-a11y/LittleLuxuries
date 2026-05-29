@@ -42,6 +42,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { OrderTimelineModal } from "@/components/order-timeline-modal";
 import { AddOrderModal } from "@/components/add-order-modal";
+import { CommunicationLevelModal } from "@/components/communication-level-modal";
 import { sendOrderStatusEmail } from "@/lib/email.server";
 import {
   AlertDialog,
@@ -56,6 +57,10 @@ import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ExportMenu } from "@/components/export-menu";
+import { HorizontalScrollArea } from "@/components/horizontal-scroll-area";
+import { cn } from "@/lib/utils";
+import { sheetModalClass, modalFooterClass, modalScrollPaneClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 
 const REVENUE_TARGET_PKR = 800_000;
 
@@ -75,11 +80,12 @@ function OrdersPage() {
 const tabs = [
   "All Orders",
   "order_placed",
+  "order_confirmed",
   "packed",
   "shipped",
   "delivered",
   "pending_payment",
-  "confirmed",
+  "payment_confirmed",
   "cancelled",
 ] as const;
 
@@ -96,6 +102,7 @@ function OrdersContent() {
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [isItemsModalOpen, setIsItemsModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isCommunicationModalOpen, setIsCommunicationModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -106,8 +113,9 @@ function OrdersContent() {
     avg_monthly_earning: 0,
     revenue_mtd: 0,
     order_placed: 0,
+    order_confirmed: 0,
+    payment_confirmed: 0,
     pending_payment: 0,
-    confirmed: 0,
     packed: 0,
     shipped: 0,
     delivered: 0,
@@ -145,12 +153,13 @@ function OrdersContent() {
       if (!statsData.error) {
         setStats({
           total_orders: statsData.total_orders,
-          pending_fulfillment: statsData.pending_payment + statsData.confirmed + statsData.packed,
+          pending_fulfillment: statsData.pending_payment + statsData.payment_confirmed + statsData.packed,
           avg_monthly_earning: statsData.revenue_mtd, // Fallback to MTD for now, can be refined later
           revenue_mtd: statsData.revenue_mtd,
           order_placed: statsData.order_placed,
+          order_confirmed: statsData.order_confirmed || 0,
+          payment_confirmed: statsData.payment_confirmed || 0,
           pending_payment: statsData.pending_payment,
-          confirmed: statsData.confirmed,
           packed: statsData.packed,
           shipped: statsData.shipped,
           delivered: statsData.delivered,
@@ -239,27 +248,30 @@ function OrdersContent() {
 
   const handleUpdatePayment = async (orderId: string, paymentStatus: any) => {
     try {
-      await orderService.updatePaymentStatus(orderId, paymentStatus);
-
       const orderToNotify = orders.find((o) => o.id === orderId);
+      const shouldMoveToPending = paymentStatus === "pending" && orderToNotify?.status === "delivered";
 
-      // AUTOMATION: Automatically send email for "paid" status
-      if (orderToNotify && paymentStatus === "paid") {
+      await orderService.updatePaymentStatus(orderId, paymentStatus, {
+        orderStatus: shouldMoveToPending ? "pending_payment" : undefined,
+      });
+
+      // AUTOMATION: Automatically send email for "paid"/"completed" status
+      if (orderToNotify && (paymentStatus === "paid" || paymentStatus === "completed")) {
         try {
           await sendOrderStatusEmail({
             data: {
               orderNumber: orderToNotify.order_number,
               customerEmail: orderToNotify.customer_email,
               customerName: `${orderToNotify.customer_first_name} ${orderToNotify.customer_last_name}`,
-              status: "paid", // We can keep "paid" for the email template if it expects it
+              status: "paid", // Normalize to "paid" for the email template
             },
           });
           toast.success("Payment verification email sent automatically");
 
-          // AUTOMATION: If payment is paid, automatically move order to 'confirmed' status
-          if (["order_placed", "pending_payment"].includes(orderToNotify.status)) {
-            await orderService.updateOrderStatus(orderId, "confirmed");
-            toast.info("Order status automatically moved to 'Confirmed'");
+          // AUTOMATION: If payment is paid, automatically move order to 'payment_confirmed' status
+          if (["order_placed", "order_confirmed", "pending_payment", "delivered"].includes(orderToNotify.status)) {
+            await orderService.updateOrderStatus(orderId, "payment_confirmed");
+            toast.info("Order status automatically moved to 'Payment Confirmed'");
           }
         } catch (emailErr) {
           console.error("Failed to send payment email:", emailErr);
@@ -448,18 +460,15 @@ function OrdersContent() {
       </div>
 
       {/* Pipeline Status Breakdown */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-5">
         {[
           { label: "Order Placed", value: stats.order_placed, color: "text-blue-600" },
+          { label: "Order Confirmed", value: stats.order_confirmed, color: "text-emerald-600" },
           { label: "Packed", value: stats.packed, color: "text-indigo-600" },
           { label: "Shipped", value: stats.shipped, color: "text-primary" },
           { label: "Delivered", value: stats.delivered, color: "text-emerald-600" },
-          {
-            label: "Pending Payment",
-            value: stats.pending_payment,
-            color: "text-(--color-gold-foreground)",
-          },
-          { label: "Confirmed", value: stats.confirmed, color: "text-blue-600" },
+          { label: "Pending Payment", value: stats.pending_payment, color: "text-(--color-gold-foreground)" },
+          { label: "Payment Confirmed", value: stats.payment_confirmed, color: "text-indigo-600" },
           { label: "Cancelled", value: stats.cancelled, color: "text-destructive" },
         ].map((s) => (
           <div
@@ -476,17 +485,65 @@ function OrdersContent() {
 
       <div className="rounded-2xl bg-card shadow-(--shadow-card) overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-border">
-          <div className="inline-flex bg-muted/40 rounded-full p-1 flex-wrap">
-            {tabs.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`px-4 py-2 text-sm rounded-full transition ${tab === t ? "bg-primary text-primary-foreground" : "text-foreground/70 hover:text-foreground"}`}
-              >
-                {t === "All Orders" ? "All" : formatStatusLabel(t)}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition shadow-sm">
+                <Filter className="h-4 w-4" /> {tab === "All Orders" ? "All Orders" : formatStatusLabel(tab)} <ChevronDown className="h-3 w-3" />
               </button>
-            ))}
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56 rounded-xl shadow-(--shadow-card) p-2">
+              <DropdownMenuLabel className="font-serif px-2 py-1.5 text-xs uppercase tracking-wider text-muted-foreground">Order Status</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {tabs.map((t) => {
+                const count =
+                  t === "All Orders"
+                    ? stats.total_orders
+                    : t === "order_placed"
+                      ? stats.order_placed
+                      : t === "order_confirmed"
+                        ? stats.order_confirmed
+                        : t === "payment_confirmed"
+                          ? stats.payment_confirmed
+                          : t === "pending_payment"
+                            ? stats.pending_payment
+                            : t === "packed"
+                              ? stats.packed
+                              : t === "shipped"
+                                ? stats.shipped
+                                : t === "delivered"
+                                  ? stats.delivered
+                                  : t === "cancelled"
+                                    ? stats.cancelled
+                                    : 0;
+
+                return (
+                  <DropdownMenuItem
+                    key={t}
+                    onClick={() => setTab(t)}
+                    className={`cursor-pointer rounded-lg px-3 py-2.5 my-0.5 ${tab === t ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+                  >
+                    <div className="flex items-center gap-3 w-full">
+                      <div className="flex items-center gap-3 flex-1">
+                        {t === "All Orders" ? (
+                          <div className="h-2 w-2 rounded-full bg-muted-foreground/50" />
+                        ) : (
+                          <div className={`h-2 w-2 rounded-full ${getStatusDotColor(t)}`} />
+                        )}
+                        <span className="font-medium">
+                          {t === "All Orders" ? "All Orders" : formatStatusLabel(t)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-md bg-red-500 px-1.5 text-[11px] font-semibold text-white tabular-nums shadow-sm">
+                          {count}
+                        </span>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -560,19 +617,35 @@ function OrdersContent() {
           </div>
         </div>
 
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[640px] text-sm">
+        <HorizontalScrollArea
+          className="px-1 sm:px-2"
+          scrollClassName="-mx-1 px-1 sm:mx-0 sm:px-2"
+          sliderLabel="Slide to browse orders"
+        >
+          <table className="w-full min-w-[1050px] text-sm border-collapse">
             <thead>
-              <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border">
-                <th className="px-6 py-4 text-left font-medium">Order ID</th>
-                <th className="px-4 py-4 text-left font-medium">Customer</th>
-                <th className="px-4 py-4 text-left font-medium">Date</th>
-                <th className="px-4 py-4 text-left font-medium">Items</th>
-                <th className="px-4 py-4 text-left font-medium">Total</th>
-                <th className="px-4 py-4 text-left font-medium">Payment</th>
-                <th className="px-4 py-4 text-left font-medium">Tracking</th>
-                <th className="px-4 py-4 text-left font-medium">Status</th>
-                <th className="px-4 py-4 text-right font-medium">Actions</th>
+              <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border bg-muted/30">
+                <th className="min-w-[120px] px-4 py-4 text-left font-medium align-middle">
+                  Order ID
+                </th>
+                <th className="min-w-[200px] px-3 py-4 text-left font-medium align-middle">
+                  Customer
+                </th>
+                <th className="w-28 px-3 py-4 text-left font-medium align-middle whitespace-nowrap">
+                  Date
+                </th>
+                <th className="min-w-[180px] px-3 py-4 text-left font-medium align-middle">
+                  Items
+                </th>
+                <th className="w-28 px-3 py-4 text-left font-medium align-middle whitespace-nowrap">
+                  Total
+                </th>
+                <th className="w-28 px-3 py-4 text-left font-medium align-middle">Payment</th>
+                <th className="min-w-[100px] px-3 py-4 text-left font-medium align-middle">
+                  Tracking
+                </th>
+                <th className="w-32 px-3 py-4 text-left font-medium align-middle">Status</th>
+                <th className="w-14 px-4 py-4 text-right font-medium align-middle">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -580,40 +653,46 @@ function OrdersContent() {
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr
                     key={`skeleton-${i}`}
-                    className="border-b border-border/40 last:border-0 hover:bg-muted/20"
+                    className="border-b border-border/40 last:border-0"
                   >
-                    <td className="px-6 py-5">
+                    <td className="px-4 py-4 align-middle">
                       <Skeleton className="h-5 w-24" />
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-3 py-4 align-middle">
                       <div className="flex items-center gap-3">
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                        <Skeleton className="h-5 w-32" />
+                        <Skeleton className="h-8 w-8 shrink-0 rounded-full" />
+                        <div className="space-y-2">
+                          <Skeleton className="h-4 w-32" />
+                          <Skeleton className="h-3 w-40" />
+                        </div>
                       </div>
                     </td>
-                    <td className="px-4 py-5">
-                      <Skeleton className="h-5 w-24" />
+                    <td className="px-3 py-4 align-middle">
+                      <Skeleton className="h-4 w-24" />
                     </td>
-                    <td className="px-4 py-5">
-                      <Skeleton className="h-5 w-8" />
+                    <td className="px-3 py-4 align-middle">
+                      <Skeleton className="h-10 w-36" />
                     </td>
-                    <td className="px-4 py-5">
-                      <Skeleton className="h-5 w-16" />
+                    <td className="px-3 py-4 align-middle">
+                      <Skeleton className="h-4 w-16" />
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-3 py-4 align-middle">
                       <Skeleton className="h-6 w-20 rounded-full" />
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-3 py-4 align-middle">
+                      <Skeleton className="h-4 w-24" />
+                    </td>
+                    <td className="px-3 py-4 align-middle">
                       <Skeleton className="h-6 w-24 rounded-full" />
                     </td>
-                    <td className="px-4 py-5">
-                      <Skeleton className="h-8 w-8 rounded-full ml-auto" />
+                    <td className="px-4 py-4 text-right align-middle">
+                      <Skeleton className="ml-auto h-8 w-8 rounded-full" />
                     </td>
                   </tr>
                 ))
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-destructive">
+                  <td colSpan={9} className="px-6 py-12 text-center text-destructive">
                     <p className="text-sm">{error}</p>
                     <button
                       onClick={fetchOrders}
@@ -625,7 +704,7 @@ function OrdersContent() {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
                     <p className="text-sm">No orders found</p>
                   </td>
                 </tr>
@@ -633,17 +712,19 @@ function OrdersContent() {
                 orders.map((o) => (
                   <tr
                     key={o.id}
-                    className="border-b border-border/40 last:border-0 hover:bg-muted/20"
+                    className="border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors"
                   >
-                    <td className="px-6 py-5 text-primary font-medium">{o.order_number}</td>
-                    <td className="px-4 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary-soft text-primary grid place-items-center text-xs font-semibold">
+                    <td className="px-4 py-4 align-middle font-medium text-primary whitespace-nowrap">
+                      {o.order_number}
+                    </td>
+                    <td className="px-3 py-4 align-middle">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
                           {getInitials(o.customer_first_name, o.customer_last_name)}
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="text-foreground font-medium">
+                        <div className="min-w-0 max-w-[220px]">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="truncate font-medium text-foreground">
                               {o.customer_first_name} {o.customer_last_name}
                             </span>
                             {o.customer_phone &&
@@ -651,7 +732,10 @@ function OrdersContent() {
                                 (h) => h.status === "whatsapp_sent",
                               ) && (
                                 <button
-                                  onClick={() => handleWhatsAppClick(o)}
+                                  onClick={() => {
+                                    setSelectedOrder(o);
+                                    setIsCommunicationModalOpen(true);
+                                  }}
                                   className="text-[#25D366] hover:scale-110 transition-transform p-0.5 hover:bg-[#25D366]/10 rounded-md cursor-pointer"
                                   title="Chat on WhatsApp"
                                 >
@@ -665,69 +749,78 @@ function OrdersContent() {
                                 </button>
                               )}
                           </div>
-                          <div className="text-[10px] text-muted-foreground truncate uppercase tracking-wider">
+                          <div className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
                             {o.customer_email}
                           </div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-5 text-muted-foreground">{formatDate(o.created_at)}</td>
+                    <td className="px-3 py-4 align-middle whitespace-nowrap text-muted-foreground">
+                      {formatDate(o.created_at)}
+                    </td>
                     <td
-                      className="px-4 py-5 cursor-pointer hover:bg-muted/30 transition-colors"
+                      className="px-3 py-4 align-middle cursor-pointer transition-colors hover:bg-muted/30"
                       onClick={() => {
                         setSelectedOrder(o);
                         setIsItemsModalOpen(true);
                       }}
                     >
-                      <div className="flex items-center">
-                        <div className="flex -space-x-3 overflow-hidden">
+                      <div className="flex items-center min-w-0">
+                        <div className="flex shrink-0 -space-x-3 overflow-hidden">
                           {o.order_items?.slice(0, 3).map((item: any, idx: number) => (
                             <div
                               key={`${o.id}-img-${idx}`}
-                              className="inline-block h-10 w-10 rounded-full ring-2 ring-background bg-muted overflow-hidden shrink-0"
+                              className="inline-block h-10 w-10 shrink-0 overflow-hidden rounded-full bg-muted ring-2 ring-background"
                               title={item.product_name}
                             >
                               {item.product_image_url ? (
                                 <img
                                   src={item.product_image_url}
-                                  alt={item.product_name}
+                                  alt=""
                                   className="h-full w-full object-cover"
                                 />
                               ) : (
-                                <div className="h-full w-full flex items-center justify-center text-[10px] text-muted-foreground">
+                                <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
                                   {item.product_name?.substring(0, 1)}
                                 </div>
                               )}
                             </div>
                           ))}
                         </div>
-                        <div className="ml-3 flex flex-col">
-                          <span className="text-xs font-medium text-foreground truncate max-w-[150px]">
+                        <div className="ml-3 min-w-0 flex flex-col">
+                          <span className="truncate text-xs font-medium text-foreground max-w-[160px]">
                           {o.order_items?.[0]?.product_name || "Custom Request"}
                         </span>
-                        {o.order_items && o.order_items.length > 1 && (
-                            <span className="text-[10px] text-primary font-bold uppercase tracking-widest mt-0.5">
-                            + {o.order_items.length - 1} more items
+                          {o.order_items && o.order_items.length > 1 ? (
+                            <span className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
+                              + {o.order_items.length - 1} more
                           </span>
-                        )}
+                          ) : null}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-5 font-medium">{formatPkr(Number(o.total_amount))}</td>
-                    <td className="px-4 py-5">
+                    <td className="px-3 py-4 align-middle font-medium whitespace-nowrap">
+                      {formatPkr(Number(o.total_amount))}
+                    </td>
+                    <td className="px-3 py-4 align-middle whitespace-nowrap">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-tight ${getPaymentStatusStyle(o.payment_status)}`}
+                        className={cn(
+                          "inline-flex px-3 py-1 rounded-full text-[10px] font-bold tracking-tight",
+                          getPaymentStatusStyle(o.payment_status),
+                        )}
                       >
                         {o.payment_status?.toUpperCase() || "PENDING"}
                       </span>
                     </td>
-                    <td className="px-4 py-5 text-xs text-muted-foreground font-mono">
+                    <td className="px-3 py-4 align-middle text-xs font-mono text-muted-foreground">
+                      <span className="line-clamp-1 max-w-[120px]" title={o.tracking_number || undefined}>
                       {o.tracking_number || "—"}
+                      </span>
                     </td>
-                    <td className="px-4 py-5">
+                    <td className="px-3 py-4 align-middle whitespace-nowrap">
                       <OrderStatus status={o.status} />
                     </td>
-                    <td className="px-4 py-5 text-right">
+                    <td className="px-4 py-4 text-right align-middle">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className="h-8 w-8 inline-flex items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
@@ -748,16 +841,63 @@ function OrdersContent() {
                           >
                             View Timeline
                           </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => handleUpdateStatus(o.id, "order_confirmed")}
+                            className="cursor-pointer"
+                            disabled={
+                              [
+                                "order_confirmed",
+                                "payment_confirmed",
+                                "packed",
+                                "shipped",
+                                "delivered",
+                                "cancelled",
+                                "refunded",
+                              ].includes(o.status) ||
+                              o.payment_status === "completed"
+                            }
+                          >
+                            Mark order as confirmed
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          {o.status === "delivered" && o.payment_status !== "completed" && (
+                          {o.status === "delivered" && (
+                            <>
+                              <DropdownMenuItem
+                                onClick={() => handleUpdatePayment(o.id, "pending")}
+                                className="cursor-pointer text-amber-600 font-medium"
+                              >
+                                {o.payment_status === "completed"
+                                  ? "Mark as unpaid"
+                                  : "Still not paid"}
+                              </DropdownMenuItem>
+                              {o.payment_status !== "completed" && (
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdatePayment(o.id, "completed")}
+                                  className="cursor-pointer text-blue-600 font-medium"
+                                >
+                                  Mark as paid
+                                </DropdownMenuItem>
+                              )}
+                            </>
+                          )}
+                          {o.status === "payment_confirmed" && o.payment_status !== "completed" && (
                             <DropdownMenuItem
                               onClick={() => handleUpdatePayment(o.id, "completed")}
                               className="cursor-pointer text-blue-600 font-medium"
                             >
-                              Mark as paid (COD collected)
+                              Mark payment completed
                             </DropdownMenuItem>
                           )}
-                          <DropdownMenuItem 
+                          {o.status === "pending_payment" && o.payment_status !== "completed" && (
+                            <DropdownMenuItem
+                              onClick={() => handleUpdatePayment(o.id, "completed")}
+                              className="cursor-pointer text-blue-600 font-medium"
+                            >
+                              Mark as paid
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
                             onClick={() => handleUpdateStatus(o.id, "packed")}
                             className="cursor-pointer"
                             disabled={!canMarkOrderPacked(o.status)}
@@ -801,7 +941,7 @@ function OrdersContent() {
               )}
             </tbody>
           </table>
-        </div>
+        </HorizontalScrollArea>
 
         <div className="flex items-center justify-between px-6 py-4 border-t border-border">
           <div className="text-sm text-muted-foreground">
@@ -840,16 +980,27 @@ function OrdersContent() {
         onOrderAdded={fetchOrders}
       />
 
-      <OrderTimelineModal 
+      <OrderTimelineModal
         isOpen={isTimelineOpen}
         onOpenChange={setIsTimelineOpen}
         order={selectedOrder}
       />
 
+      <CommunicationLevelModal
+        isOpen={isCommunicationModalOpen}
+        onOpenChange={setIsCommunicationModalOpen}
+        orderNumber={selectedOrder?.order_number || ""}
+        status={formatStatusLabel(selectedOrder?.status || "")}
+        customerName={`${selectedOrder?.customer_first_name || ""} ${selectedOrder?.customer_last_name || ""}`}
+        customerPhone={selectedOrder?.customer_phone}
+        customerTier={selectedOrder?.customer_tier as any}
+      />
+
       <Dialog open={isItemsModalOpen} onOpenChange={setIsItemsModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl bg-card">
-          <div className="p-6 border-b border-border bg-muted/30">
-            <h3 className="font-serif text-xl text-foreground">Order Items</h3>
+        <DialogContent className={cn(sheetModalClass, "min-h-0 bg-card")}>
+          <ModalCloseBar onClose={() => setIsItemsModalOpen(false)} />
+          <div className="shrink-0 border-b border-border bg-muted/30 p-4 sm:p-6">
+            <h3 className="font-serif text-lg text-foreground sm:text-xl">Order Items</h3>
             <div className="flex justify-between items-center mt-1">
               <p className="text-xs text-muted-foreground">Order #{selectedOrder?.order_number}</p>
               {selectedOrder?.tracking_number && (
@@ -859,7 +1010,7 @@ function OrdersContent() {
               )}
             </div>
           </div>
-          <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+          <div className={cn(modalScrollPaneClass, "space-y-4 px-3 py-4 sm:px-6")}>
             {selectedOrder?.order_items?.map((item: any, idx: number) => (
               <div key={idx} className="flex items-center gap-4 group">
                 <div className="h-16 w-16 rounded-xl bg-muted overflow-hidden shrink-0 ring-1 ring-border group-hover:ring-primary/30 transition-all">
@@ -887,7 +1038,7 @@ function OrdersContent() {
               </div>
             ))}
           </div>
-          <div className="p-6 bg-muted/30 flex justify-between items-center">
+          <div className={cn(modalFooterClass, "flex items-center justify-between bg-muted/30")}>
             <span className="text-sm font-medium text-muted-foreground">Total Value</span>
             <span className="text-lg font-serif text-foreground">
               {formatPkr(Number(selectedOrder?.total_amount || 0))}
@@ -931,10 +1082,11 @@ function OrdersContent() {
 function OrderStatus({ status }: { status: string }) {
   const styles: Record<string, string> = {
     order_placed: "bg-blue-100 text-blue-700",
+    order_confirmed: "bg-emerald-100 text-emerald-700",
+    payment_confirmed: "bg-indigo-100 text-indigo-700",
     pending_payment: "bg-gold/25 text-(--color-gold-foreground)",
     payment_initiated: "bg-blue-100 text-blue-700",
     paid: "bg-blue-100 text-blue-700",
-    confirmed: "bg-blue-100 text-blue-700",
     packed: "bg-indigo-100 text-indigo-700",
     shipped: "bg-primary-soft text-primary",
     delivered: "bg-emerald-100 text-emerald-700",
@@ -942,7 +1094,11 @@ function OrderStatus({ status }: { status: string }) {
     refunded: "bg-gray-100 text-gray-700",
   };
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || "bg-muted"}`}>
+    <span
+      className={`px-3 py-1 rounded-full text-xs font-medium ${
+        styles[status] || "bg-muted"
+      }`}
+    >
       {formatStatusLabel(status)}
     </span>
   );
@@ -979,4 +1135,18 @@ function getPaymentStatusStyle(status: string): string {
     refunded: "bg-gray-100 text-gray-700",
   };
   return styles[status] || styles.pending;
+}
+
+function getStatusDotColor(status: string): string {
+  const colors: Record<string, string> = {
+    order_placed: "bg-blue-500",
+    order_confirmed: "bg-emerald-500",
+    payment_confirmed: "bg-indigo-500",
+    pending_payment: "bg-amber-500",
+    packed: "bg-indigo-500",
+    shipped: "bg-primary",
+    delivered: "bg-emerald-500",
+    cancelled: "bg-red-500",
+  };
+  return colors[status] || "bg-muted-foreground";
 }

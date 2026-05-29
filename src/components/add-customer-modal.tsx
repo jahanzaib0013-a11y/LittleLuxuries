@@ -21,6 +21,14 @@ import {
   hasFieldErrors,
   type FieldErrors,
 } from "@/lib/form-validation";
+import {
+  fullScreenModalClass,
+  modalFooterClass,
+  modalInputClass,
+  modalSelectClass,
+} from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
+import { cn } from "@/lib/utils";
 
 interface AddCustomerModalProps {
   open: boolean;
@@ -88,7 +96,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               <UserPlus className="h-7 w-7 text-primary" />
             </div>
             <div>
-              <DialogTitle className="text-2xl font-serif text-foreground">
+              <DialogTitle className="font-serif text-xl text-foreground sm:text-2xl">
                 Add New Client
               </DialogTitle>
               <p className="text-sm text-muted-foreground mt-1">
@@ -98,7 +106,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
           </div>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 sm:px-8 py-6 bg-[#fcfcfc] custom-scrollbar">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#fcfcfc] px-4 py-4 custom-scrollbar sm:px-6 sm:py-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
@@ -115,7 +123,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 aria-invalid={Boolean(fieldErrors.first_name)}
                 className={inputWithError(
                   Boolean(fieldErrors.first_name),
-                  "h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20",
+                  cn(modalInputClass, "bg-white border border-border focus-visible:ring-primary/20"),
                 )}
               />
               <FieldError message={fieldErrors.first_name} />
@@ -134,7 +142,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 aria-invalid={Boolean(fieldErrors.last_name)}
                 className={inputWithError(
                   Boolean(fieldErrors.last_name),
-                  "h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20",
+                  cn(modalInputClass, "bg-white border border-border focus-visible:ring-primary/20"),
                 )}
               />
               <FieldError message={fieldErrors.last_name} />
@@ -156,7 +164,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 aria-invalid={Boolean(fieldErrors.email)}
                 className={inputWithError(
                   Boolean(fieldErrors.email),
-                  "h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20",
+                  cn(modalInputClass, "bg-white border border-border focus-visible:ring-primary/20"),
                 )}
               />
               <FieldError message={fieldErrors.email} />
@@ -171,7 +179,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 placeholder="+1 (555) 000-0000"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20"
+                className={cn(modalInputClass, "bg-white border border-border focus-visible:ring-primary/20")}
               />
             </div>
 
@@ -183,7 +191,7 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 value={formData.membership_tier}
                 onValueChange={(val: any) => setFormData({ ...formData, membership_tier: val })}
               >
-                <SelectTrigger className="h-12 bg-white rounded-xl border-border">
+                <SelectTrigger className={cn(modalSelectClass, "bg-white border border-border")}>
                   <SelectValue placeholder="Select tier" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -207,18 +215,18 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
           </div>
         </div>
 
-        <div className="p-6 sm:p-8 bg-white border-t border-border shrink-0 flex items-center justify-end gap-3 rounded-b-[32px] relative z-10">
+        <div className={cn(modalFooterClass, "flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3")}>
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="rounded-full h-12 px-6 sm:px-8 border-border hover:bg-muted text-sm font-semibold transition-all"
+            className="min-h-11 w-full rounded-full border-border text-base font-semibold sm:w-auto sm:px-8"
             disabled={isSubmitting}
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
-            className="rounded-full h-12 px-6 sm:px-10 bg-primary hover:bg-primary/90 text-primary-foreground text-sm font-semibold shadow-lg shadow-primary/20 transition-all active:scale-95"
+            className="min-h-11 w-full rounded-full bg-primary text-base font-semibold text-primary-foreground shadow-md sm:w-auto sm:px-10"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

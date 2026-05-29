@@ -15,6 +15,13 @@ import { Calendar, Tag, Sparkles, Percent, DollarSign, Clock } from "lucide-reac
 import { couponService } from "@/lib/coupon-service";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import {
+  sheetModalClass,
+  sheetModalInnerClass,
+  modalFooterClass,
+  modalInputClass,
+} from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 import { formatPkr } from "@/lib/format-currency";
 import { FieldError, inputWithError } from "@/components/field-error";
 import {
@@ -100,8 +107,9 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[600px] p-0 overflow-y-auto border-none shadow-2xl rounded-[28px] sm:rounded-[32px]">
-        <div className="bg-linear-to-br from-primary/10 via-lilac/5 to-white p-5 sm:p-8">
+      <DialogContent className={cn(sheetModalClass, "sm:max-w-[600px]")}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} />
+        <div className={cn(sheetModalInnerClass, "bg-linear-to-br from-primary/10 via-lilac/5 to-white")}>
           <DialogHeader className="mb-6">
             <div className="h-12 w-12 rounded-2xl bg-primary/10 grid place-items-center mb-4">
               <Sparkles className="h-6 w-6 text-primary" />
@@ -247,19 +255,19 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
               </div>
             </div>
 
-            <DialogFooter className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-2 justify-end">
+            <DialogFooter className={cn(modalFooterClass, "mt-6 flex flex-col gap-2 sm:flex-row sm:justify-end")}>
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="rounded-full h-12 px-8 text-muted-foreground w-full sm:w-auto"
+                className="min-h-11 w-full rounded-full text-base font-semibold sm:w-auto sm:px-8"
               >
                 Discard
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="rounded-full h-12 px-10 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 w-full sm:w-auto"
+                className="min-h-11 w-full rounded-full bg-primary text-base font-semibold text-white shadow-md sm:w-auto sm:px-10"
               >
                 {isLoading ? "Crafting..." : "Publish Offer"}
               </Button>

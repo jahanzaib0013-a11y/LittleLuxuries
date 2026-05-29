@@ -9,6 +9,7 @@ import { productService } from "./supabase-service";
 import { products as fallbackProducts, type Product } from "./products";
 import type { Database } from "./supabase";
 import { FIVE_MINUTES } from "./query-client";
+import { getProductDisplayImage } from "./product-colors";
 
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 
@@ -21,9 +22,10 @@ export const productKeys = {
 };
 
 function mapDbProductToProduct(product: ProductRow): Product {
+  const displayImage = getProductDisplayImage(product);
   return {
     ...product,
-    image: product.image_url || fallbackProducts[0]?.image,
+    image: displayImage || product.image_url || fallbackProducts[0]?.image,
     category: product.category as Product["category"],
     badge: product.badge as Product["badge"],
   };

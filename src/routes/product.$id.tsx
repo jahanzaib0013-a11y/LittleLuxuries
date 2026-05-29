@@ -10,6 +10,12 @@ import { useFavorites } from "@/hooks/use-favorites";
 import { formatPkr } from "@/lib/format-currency";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ProductColorSwatches } from "@/components/product-color-swatches";
+import {
+  getDefaultColor,
+  getGalleryImagesForColor,
+  getProductColors,
+} from "@/lib/product-colors";
 
 export const Route = createFileRoute("/product/$id")({
   loader: async ({ params }) => {
@@ -58,6 +64,13 @@ function ProductPage() {
   const navigate = useNavigate();
   const { addToCart, openCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
+  const productColors = useMemo(() => getProductColors(product), [product]);
+  const defaultColor = useMemo(() => getDefaultColor(productColors), [productColors]);
+  const [selectedColorId, setSelectedColorId] = useState(defaultColor?.id ?? "");
+  const selectedColor = useMemo(
+    () => productColors.find((c) => c.id === selectedColorId) ?? defaultColor,
+    [productColors, selectedColorId, defaultColor],
+  );
   const [size, setSize] = useState<string>(product.sizes[0]);
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState<"sustainability" | "care">("sustainability");
@@ -65,14 +78,17 @@ function ProductPage() {
   const isOutOfStock =
     product.badge === "Out of Stock" || (product.units !== undefined && product.units <= 0);
 
+  const colorLabel = selectedColor?.name?.trim() || "";
+
   const handleAddToCart = () => {
-    addToCart(product.id, size, qty);
-    toast.success(`Added ${qty} × ${product.name} (${size}) to cart`);
+    addToCart(product.id, size, qty, colorLabel);
+    const colorPart = colorLabel ? `, ${colorLabel}` : "";
+    toast.success(`Added ${qty} × ${product.name} (${size}${colorPart}) to cart`);
     openCart();
   };
 
   const handleBuyNow = () => {
-    addToCart(product.id, size, qty);
+    addToCart(product.id, size, qty, colorLabel);
     navigate({ to: "/checkout" });
   };
 
@@ -89,11 +105,8 @@ function ProductPage() {
   };
 
   const galleryImages = useMemo(
-    () =>
-      [product.image_url || product.image, ...(product.secondary_images || [])]
-        .filter(Boolean)
-        .slice(0, 5) as string[],
-    [product.image, product.image_url, product.secondary_images],
+    () => getGalleryImagesForColor(selectedColor),
+    [selectedColor],
   );
 
   return (
@@ -107,10 +120,10 @@ function ProductPage() {
           ← Back to Shop
         </Link>
 
-        <div className="mt-8 grid gap-12 lg:grid-cols-2">
+        <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-10 xl:gap-12">
           <ProductImageGallery
             images={galleryImages}
-            alt={product.name}
+                alt={product.name}
             badge={product.badge}
           />
 
@@ -140,6 +153,15 @@ function ProductPage() {
                 {product.description}
               </p>
             </div>
+
+            {productColors.length > 0 ? (
+              <ProductColorSwatches
+                colors={productColors}
+                selectedId={selectedColor?.id ?? ""}
+                onSelect={(color) => setSelectedColorId(color.id)}
+                className="border-t border-border pt-8"
+              />
+            ) : null}
 
             <div className="border-y border-border py-8">
               <p className="text-sm font-medium uppercase tracking-wider text-foreground mb-4">

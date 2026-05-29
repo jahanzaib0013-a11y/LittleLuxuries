@@ -27,6 +27,8 @@ import {
 } from "@/lib/order-service";
 import { sendOrderStatusEmail } from "@/lib/email.server";
 import { toast } from "sonner";
+import { sheetModalClass, modalScrollPaneClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 
 interface OrderTimelineModalProps {
   isOpen: boolean;
@@ -56,7 +58,8 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       order_placed: "Order Placed",
-      confirmed: "Order Confirmed",
+      order_confirmed: "Order Confirmed",
+      payment_confirmed: "Payment Confirmed",
       packed: "Hand-Packed",
       shipped: "Boutique Shipped",
       delivered: "Delivered",
@@ -70,7 +73,8 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
   const getStatusIcon = (status: string) => {
     const icons: Record<string, React.ComponentType<{ className?: string }>> = {
       order_placed: ShoppingBag,
-      confirmed: CheckCircle2,
+      order_confirmed: MessageSquare,
+      payment_confirmed: CheckCircle2,
       packed: Package,
       shipped: Truck,
       delivered: Home,
@@ -85,7 +89,8 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
     if (notes) return notes;
     const descriptions: Record<string, string> = {
       order_placed: "Initial order request received.",
-      confirmed: "Merchant has confirmed your selection.",
+      order_confirmed: "Customer confirmed order via WhatsApp.",
+      payment_confirmed: "Payment has been verified and confirmed.",
       packed: "Items curated and placed in luxury packaging.",
       shipped: "Package handed to our priority courier.",
       delivered: "Hand-delivered to the customer.",
@@ -99,11 +104,12 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
   // Determine current progress
   const statusOrder = [
     "order_placed",
-    "confirmed",
+    "order_confirmed",
+    "payment_confirmed",
+    "pending_payment",
     "packed",
     "shipped",
     "delivered",
-    "pending_payment",
   ];
   const currentStatusIndex = statusOrder.indexOf(order.status);
 
@@ -158,8 +164,9 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[480px] rounded-[28px] sm:rounded-3xl p-0 overflow-y-auto border-none shadow-2xl">
-        <DialogHeader className="p-6 sm:p-8 bg-linear-to-br from-gold/10 to-transparent">
+      <DialogContent className={cn(sheetModalClass, "min-h-0 sm:max-w-[480px]")}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} />
+        <DialogHeader className="shrink-0 bg-linear-to-br from-gold/10 to-transparent p-4 sm:p-6">
           <div className="flex items-center justify-between">
             <div>
               <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground font-bold mb-1">
@@ -178,7 +185,12 @@ export function OrderTimelineModal({ isOpen, onOpenChange, order }: OrderTimelin
           </DialogDescription>
         </DialogHeader>
 
-        <div className="px-6 pb-8 sm:px-8 sm:pb-10 space-y-6 sm:space-y-8 mt-4">
+        <div
+          className={cn(
+            modalScrollPaneClass,
+            "space-y-6 px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2 sm:space-y-8 sm:px-6",
+          )}
+        >
           <div className="relative">
             {/* Timeline Line */}
             <div className="absolute left-[19px] top-2 bottom-2 w-[2px] bg-muted" />

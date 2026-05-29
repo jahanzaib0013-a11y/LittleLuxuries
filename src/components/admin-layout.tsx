@@ -174,10 +174,13 @@ export function AdminLayout({
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
   const { data: vipPulseData } = useQuery({
-    queryKey: ["header-vip-pulse"],
+    queryKey: ["vip-activity"],
     queryFn: () => orderService.getVIPActivity(),
-    refetchInterval: 30000,
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+    enabled: isAuthorized === true,
   });
 
   const vipActivities = vipPulseData?.activities || [];
@@ -192,27 +195,33 @@ export function AdminLayout({
   // Auth check
   useEffect(() => {
     const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (isAuthenticated !== "true") {
+    const authorized = isAuthenticated === "true";
+    setIsAuthorized(authorized);
+    if (!authorized) {
       navigate({ to: "/login" });
     }
-  }, [navigate]);
+  }, [navigate, pathname]);
+
+  if (isAuthorized !== true) {
+    return null;
+  }
 
   return (
     <div className="flex h-screen w-full bg-[oklch(0.97_0.005_300)]">
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex w-64 shrink-0 flex-col bg-card border-r border-border">
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-card border-r border-border">
         <SidebarNav pathname={pathname} />
       </aside>
 
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header className="shrink-0 bg-[oklch(0.97_0.005_300)]/90 backdrop-blur border-b border-border/60">
-          <div className="flex items-center gap-2 sm:gap-4 px-4 sm:px-6 lg:px-10 py-3 sm:py-4">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 sm:px-6 sm:py-4 lg:px-8">
             {/* Mobile menu trigger */}
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
                 <button
-                  className="md:hidden h-10 w-10 grid place-items-center rounded-full bg-card border border-border hover:bg-muted shrink-0"
+                  className="lg:hidden h-10 w-10 grid place-items-center rounded-full bg-card border border-border hover:bg-muted shrink-0"
                   aria-label="Open navigation"
                 >
                   <Menu className="h-4 w-4 text-foreground/70" />
@@ -224,17 +233,17 @@ export function AdminLayout({
               </SheetContent>
             </Sheet>
 
-            <div className="relative flex-1 min-w-0 max-w-2xl">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative order-3 min-w-0 w-full basis-full lg:order-none lg:w-auto lg:flex-1 lg:max-w-2xl">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
                 placeholder={searchPlaceholder}
                 value={searchValue}
                 onChange={(e) => onSearch?.(e.target.value)}
-                className="pl-11 h-11 rounded-full bg-card border-border"
+                className="w-full pl-11 h-11 rounded-full bg-card border-border"
               />
             </div>
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="hidden lg:flex items-center gap-2">{rightSlot}</div>
+            <div className="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
+              <div className="hidden min-w-0 xl:flex items-center gap-2 flex-wrap justify-end">{rightSlot}</div>
               <Popover>
                 <PopoverTrigger asChild>
                   <button
@@ -523,13 +532,13 @@ export function AdminLayout({
           </div>
           {/* Mobile/tablet right-slot row */}
           {rightSlot && (
-            <div className="lg:hidden flex flex-wrap items-center gap-2 px-4 sm:px-6 pb-3">
+            <div className="flex w-full flex-wrap items-center gap-2 border-t border-border/40 px-4 pb-3 pt-2 sm:px-6 xl:hidden">
               {rightSlot}
             </div>
           )}
         </header>
 
-        <main className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
+        <main className="hide-scrollbar min-w-0 flex-1 overflow-x-clip overflow-y-auto px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
           {children}
         </main>
       </div>

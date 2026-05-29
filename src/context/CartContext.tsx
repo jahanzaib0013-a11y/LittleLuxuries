@@ -3,14 +3,15 @@ import { createContext, useContext, useState, useEffect, ReactNode } from "react
 export type CartItem = {
   id: string;
   size: string;
+  color: string;
   qty: number;
 };
 
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (id: string, size: string, qty: number) => void;
-  removeFromCart: (id: string, size: string) => void;
-  updateQuantity: (id: string, size: string, qty: number) => void;
+  addToCart: (id: string, size: string, qty: number, color?: string) => void;
+  removeFromCart: (id: string, size: string, color?: string) => void;
+  updateQuantity: (id: string, size: string, qty: number, color?: string) => void;
   clearCart: () => void;
   getCartCount: () => number;
   isCartOpen: boolean;
@@ -31,7 +32,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem(CART_STORAGE_KEY);
     if (stored) {
       try {
-        setCart(JSON.parse(stored));
+        const parsed = JSON.parse(stored) as CartItem[];
+        setCart(
+          parsed.map((item) => ({
+            ...item,
+            color: item.color ?? "",
+          })),
+        );
       } catch (e) {
         console.error("Failed to parse cart from localStorage:", e);
       }
@@ -43,11 +50,13 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
   }, [cart]);
 
-  const addToCart = (id: string, size: string, qty: number) => {
+  const matchCartLine = (item: CartItem, id: string, size: string, color = "") =>
+    item.id === id && item.size === size && (item.color || "") === color;
+
+  const addToCart = (id: string, size: string, qty: number, color = "") => {
     setCart((prev) => {
-      const existingIndex = prev.findIndex((item) => item.id === id && item.size === size);
+      const existingIndex = prev.findIndex((item) => matchCartLine(item, id, size, color));
       if (existingIndex !== -1) {
-        // Update quantity if item already exists
         const updated = [...prev];
         updated[existingIndex] = {
           ...updated[existingIndex],
@@ -55,22 +64,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
         };
         return updated;
       }
-      // Add new item
-      return [...prev, { id, size, qty }];
+      return [...prev, { id, size, color, qty }];
     });
   };
 
-  const removeFromCart = (id: string, size: string) => {
-    setCart((prev) => prev.filter((item) => !(item.id === id && item.size === size)));
+  const removeFromCart = (id: string, size: string, color = "") => {
+    setCart((prev) => prev.filter((item) => !matchCartLine(item, id, size, color)));
   };
 
-  const updateQuantity = (id: string, size: string, qty: number) => {
+  const updateQuantity = (id: string, size: string, qty: number, color = "") => {
     if (qty <= 0) {
-      removeFromCart(id, size);
+      removeFromCart(id, size, color);
       return;
     }
     setCart((prev) =>
-      prev.map((item) => (item.id === id && item.size === size ? { ...item, qty } : item)),
+      prev.map((item) => (matchCartLine(item, id, size, color) ? { ...item, qty } : item)),
     );
   };
 

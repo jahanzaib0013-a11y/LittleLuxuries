@@ -25,6 +25,8 @@ import {
 import { ShareProductModal } from "./share-product-modal";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { fullScreenModalWideClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 import { formatPkr } from "@/lib/format-currency";
 import { type Database } from "@/lib/supabase";
 
@@ -60,10 +62,11 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-[95vw] w-full lg:max-w-6xl p-0 overflow-y-auto lg:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] lg:rounded-[40px] h-auto lg:h-[90vh] max-h-[95vh] flex flex-col">
-          <div className="flex flex-col lg:flex-row flex-1 w-full overflow-y-auto lg:overflow-hidden">
+        <DialogContent className={fullScreenModalWideClass}>
+          <ModalCloseBar onClose={() => onOpenChange(false)} />
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
             {/* Left Column: Visual Showcase */}
-            <div className="w-full lg:w-[450px] bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50 p-6 lg:p-10 flex flex-col gap-6 lg:gap-8 lg:overflow-y-auto custom-scrollbar shrink-0">
+            <div className="min-h-0 w-full shrink-0 overflow-y-auto overscroll-contain border-b border-border/50 bg-muted/20 p-4 custom-scrollbar sm:p-5 lg:w-[450px] lg:border-b-0 lg:border-r lg:p-10">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
@@ -80,15 +83,15 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
               </div>
 
               <div className="flex-1 space-y-6">
-                <div className="relative aspect-4/5 rounded-[32px] overflow-hidden shadow-2xl bg-white border border-border/50 transition-all duration-700 group">
+                <div className="relative aspect-4/5 rounded-2xl sm:rounded-[28px] lg:rounded-[32px] overflow-hidden shadow-2xl bg-white border border-border/50 transition-all duration-700 group">
                   <img
                     src={currentImage}
                     alt={product.name}
                     className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-500"
                   />
                   {product.badge && (
-                    <div className="absolute top-6 left-6">
-                      <span className="bg-primary text-white text-[10px] font-bold px-4 py-1.5 rounded-full uppercase tracking-widest shadow-xl">
+                    <div className="absolute top-3 left-3 sm:top-6 sm:left-6">
+                      <span className="bg-primary text-white text-[9px] sm:text-[10px] font-bold px-3 sm:px-4 py-1.5 rounded-full uppercase tracking-wider sm:tracking-widest shadow-xl">
                         {product.badge}
                       </span>
                     </div>
@@ -149,18 +152,18 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
             </div>
 
             {/* Right Column: Administrative Workspace */}
-            <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
-              <div className="p-6 pb-4 lg:p-10 lg:pb-6 border-b border-border/30 flex flex-wrap items-start justify-between gap-3 bg-white sticky top-0 z-10">
-                <div className="space-y-1">
-                  <h1 className="font-serif text-2xl sm:text-3xl lg:text-4xl text-primary tracking-tight break-words">
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-white">
+              <div className="flex shrink-0 items-start justify-between gap-3 border-b border-border/30 bg-white p-4 pb-3 sm:p-6 sm:pb-4 lg:p-10 lg:pb-6">
+                <div className="space-y-1 min-w-0">
+                  <h1 className="font-serif text-xl sm:text-3xl lg:text-4xl text-primary tracking-tight wrap-break-word">
                     {product.name}
                   </h1>
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl font-bold text-primary">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
+                    <span className="text-xl sm:text-2xl font-bold text-primary">
                       {formatPkr(Number(product.price))}
                     </span>
                     <Separator orientation="vertical" className="h-4 bg-border/40" />
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                    <span className="text-[10px] sm:text-xs font-bold text-muted-foreground uppercase tracking-[0.15em] sm:tracking-[0.2em] wrap-break-word">
                       {product.variant}
                     </span>
                   </div>
@@ -169,15 +172,15 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                   variant="ghost"
                   size="icon"
                   onClick={() => onOpenChange(false)}
-                  className="rounded-full h-10 w-10 hover:bg-muted/80"
+                  className="rounded-full h-10 w-10 hover:bg-muted/80 shrink-0"
                 >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
 
-              <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 space-y-6 lg:space-y-10 custom-scrollbar">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 custom-scrollbar sm:p-6 lg:p-10 space-y-5 lg:space-y-10">
                 {/* Navigation Tabs */}
-                <div className="flex flex-wrap gap-4 sm:gap-6 lg:gap-10 border-b border-border/30">
+                <div className="flex flex-wrap gap-3 sm:gap-6 lg:gap-10 border-b border-border/30">
                   {(
                     [
                       { id: "details", label: "Overview", icon: FileText },
@@ -189,7 +192,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                       key={t.id}
                       onClick={() => setActiveTab(t.id)}
                       className={cn(
-                        "pb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-all relative",
+                        "pb-3 sm:pb-4 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-xs font-bold uppercase tracking-[0.08em] sm:tracking-widest transition-all relative",
                         activeTab === t.id
                           ? "text-primary"
                           : "text-muted-foreground hover:text-primary/70",
@@ -209,32 +212,55 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                   {activeTab === "details" && (
                     <div className="space-y-8">
                       <div className="space-y-4">
-                        <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                        <h4 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] text-primary/60">
                           Product Narrative
                         </h4>
-                        <p className="text-base text-muted-foreground leading-relaxed italic font-medium bg-muted/10 p-6 rounded-[24px] border border-border/40">
+                        <p className="text-sm sm:text-base text-muted-foreground leading-relaxed italic font-medium bg-muted/10 p-4 sm:p-6 rounded-2xl sm:rounded-[24px] border border-border/40 wrap-break-word">
                           "{product.description || "No narrative provided for this luxury piece."}"
                         </p>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                         <div className="space-y-4">
-                          <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                        <h4 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] text-primary/60">
                             Inventory Allocation
                           </h4>
-                          <div className="flex flex-wrap gap-2">
-                            {product.sizes?.map((size: string) => (
+                          <div className="rounded-2xl border border-border/40 bg-muted/10 p-3 sm:p-4">
+                            {product.sizes && product.sizes.length > 0 ? (
+                              <>
+                                <div className="mb-3 flex items-center justify-between gap-2">
+                                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                                    Available size range
+                                  </p>
+                                  <span className="rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-bold text-primary">
+                                    {product.sizes.length} sizes
+                                  </span>
+                                </div>
+                                <div className="-mx-1 overflow-x-auto px-1 pb-1 hide-scrollbar">
+                                  <div className="flex min-w-max gap-2">
+                                    {product.sizes.map((size: string, index: number) => (
                               <span
                                 key={size}
-                                className="px-4 py-2 rounded-xl bg-white border border-border/50 text-xs font-bold shadow-sm"
+                                        className={cn(
+                                          "inline-flex min-h-9 min-w-20 items-center justify-center rounded-full border px-4 py-2 text-xs font-bold shadow-sm transition",
+                                          index === 0
+                                            ? "border-primary/30 bg-primary text-primary-foreground shadow-primary/20"
+                                            : "border-border/50 bg-white text-foreground",
+                                        )}
                               >
                                 {size}
                               </span>
                             ))}
+                                  </div>
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">No sizes configured yet.</p>
+                            )}
                           </div>
                         </div>
                         <div className="space-y-4">
-                          <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                        <h4 className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] sm:tracking-[0.2em] text-primary/60">
                             Stock Health
                           </h4>
                           {product.badge === "Out of Stock" ||
@@ -285,7 +311,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                           </p>
                         </div>
                       </div>
-                      <p className="text-muted-foreground leading-relaxed bg-emerald-50/30 p-8 rounded-[32px] border border-emerald-100/50 whitespace-pre-line">
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed bg-emerald-50/30 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[28px] lg:rounded-[32px] border border-emerald-100/50 whitespace-pre-line wrap-break-word">
                         {product.sustainability ||
                           "100% certified organic, GOTS-grown materials. Natural wood buttons and non-toxic, low-impact dyes. Crafted in small batches by artisan partners. Recyclable, plastic-free packaging."}
                       </p>
@@ -305,7 +331,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                           </p>
                         </div>
                       </div>
-                      <p className="text-muted-foreground leading-relaxed bg-primary-soft/10 p-8 rounded-[32px] border border-primary-soft/50 whitespace-pre-line">
+                      <p className="text-sm sm:text-base text-muted-foreground leading-relaxed bg-primary-soft/10 p-4 sm:p-6 lg:p-8 rounded-2xl sm:rounded-[28px] lg:rounded-[32px] border border-primary-soft/50 whitespace-pre-line wrap-break-word">
                         {product.care_instructions ||
                           "Machine wash cold on a delicate cycle with mild detergent. Lay flat to dry to preserve softness and shape. Iron on low if needed."}
                       </p>
@@ -315,37 +341,37 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
               </div>
 
               {/* Admin Controls Footer */}
-              <div className="p-6 lg:p-10 border-t border-border/40 bg-muted/5 mt-auto">
-                <div className="flex items-center justify-between">
+              <div className="p-4 sm:p-6 lg:p-10 border-t border-border/40 bg-muted/5 mt-auto">
+                <div className="flex flex-col gap-3 sm:gap-4">
+                  <div className="flex items-center justify-between gap-3">
                   <Button
                     variant="outline"
                     size="icon"
-                    className="rounded-full h-12 w-12 hover:bg-primary-soft hover:text-primary transition-all shadow-sm"
+                      className="rounded-full h-11 w-11 sm:h-12 sm:w-12 hover:bg-primary-soft hover:text-primary transition-all shadow-sm shrink-0"
                     onClick={handleShare}
                   >
                     <Share2 className="h-5 w-5" />
                   </Button>
-                  <div className="flex items-center gap-4">
                     <Button
                       variant="outline"
                       onClick={() => onOpenChange(false)}
-                      className="rounded-full px-8 h-12 font-bold border-border/50"
+                      className="rounded-full px-6 sm:px-8 h-11 sm:h-12 font-bold border-border/50 flex-1 sm:flex-none"
                     >
                       Close Preview
                     </Button>
+                  </div>
                     {onEdit && (
                       <Button
                         onClick={() => {
                           onEdit();
                           onOpenChange(false);
                         }}
-                        className="rounded-full px-10 h-12 font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 w-full sm:w-auto sm:min-w-[180px]"
+                      className="rounded-full h-11 sm:h-12 font-bold bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20 w-full sm:min-w-[180px] sm:self-end"
                       >
                         <Edit className="h-4 w-4 mr-2" />
                         Refine Details
                       </Button>
                     )}
-                  </div>
                 </div>
               </div>
             </div>

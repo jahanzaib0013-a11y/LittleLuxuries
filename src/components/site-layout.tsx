@@ -47,7 +47,7 @@ export function Header() {
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <button
-                className="md:hidden flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-primary"
+                className="lg:hidden flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-primary"
                 aria-label="Open menu"
               >
                 <Menu className="size-5" />
@@ -86,13 +86,13 @@ export function Header() {
           </Link>
         </div>
 
-        <nav className="hidden items-center gap-10 md:flex">
+        <nav className="hidden min-w-0 items-center gap-4 md:gap-6 lg:flex lg:gap-8 xl:gap-10">
           {navItems.map((item) => (
             <Link
               key={item.to}
               to={item.to}
               activeOptions={{ exact: item.to === "/" }}
-              className="group relative text-[12px] font-semibold uppercase tracking-[0.18em] text-muted-foreground transition-colors hover:text-primary data-[status=active]:text-primary"
+              className="group relative shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary data-[status=active]:text-primary lg:text-[12px] lg:tracking-[0.18em]"
             >
               {item.label}
               <span className="absolute -bottom-1.5 left-1/2 h-px w-0 -translate-x-1/2 bg-gold transition-all duration-300 group-hover:w-6 group-data-[status=active]:w-6" />

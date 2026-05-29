@@ -38,8 +38,7 @@ import {
   canMarkOrderDelivered,
 } from "@/lib/order-service";
 import { formatPkr } from "@/lib/format-currency";
-import { productService } from "@/lib/supabase-service";
-import { getCustomerStats } from "@/lib/customers";
+import { useDashboardSummary } from "@/lib/dashboard-queries";
 import { VIPPulseFeed } from "@/components/vip-pulse-feed";
 import { AddProductModal } from "@/components/add-product-modal";
 import { OrderTimelineModal } from "@/components/order-timeline-modal";
@@ -47,6 +46,9 @@ import { sendOrderStatusEmail } from "@/lib/email.server";
 import logo from "@/assets/logo.png";
 import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { sheetModalClass, modalFooterClass, modalScrollPaneClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -72,12 +74,6 @@ export const Route = createFileRoute("/dashboard")({
   head: () => ({ meta: [{ title: "Dashboard — Little Luxuries Admin" }] }),
   component: DashboardPage,
 });
-
-interface TopSeller {
-  name: string;
-  collection: string;
-  sales: number;
-}
 
 function DashboardPage() {
   const navigate = useNavigate();
@@ -126,19 +122,21 @@ const toneBg: Record<string, string> = {
 
 function DashboardContent() {
   const [period, setPeriod] = useState<"Weekly" | "Monthly">("Weekly");
-  const [recentOrders, setRecentOrders] = useState<OrderWithItems[]>([]);
   const [page, setPage] = useState(1);
   const ordersPerPage = 5;
-  const [isLoading, setIsLoading] = useState(true);
-  const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [realTopSellers, setRealTopSellers] = useState<TopSeller[]>(topSellers);
-  const [stats, setStats] = useState({
+  const { data, isPending, refetch } = useDashboardSummary(page, ordersPerPage);
+  const recentOrders = data?.recentOrders ?? [];
+  const stats = data?.stats ?? {
     total_orders: 0,
     total_revenue: 0,
     new_customers: 0,
-    low_stock_alerts: 5,
-  });
+    low_stock_alerts: 0,
+  };
+  const realTopSellers = data?.topSellers ?? topSellers;
+  const isLoading = isPending && !data;
+
+  const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
@@ -146,57 +144,6 @@ function DashboardContent() {
   
   const chartData = period === "Weekly" ? dailySales : monthlySales;
   const max = Math.max(...chartData.map((d) => d.value));
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setIsLoading(true);
-      try {
-        // Fetch recent orders
-        const { orders, error } = await orderService.getAllOrders({ 
-          limit: ordersPerPage, 
-          offset: (page - 1) * ordersPerPage,
-        });
-        if (!error) {
-          setRecentOrders(orders);
-        }
-
-        // Fetch stats
-        const statsData = await orderService.getOrderStats();
-        if (!statsData.error) {
-          setStats({
-            total_orders: statsData.total_orders,
-            total_revenue: statsData.total_revenue,
-            new_customers: 0, // Would need customers table
-            low_stock_alerts: 5, // Would need inventory tracking
-          });
-        }
-        
-        // Fetch top sellers
-        const topData = await orderService.getTopSellers(3);
-        if (!topData.error && topData.topSellers.length > 0) {
-          setRealTopSellers(topData.topSellers);
-        }
-
-        // Fetch customer stats for New Customers KPI
-        const customerStats = await getCustomerStats();
-        
-        // Fetch low stock count
-        const lowStockCount = await productService.getLowStockCount();
-
-        setStats((prev) => ({
-          ...prev,
-          new_customers: customerStats.new_this_month,
-          low_stock_alerts: lowStockCount,
-        }));
-      } catch (err) {
-        console.error("Error fetching dashboard data:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [page]);
 
   const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
     try {
@@ -222,12 +169,7 @@ function DashboardContent() {
         }
       }
 
-      // Refresh the orders array
-      const { orders } = await orderService.getAllOrders({ 
-        limit: ordersPerPage, 
-        offset: (page - 1) * ordersPerPage,
-      });
-      setRecentOrders(orders);
+      await refetch();
       toast.success(`Order status updated to ${status}`);
     } catch (e) {
       console.error(e);
@@ -237,9 +179,12 @@ function DashboardContent() {
 
   const handleUpdatePayment = async (orderId: string, paymentStatus: PaymentStatus) => {
     try {
-      await orderService.updatePaymentStatus(orderId, paymentStatus);
-
       const orderToNotify = recentOrders.find((o) => o.id === orderId);
+      const shouldMoveToPending = paymentStatus === "pending" && orderToNotify?.status === "delivered";
+
+      await orderService.updatePaymentStatus(orderId, paymentStatus, {
+        orderStatus: shouldMoveToPending ? "pending_payment" : undefined,
+      });
 
       // AUTOMATION: Automatically send email for "paid" status
       if (orderToNotify && paymentStatus === "completed") {
@@ -254,23 +199,22 @@ function DashboardContent() {
           });
           toast.success("Payment verification email sent automatically");
 
-          // AUTOMATION: If payment is paid, automatically move order to 'confirmed' status
-          // only if it's currently in 'order_placed' or 'pending_payment'
-          if (["order_placed", "pending_payment"].includes(orderToNotify.status)) {
-            await orderService.updateOrderStatus(orderId, "confirmed");
-            toast.info("Order status automatically moved to 'Confirmed'");
+          // AUTOMATION: If payment is paid, automatically move order to 'payment_confirmed' status
+          // only if it's currently in 'order_placed', 'order_confirmed', or 'pending_payment'
+          if (
+            ["order_placed", "order_confirmed", "pending_payment"].includes(
+              orderToNotify.status,
+            )
+          ) {
+            await orderService.updateOrderStatus(orderId, "payment_confirmed");
+            toast.info("Order status automatically moved to 'Payment Confirmed'");
           }
         } catch (emailErr) {
           console.error("Failed to send payment email:", emailErr);
         }
       }
 
-      // Refresh the orders array
-      const { orders } = await orderService.getAllOrders({ 
-        limit: ordersPerPage, 
-        offset: (page - 1) * ordersPerPage,
-      });
-      setRecentOrders(orders);
+      await refetch();
       toast.success(`Payment status updated to ${paymentStatus}`);
     } catch (e) {
       console.error(e);
@@ -302,11 +246,7 @@ function DashboardContent() {
     (async () => {
       try {
         await orderService.recordWhatsAppSent(order.id);
-        const { orders } = await orderService.getAllOrders({
-          limit: ordersPerPage,
-          offset: (page - 1) * ordersPerPage,
-        });
-        setRecentOrders(orders);
+        await refetch();
       } catch (err) {
         console.error("Failed to record WhatsApp status:", err);
       }
@@ -324,19 +264,7 @@ function DashboardContent() {
       }
       toast.success(`Order ${orderToDelete.order_number} deleted`);
       setOrderToDelete(null);
-      const { orders } = await orderService.getAllOrders({
-        limit: ordersPerPage,
-        offset: (page - 1) * ordersPerPage,
-      });
-      setRecentOrders(orders);
-      const statsData = await orderService.getOrderStats();
-      if (!statsData.error) {
-        setStats((prev) => ({
-          ...prev,
-          total_orders: statsData.total_orders,
-          total_revenue: statsData.total_revenue,
-        }));
-      }
+      await refetch();
     } finally {
       setIsDeleting(false);
     }
@@ -472,19 +400,26 @@ function DashboardContent() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-5 sm:space-y-6">
+      <div className="min-w-0">
+        <h1 className="font-serif text-2xl text-foreground sm:text-3xl">Dashboard</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Overview of orders, revenue, and VIP activity
+        </p>
+      </div>
+
       {/* KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-4">
         {dynamicStats.map((s, i) => {
           const Icon = statIcons[i];
           return (
-            <div key={s.label} className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
-              <div className="flex items-start justify-between">
-                <div className={`h-12 w-12 rounded-xl grid place-items-center ${toneBg[s.tone]}`}>
+            <div key={s.label} className="rounded-2xl bg-card p-4 shadow-(--shadow-card) sm:p-6">
+              <div className="flex items-start justify-between gap-2">
+                <div className={`h-11 w-11 shrink-0 rounded-xl grid place-items-center sm:h-12 sm:w-12 ${toneBg[s.tone]}`}>
                   <Icon className="h-5 w-5" />
                 </div>
                 <span
-                  className={`text-xs font-medium ${s.trend === "warn" ? "text-destructive" : "text-emerald-600"}`}
+                  className={`shrink-0 text-right text-xs font-medium ${s.trend === "warn" ? "text-destructive" : "text-emerald-600"}`}
                 >
                   {s.change} {s.trend === "up" && "↗"}
                 </span>
@@ -500,22 +435,23 @@ function DashboardContent() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* Sales chart */}
-        <div className="lg:col-span-2 rounded-2xl bg-card p-6 shadow-(--shadow-card)">
-          <div className="flex items-start justify-between">
-            <div>
+        <div className="min-w-0 rounded-2xl bg-card p-4 shadow-(--shadow-card) sm:p-6 xl:col-span-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
+            <div className="min-w-0">
               <h2 className="font-serif text-2xl text-foreground">Daily Sales Performance</h2>
               <p className="text-sm text-muted-foreground mt-1">
                 Real-time overview of transaction volume
               </p>
             </div>
-            <div className="inline-flex rounded-full bg-muted p-1 text-xs">
+            <div className="inline-flex w-full max-w-full rounded-full bg-muted p-1 text-xs sm:w-auto">
               {(["Weekly", "Monthly"] as const).map((p) => (
                 <button
                   key={p}
+                  type="button"
                   onClick={() => setPeriod(p)}
-                  className={`px-4 py-1.5 rounded-full transition ${period === p ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}
+                  className={`flex-1 px-3 py-1.5 rounded-full transition sm:flex-none sm:px-4 ${period === p ? "bg-card shadow text-foreground" : "text-muted-foreground"}`}
                 >
                   {p}
                 </button>
@@ -523,28 +459,30 @@ function DashboardContent() {
             </div>
           </div>
 
+          <div className="hide-scrollbar mt-6 -mx-1 overflow-x-auto px-1 sm:mx-0 sm:px-0 sm:overflow-visible">
           <div
-            className={`mt-8 grid gap-1 sm:gap-1.5 md:gap-3 h-48 sm:h-56 items-end ${period === "Weekly" ? "grid-cols-4 sm:grid-cols-7" : "grid-cols-2 sm:grid-cols-4"}`}
+              className={`grid h-44 min-w-[280px] items-end gap-1 sm:h-56 sm:gap-2 ${period === "Weekly" ? "grid-cols-7" : "grid-cols-4 md:grid-cols-6"}`}
           >
             {chartData.map((d) => (
               <div
                 key={d.day}
-                className="flex flex-col items-center gap-2 sm:gap-3 h-full justify-end"
+                  className="flex min-w-0 flex-col items-center gap-1.5 h-full justify-end sm:gap-2"
               >
                 <div
-                  className={`w-full rounded-t-lg transition-all duration-500 ${d.value === max ? "bg-primary" : "bg-primary/15"}`}
-                  style={{ height: `${(d.value / max) * 100}%` }}
+                    className={`w-full min-h-[4px] rounded-t-lg transition-all duration-500 ${d.value === max ? "bg-primary" : "bg-primary/15"}`}
+                    style={{ height: `${max > 0 ? (d.value / max) * 100 : 0}%` }}
                 />
-                <span className="text-[10px] sm:text-xs text-muted-foreground whitespace-nowrap">
+                  <span className="w-full truncate text-center text-[9px] text-muted-foreground sm:text-[10px]">
                   {d.day}
                 </span>
               </div>
             ))}
+            </div>
           </div>
         </div>
 
         {/* Top sellers */}
-        <div className="rounded-2xl bg-card p-6 shadow-(--shadow-card) flex flex-col">
+        <div className="flex min-w-0 flex-col rounded-2xl bg-card p-4 shadow-(--shadow-card) sm:p-6">
           <div className="flex-1">
             <h2 className="font-serif text-2xl text-foreground">Top Sellers</h2>
             <div className="mt-6 space-y-4">
@@ -585,25 +523,28 @@ function DashboardContent() {
           </div>
           <Button
             variant="outline"
-            className="w-full mt-auto rounded-full border-dashed shrink-0"
-            style={{ marginTop: "1.5rem" }}
+            className="mt-6 w-full shrink-0 rounded-full border-dashed"
+            asChild
           >
-            View All Products
+            <Link to="/products">View All Products</Link>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         {/* Recent orders */}
-        <div className="lg:col-span-2 rounded-2xl bg-card p-6 shadow-(--shadow-card)">
-          <div className="flex items-center justify-between">
-            <h2 className="font-serif text-2xl text-foreground">Recent Orders</h2>
-            <button className="inline-flex items-center gap-1.5 text-sm text-primary font-medium">
-              View Reports <ExternalLink className="h-3.5 w-3.5" />
+        <div className="min-w-0 rounded-2xl bg-card p-4 shadow-(--shadow-card) sm:p-6 xl:col-span-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="font-serif text-xl text-foreground sm:text-2xl">Recent Orders</h2>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-primary self-start sm:self-auto"
+            >
+              View Reports <ExternalLink className="h-3.5 w-3.5 shrink-0" />
             </button>
           </div>
-          <div className="mt-6 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-            <table className="w-full text-sm">
+          <div className="hide-scrollbar mt-6 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border">
                   <th className="text-left font-medium py-3">Order ID</th>
@@ -647,7 +588,7 @@ function DashboardContent() {
                   ))
                 ) : recentOrders.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-muted-foreground">
+                    <td colSpan={7} className="py-8 text-center text-muted-foreground">
                       <p className="text-sm">No orders yet</p>
                     </td>
                   </tr>
@@ -775,29 +716,57 @@ function DashboardContent() {
                               View Journey
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            {o.status === "delivered" && o.payment_status !== "completed" && (
+                            {o.status === "delivered" && (
+                              <>
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdatePayment(o.id, "pending")}
+                                  className="cursor-pointer text-amber-600 font-medium"
+                                >
+                                  {o.payment_status === "completed"
+                                    ? "Mark as unpaid"
+                                    : "Still not paid"}
+                                </DropdownMenuItem>
+                                {o.payment_status !== "completed" && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleUpdatePayment(o.id, "completed")}
+                                    className="cursor-pointer text-blue-600 font-medium"
+                                  >
+                                    Mark as paid
+                                  </DropdownMenuItem>
+                                )}
+                              </>
+                            )}
+                            {o.status === "payment_confirmed" && o.payment_status !== "completed" && (
                               <DropdownMenuItem
                                 onClick={() => handleUpdatePayment(o.id, "completed")}
                                 className="cursor-pointer text-blue-600 font-medium"
                               >
-                                Mark as paid (COD collected)
+                                Mark payment completed
                               </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem 
+                            {o.status === "pending_payment" && o.payment_status !== "completed" && (
+                              <DropdownMenuItem
+                                onClick={() => handleUpdatePayment(o.id, "completed")}
+                                className="cursor-pointer text-blue-600 font-medium"
+                              >
+                                Mark as paid
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem
                               onClick={() => handleUpdateStatus(o.id, "packed")}
                               className="cursor-pointer"
                               disabled={!canMarkOrderPacked(o.status)}
                             >
                               Mark as packed
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleUpdateStatus(o.id, "shipped")}
                               className="cursor-pointer"
                               disabled={!canMarkOrderShipped(o.status)}
                             >
                               Mark as shipped
                             </DropdownMenuItem>
-                            <DropdownMenuItem 
+                            <DropdownMenuItem
                               onClick={() => handleUpdateStatus(o.id, "delivered")}
                               className={`cursor-pointer ${o.status === "delivered" ? "text-emerald-600" : ""}`}
                               disabled={!canMarkOrderDelivered(o.status)}
@@ -829,13 +798,13 @@ function DashboardContent() {
             </table>
           </div>
           
-          <div className="flex items-center justify-between px-2 py-4 mt-2 border-t border-border/50">
+          <div className="mt-2 flex flex-col gap-3 border-t border-border/50 px-2 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-muted-foreground">
               {recentOrders.length > 0
                 ? `Showing ${(page - 1) * ordersPerPage + 1} to ${Math.min(page * ordersPerPage, stats.total_orders)} of ${stats.total_orders} orders`
                 : "No orders"}
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center justify-center gap-1 sm:justify-end">
               <button 
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
@@ -858,7 +827,9 @@ function DashboardContent() {
         </div>
 
         {/* VIP Pulse Feed */}
+        <div className="min-w-0">
         <VIPPulseFeed />
+        </div>
       </div>
 
       <AlertDialog
@@ -897,9 +868,10 @@ function DashboardContent() {
       />
 
       <Dialog open={isItemsModalOpen} onOpenChange={setIsItemsModalOpen}>
-        <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl bg-card">
-          <div className="p-6 border-b border-border bg-muted/30">
-            <h3 className="font-serif text-xl text-foreground">Order Items</h3>
+        <DialogContent className={cn(sheetModalClass, "min-h-0 bg-card")}>
+          <ModalCloseBar onClose={() => setIsItemsModalOpen(false)} />
+          <div className="shrink-0 border-b border-border bg-muted/30 p-4 sm:p-6">
+            <h3 className="font-serif text-lg text-foreground sm:text-xl">Order Items</h3>
             <div className="flex justify-between items-center mt-1">
               <p className="text-xs text-muted-foreground">Order #{selectedOrder?.order_number}</p>
               {selectedOrder?.tracking_number && (
@@ -909,7 +881,7 @@ function DashboardContent() {
               )}
             </div>
           </div>
-          <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
+          <div className={cn(modalScrollPaneClass, "space-y-4 px-3 py-4 sm:px-6")}>
             {selectedOrder?.order_items?.map((item, idx) => (
               <div key={idx} className="flex items-center gap-4 group">
                 <div className="h-16 w-16 rounded-xl bg-muted overflow-hidden shrink-0 ring-1 ring-border group-hover:ring-primary/30 transition-all">
@@ -937,7 +909,7 @@ function DashboardContent() {
               </div>
             ))}
           </div>
-          <div className="p-6 bg-muted/30 flex justify-between items-center">
+          <div className={cn(modalFooterClass, "flex items-center justify-between bg-muted/30")}>
             <span className="text-sm font-medium text-muted-foreground">Total Value</span>
             <span className="text-lg font-serif text-foreground">
               {formatPkr(Number(selectedOrder?.total_amount || 0))}
@@ -952,10 +924,11 @@ function DashboardContent() {
 function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
     order_placed: "bg-blue-100 text-blue-700",
+    order_confirmed: "bg-emerald-100 text-emerald-700",
+    payment_confirmed: "bg-indigo-100 text-indigo-700",
     pending_payment: "bg-gold/25 text-(--color-gold-foreground)",
     payment_initiated: "bg-blue-100 text-blue-700",
     paid: "bg-blue-100 text-blue-700",
-    confirmed: "bg-blue-100 text-blue-700",
     packed: "bg-indigo-100 text-indigo-700",
     shipped: "bg-primary-soft text-primary",
     delivered: "bg-emerald-100 text-emerald-700",

@@ -106,7 +106,7 @@ export async function getCustomers(
       const orders = customer.orders || [];
       const totalOrders = orders.length;
       const pendingOrders = orders.filter((order) =>
-        ["pending_payment", "payment_initiated", "paid", "confirmed", "packed"].includes(
+        ["pending_payment", "payment_initiated", "paid", "order_confirmed", "payment_confirmed", "packed"].includes(
           order.status,
         ),
       ).length;

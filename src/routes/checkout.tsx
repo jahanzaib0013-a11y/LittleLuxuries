@@ -33,6 +33,8 @@ import {
 } from "@/lib/form-validation";
 import { useCheckoutPricing } from "@/hooks/use-checkout-pricing";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getProductDisplayImage } from "@/lib/product-colors";
+import { OrderSuccessScreen } from "@/components/order-success-screen";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -44,7 +46,7 @@ export const Route = createFileRoute("/checkout")({
   component: Checkout,
 });
 
-type CartItemState = { id: string; size: string; qty: number };
+type CartItemState = { id: string; size: string; color: string; qty: number };
 type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 
 const CHECKOUT_PREFILL_KEY = "littleluxuries_checkout_prefill_v1";
@@ -138,7 +140,11 @@ function Checkout() {
       "email" | "firstName" | "lastName" | "phone" | "streetAddress" | "city" | "postalCode"
     >
   >({});
-  const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<{
+    orderNumber: string;
+    total: number;
+    customerFirstName: string;
+  } | null>(null);
   const loading = productsLoading;
   const [addressLookup, setAddressLookup] = useState<"idle" | "loading">("idle");
   const [prefillBanner, setPrefillBanner] = useState<CheckoutPrefillBanner | null>(null);
@@ -284,12 +290,12 @@ function Checkout() {
     setOrderError(null);
   };
 
-  const handleRemoveItem = (id: string, size: string) => {
-    removeFromCart(id, size);
+  const handleRemoveItem = (id: string, size: string, color = "") => {
+    removeFromCart(id, size, color);
   };
 
-  const handleQuantityChange = (id: string, size: string, newQty: number) => {
-    updateQuantity(id, size, newQty);
+  const handleQuantityChange = (id: string, size: string, newQty: number, color = "") => {
+    updateQuantity(id, size, newQty, color);
   };
 
   const handlePlaceOrder = async () => {
@@ -333,7 +339,9 @@ function Checkout() {
         size: item.size,
         quantity: item.qty,
         unit_price: item.product.price,
-        variant: item.product.variant,
+        variant: item.color
+          ? [item.color, item.product.variant].filter(Boolean).join(" / ")
+          : item.product.variant,
       }));
 
       // Create order with acquisition data
@@ -368,7 +376,11 @@ function Checkout() {
         throw new Error(error || "Failed to create order");
       }
 
-      setCreatedOrderId(order.id);
+      setPlacedOrder({
+        orderNumber: order.order_number,
+        total: Number(order.total_amount),
+        customerFirstName: formData.firstName.trim(),
+      });
       setOrderSuccess(true);
 
       persistCheckoutPrefill(formData);
@@ -385,6 +397,26 @@ function Checkout() {
     }
   };
 
+  if (orderSuccess && placedOrder) {
+    return (
+      <Layout>
+        <CartSidebar isOpen={isCartOpen} onOpenChange={closeCart} />
+        <section className="bg-secondary/30 py-10 sm:py-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <OrderSuccessScreen
+              variant="page"
+              orderNumber={placedOrder.orderNumber}
+              total={placedOrder.total}
+              customerName={placedOrder.customerFirstName}
+              doneLabel="Back to home"
+              onDone={() => navigate({ to: "/" })}
+            />
+          </div>
+        </section>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <CartSidebar isOpen={isCartOpen} onOpenChange={closeCart} />
@@ -398,7 +430,7 @@ function Checkout() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 py-8 sm:py-12 lg:grid-cols-[1.5fr_1fr]">
+      <section className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 py-8 sm:py-12 xl:grid-cols-[1.5fr_1fr]">
         {/* LEFT */}
         <div className="space-y-10">
           {/* Items */}
@@ -428,12 +460,12 @@ function Checkout() {
               ) : (
                 items.map((item) => (
                   <div
-                    key={`${item.id}-${item.size}`}
+                    key={`${item.id}-${item.size}-${item.color || ""}`}
                     className="flex items-start gap-4 py-4 first:pt-0 last:pb-0"
                   >
                     <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-2xl bg-card border border-border shadow-sm">
                       <img
-                        src={item.product.image_url}
+                        src={getProductDisplayImage(item.product) || item.product.image_url}
                         alt={item.product.name} 
                         className="h-full w-full object-cover transition-transform hover:scale-105"
                       />
@@ -448,6 +480,11 @@ function Checkout() {
                             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-primary-soft text-primary text-xs font-medium">
                               {item.size}
                             </span>
+                            {item.color ? (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-muted text-foreground text-xs font-medium">
+                                {item.color}
+                              </span>
+                            ) : null}
                             {item.product.badge && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gold text-gold-foreground text-xs font-medium">
                                 {item.product.badge}
@@ -473,7 +510,12 @@ function Checkout() {
                         <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-1 w-fit">
                           <button 
                             onClick={() =>
-                              handleQuantityChange(item.id, item.size, Math.max(1, item.qty - 1))
+                              handleQuantityChange(
+                                item.id,
+                                item.size,
+                                Math.max(1, item.qty - 1),
+                                item.color || "",
+                              )
                             }
                             className="grid size-8 place-items-center rounded-full hover:bg-muted transition-colors"
                             disabled={item.qty <= 1}
@@ -482,14 +524,21 @@ function Checkout() {
                           </button>
                           <span className="w-10 text-center text-sm font-medium">{item.qty}</span>
                           <button 
-                            onClick={() => handleQuantityChange(item.id, item.size, item.qty + 1)} 
+                            onClick={() =>
+                              handleQuantityChange(
+                                item.id,
+                                item.size,
+                                item.qty + 1,
+                                item.color || "",
+                              )
+                            } 
                             className="grid size-8 place-items-center rounded-full hover:bg-muted transition-colors"
                           >
                             <Plus className="size-3.5" />
                           </button>
                         </div>
                         <button 
-                          onClick={() => handleRemoveItem(item.id, item.size)} 
+                          onClick={() => handleRemoveItem(item.id, item.size, item.color || "")} 
                           className="flex min-h-11 items-center gap-1.5 self-start px-3 py-2 rounded-full border border-border text-xs font-medium text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all sm:ml-auto"
                           aria-label="Remove item"
                         >

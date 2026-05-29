@@ -25,6 +25,14 @@ import { orderService, type CartItem } from "@/lib/order-service";
 import { productService } from "@/lib/supabase-service";
 import { toast } from "sonner";
 import { formatPkr } from "@/lib/format-currency";
+import {
+  fullScreenModalClass,
+  modalFooterClass,
+  modalScrollPaneClass,
+} from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
+import { OrderSuccessScreen } from "@/components/order-success-screen";
+import { cn } from "@/lib/utils";
 
 interface AddOrderModalProps {
   open: boolean;
@@ -66,6 +74,11 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationSummary, setValidationSummary] = useState<string | null>(null);
+  const [placedOrder, setPlacedOrder] = useState<{
+    orderNumber: string;
+    total: number;
+    customerName: string;
+  } | null>(null);
 
   // Load products list from Supabase
   useEffect(() => {
@@ -167,7 +180,26 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
     toast.info(`Removed ${item.product_name} from order`);
   };
 
+  const resetForm = () => {
+    setOrderItems([]);
+    setDiscountAmount("0");
+    setShippingAmount("250");
+    setTaxAmount("0");
+    setCustomerInfo({ email: "", firstName: "", lastName: "", phone: "" });
+    setShippingAddress({ streetAddress: "", city: "", postalCode: "", country: "PK" });
+    setValidationSummary(null);
+    setPlacedOrder(null);
+  };
+
   const handleClose = () => {
+    if (!isSubmitting) {
+      resetForm();
+      onOpenChange(false);
+    }
+  };
+
+  const handleSuccessDone = () => {
+    resetForm();
     onOpenChange(false);
   };
 
@@ -220,17 +252,12 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
         return;
       }
 
-      toast.success(`Boutique Order ${order?.order_number} created successfully`);
       onOrderAdded();
-      onOpenChange(false);
-
-      // Reset form states completely
-      setOrderItems([]);
-      setDiscountAmount("0");
-      setShippingAmount("250");
-      setTaxAmount("0");
-      setCustomerInfo({ email: "", firstName: "", lastName: "", phone: "" });
-      setShippingAddress({ streetAddress: "", city: "", postalCode: "", country: "PK" });
+      setPlacedOrder({
+        orderNumber: order?.order_number ?? "—",
+        total,
+        customerName: `${customerInfo.firstName.trim()} ${customerInfo.lastName.trim()}`.trim(),
+      });
     } catch (err) {
       console.error(err);
       toast.error("Failed to create new order");
@@ -241,10 +268,29 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl p-0 overflow-y-auto lg:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] lg:rounded-[40px] h-auto lg:h-[90vh] max-h-[95vh] flex flex-col">
-        <div className="flex flex-col lg:flex-row flex-1 w-full lg:overflow-hidden">
+      <DialogContent className={fullScreenModalClass}>
+        <ModalCloseBar onClose={handleClose} />
+        {placedOrder ? (
+          <div className={cn(modalScrollPaneClass, "flex flex-col justify-center")}>
+            <OrderSuccessScreen
+              variant="modal"
+              orderNumber={placedOrder.orderNumber}
+              total={placedOrder.total}
+              customerName={placedOrder.customerName}
+              doneLabel="Done"
+              onDone={handleSuccessDone}
+            />
+          </div>
+        ) : (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div
+            className={cn(
+              modalScrollPaneClass,
+              "custom-scrollbar lg:flex lg:flex-row lg:overflow-hidden",
+            )}
+          >
           {/* Left Column: Order Items Workspace */}
-          <div className="w-full lg:w-[450px] bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50 p-6 lg:p-10 flex flex-col lg:overflow-y-auto custom-scrollbar shrink-0">
+          <div className="w-full shrink-0 border-b border-border/50 bg-muted/20 p-4 sm:p-6 lg:min-h-0 lg:w-[450px] lg:shrink-0 lg:overflow-y-auto lg:overscroll-contain lg:border-b-0 lg:border-r lg:p-10 custom-scrollbar">
             <div className="space-y-8">
               <div className="space-y-2">
                 <div className="flex items-center gap-3">
@@ -471,9 +517,14 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
           </div>
 
           {/* Right Column: Client & Delivery Details */}
-          <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
-            <form onSubmit={handleSubmit} className="flex-1 flex flex-col lg:overflow-hidden">
-              <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 lg:pt-8 pt-6 space-y-8 lg:space-y-10 custom-scrollbar">
+          <div className="flex w-full min-w-0 flex-col bg-white lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+            <form onSubmit={handleSubmit} className="flex min-h-0 flex-col lg:flex-1 lg:overflow-hidden">
+              <div
+                className={cn(
+                  "space-y-8 p-4 pt-5 sm:p-6 lg:space-y-10 lg:p-10 lg:pt-8",
+                  "lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-contain custom-scrollbar",
+                )}
+              >
                 {validationSummary && (
                   <div
                     className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
@@ -670,8 +721,8 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
               </div>
 
               {/* Premium Footer */}
-              <div className="p-6 lg:p-10 border-t border-border/40 bg-muted/5 rounded-b-[32px] lg:rounded-b-[40px]">
-                <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+              <div className={cn(modalFooterClass, "bg-muted/5 sm:bg-muted/5")}>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                     <div className="flex -space-x-2">
                       <div className="w-8 h-8 rounded-full border-2 border-white bg-primary-soft flex items-center justify-center text-primary">
@@ -685,14 +736,14 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
                       type="button"
                       variant="ghost"
                       onClick={handleClose}
-                      className="rounded-full px-8 h-12 text-xs font-bold text-muted-foreground transition-all hover:bg-muted/60"
+                      className="min-h-11 w-full rounded-full text-base font-semibold sm:w-auto sm:px-8"
                     >
                       Cancel
                     </Button>
                     <Button
                       type="submit"
                       disabled={isSubmitting}
-                      className="rounded-full px-10 h-12 text-xs font-bold bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20 w-full sm:w-auto sm:min-w-[160px] transition-all active:scale-95"
+                      className="min-h-11 w-full rounded-full bg-primary text-base font-semibold text-white shadow-md sm:w-auto sm:min-w-[160px]"
                     >
                       {isSubmitting ? "Placing Order..." : "Create Order"}
                     </Button>
@@ -702,6 +753,8 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
             </form>
           </div>
         </div>
+        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

@@ -21,7 +21,7 @@ export interface StoreSettings {
   meta_description: string;
 }
 
-const defaultSettings: StoreSettings = {
+export const defaultStoreSettings: StoreSettings = {
   store_name: "Little Luxuries",
   business_email: "concierge@littleluxuries.com",
   contact_phone: "+1 (555) 892-0192",
@@ -42,51 +42,38 @@ const defaultSettings: StoreSettings = {
   meta_description: "Premium baby garments crafted with love and organic materials.",
 };
 
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 class StoreSettingsService {
   private cache: Partial<StoreSettings> = {};
-  private cacheExpiry: number = 0;
-  private readonly CACHE_TTL = 1000; // 1 second cache
+  private cacheExpiry = 0;
 
   async getSettings(): Promise<StoreSettings> {
-    console.log("🔍 StoreSettingsService.getSettings() called");
-
-    // Return cached if valid
     if (Object.keys(this.cache).length > 0 && Date.now() < this.cacheExpiry) {
-      console.log("📦 Returning cached settings:", this.cache);
-      return { ...defaultSettings, ...this.cache };
+      return { ...defaultStoreSettings, ...this.cache };
     }
 
-    console.log("🌐 Fetching fresh settings from database...");
     try {
       const { data, error } = await supabase.from("store_settings").select("key, value");
 
       if (error) {
-        console.error("❌ Error fetching store settings:", error);
-        return defaultSettings;
+        console.error("Error fetching store settings:", error);
+        return defaultStoreSettings;
       }
 
-      console.log("📊 Raw database data:", data);
-
-      // Convert array to object
       const settings: Partial<StoreSettings> = {};
       data?.forEach((row: { key: string; value: string }) => {
         const key = row.key as keyof StoreSettings;
         (settings as Record<string, string>)[key] = row.value;
-        console.log(`📝 Setting ${key}: ${row.value}`);
       });
 
-      console.log("✅ Processed settings:", settings);
-
       this.cache = settings;
-      this.cacheExpiry = Date.now() + this.CACHE_TTL;
+      this.cacheExpiry = Date.now() + CACHE_TTL_MS;
 
-      const finalSettings = { ...defaultSettings, ...settings };
-      console.log("🎯 Final settings to return:", finalSettings);
-
-      return finalSettings;
+      return { ...defaultStoreSettings, ...settings };
     } catch (err) {
-      console.error("❌ Failed to fetch store settings:", err);
-      return defaultSettings;
+      console.error("Failed to fetch store settings:", err);
+      return defaultStoreSettings;
     }
   }
 
@@ -99,46 +86,38 @@ class StoreSettingsService {
     key: keyof StoreSettings,
     value: string,
   ): Promise<{ success: boolean; error?: string }> {
-    console.log(`💾 Updating setting ${key} to: "${value}"`);
     try {
       const { error } = await supabase
         .from("store_settings")
         .upsert({ key, value, updated_at: new Date().toISOString() }, { onConflict: "key" });
 
       if (error) {
-        console.error("❌ Error updating setting:", error);
+        console.error("Error updating setting:", error);
         return { success: false, error: error.message };
       }
 
-      console.log(`✅ Successfully updated ${key} to "${value}"`);
-
-      // Clear cache to force refresh
       this.cache = {};
       this.cacheExpiry = 0;
-      console.log("🗑️ Cache cleared for refresh");
 
       return { success: true };
     } catch (err) {
-      console.error("❌ Failed to update setting:", err);
+      console.error("Failed to update setting:", err);
       return { success: false, error: "Failed to update setting" };
     }
   }
 
-  // Force clear cache for debugging
   clearCache(): void {
     this.cache = {};
     this.cacheExpiry = 0;
   }
 
-  // Format price with currency
   formatPrice(amount: number, settings?: StoreSettings): string {
-    const symbol = settings?.currency_symbol || defaultSettings.currency_symbol;
+    const symbol = settings?.currency_symbol || defaultStoreSettings.currency_symbol;
     return `${symbol}${amount.toFixed(2)}`;
   }
 
-  // Get page title with store suffix
   getPageTitle(pageTitle: string, settings?: StoreSettings): string {
-    const suffix = settings?.meta_title_suffix || defaultSettings.meta_title_suffix;
+    const suffix = settings?.meta_title_suffix || defaultStoreSettings.meta_title_suffix;
     return `${pageTitle} — ${suffix}`;
   }
 }
