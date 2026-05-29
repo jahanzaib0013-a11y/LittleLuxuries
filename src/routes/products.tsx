@@ -662,7 +662,7 @@ function ProductsContent({ search }: { search: string }) {
                           <img
                             src={p.image_url}
                             alt=""
-                            className="h-full w-full object-cover"
+                            className="h-full w-full object-contain"
                           />
                         ) : (
                           <img src={logo} alt="" className="h-full w-full object-cover p-2" />

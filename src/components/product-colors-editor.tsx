@@ -760,7 +760,7 @@ export function ProductColorsEditor({
 
                     <>
 
-                      <img src={color.image_url} alt="" className="h-full w-full object-cover" />
+                      <img src={color.image_url} alt="" className="h-full w-full object-contain" />
 
                       <span className="absolute inset-x-2 bottom-2 rounded-lg bg-black/55 py-2 text-center text-xs font-medium text-white">
 
@@ -830,7 +830,7 @@ export function ProductColorsEditor({
 
                     >
 
-                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      <img src={url} alt="" className="h-full w-full object-contain" />
 
                       <button
 

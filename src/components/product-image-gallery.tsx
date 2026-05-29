@@ -294,7 +294,7 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
             width={1024}
             height={1024}
             draggable={false}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-contain"
             style={{
               transformOrigin: "center center",
               willChange: isZoomed ? "transform" : undefined,
@@ -411,7 +411,7 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
               aria-label={`View image ${i + 1}`}
               aria-current={currentImage === img}
             >
-              <img src={img} alt="" className="h-full w-full object-cover" draggable={false} />
+              <img src={img} alt="" className="h-full w-full object-contain" draggable={false} />
             </button>
           ))}
         </div>

@@ -723,7 +723,7 @@ function Shop() {
                       <ProductCardImage
                     src={p.image}
                     alt={p.name}
-                        className="h-full w-full object-cover grayscale-[0.5]"
+                        className="h-full w-full object-contain grayscale-[0.5]"
                       />
               </div>
                   ) : (
@@ -754,7 +754,7 @@ function Shop() {
                       <ProductCardImage
                         src={p.image}
                         alt={p.name}
-                        className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
+                        className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.04]"
                       />
                       <div
                         className="absolute inset-0 transition-opacity duration-400 opacity-0 group-hover:opacity-100"
@@ -842,7 +842,7 @@ function Shop() {
                             >
                               {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
                               color.image_url ? (
-                                <img src={color.image_url} alt="" className="h-full w-full object-cover" />
+                                <img src={color.image_url} alt="" className="h-full w-full object-contain" />
                               ) : null}
                             </span>
                           ))}

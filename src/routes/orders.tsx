@@ -777,7 +777,7 @@ function OrdersContent() {
                                 <img
                                   src={item.product_image_url}
                                   alt=""
-                                  className="h-full w-full object-cover"
+                                  className="h-full w-full object-contain"
                                 />
                               ) : (
                                 <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
@@ -1018,7 +1018,7 @@ function OrdersContent() {
                     <img
                       src={item.product_image_url}
                       alt={item.product_name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-muted-foreground">

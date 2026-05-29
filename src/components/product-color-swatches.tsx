@@ -59,7 +59,7 @@ export function ProductColorSwatches({
                 style={hasHex ? { backgroundColor: color.hex } : undefined}
               >
                 {!hasHex && color.image_url ? (
-                  <img src={color.image_url} alt="" className="h-full w-full object-cover" />
+                  <img src={color.image_url} alt="" className="h-full w-full object-contain" />
                 ) : null}
               </span>
               <span>{color.name}</span>

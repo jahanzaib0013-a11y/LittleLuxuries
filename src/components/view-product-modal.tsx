@@ -87,7 +87,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                   <img
                     src={currentImage}
                     alt={product.name}
-                    className="w-full h-full object-cover animate-in fade-in zoom-in-95 duration-500"
+                    className="w-full h-full object-contain animate-in fade-in zoom-in-95 duration-500"
                   />
                   {product.badge && (
                     <div className="absolute top-3 left-3 sm:top-6 sm:left-6">
@@ -119,7 +119,7 @@ export function ViewProductModal({ open, onOpenChange, product, onEdit }: ViewPr
                           : "border-transparent hover:border-primary/30 opacity-70 hover:opacity-100",
                       )}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <img src={img} alt="" className="w-full h-full object-contain" />
                     </button>
                   ))}
                 </div>

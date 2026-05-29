@@ -89,7 +89,7 @@ function FavoritesPage() {
                       <img
                         src={p.image}
                         alt={p.name}
-                        className="h-full w-full object-cover grayscale-[0.5]"
+                        className="h-full w-full object-contain grayscale-[0.5]"
                       />
                     </div>
                   ) : (
@@ -108,7 +108,7 @@ function FavoritesPage() {
                         <img
                           src={p.image}
                           alt={p.name}
-                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />
                         <button

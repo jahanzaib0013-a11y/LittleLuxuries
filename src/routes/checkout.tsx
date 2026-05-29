@@ -467,7 +467,7 @@ function Checkout() {
                       <img
                         src={getProductDisplayImage(item.product) || item.product.image_url}
                         alt={item.product.name} 
-                        className="h-full w-full object-cover transition-transform hover:scale-105"
+                        className="h-full w-full object-contain transition-transform hover:scale-105"
                       />
                     </div>
                     <div className="flex-1 min-w-0 py-1">

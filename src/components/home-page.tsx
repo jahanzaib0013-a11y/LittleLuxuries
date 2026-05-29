@@ -298,7 +298,7 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                             width={1024}
                             height={1024}
                             draggable={false}
-                            className="h-full w-full max-w-full object-cover grayscale-[0.5]"
+                            className="h-full w-full max-w-full object-contain grayscale-[0.5]"
                           />
                         </div>
                       ) : (
@@ -333,7 +333,7 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                               width={1024}
                               height={1024}
                               draggable={false}
-                              className="h-full w-full max-w-full object-cover transition-transform duration-700 md:group-hover:scale-105"
+                              className="h-full w-full max-w-full object-contain transition-transform duration-700 md:group-hover:scale-105"
                             />
                           </div>
                         </Link>

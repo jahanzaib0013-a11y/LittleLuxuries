@@ -668,7 +668,7 @@ function DashboardContent() {
                                     <img
                                       src={item.product_image_url}
                                       alt={item.product_name}
-                                      className="h-full w-full object-cover"
+                                      className="h-full w-full object-contain"
                                     />
                                   ) : (
                                     <div className="h-full w-full flex items-center justify-center text-[10px] text-muted-foreground uppercase font-bold">
@@ -889,7 +889,7 @@ function DashboardContent() {
                     <img
                       src={item.product_image_url}
                       alt={item.product_name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-contain"
                     />
                   ) : (
                     <div className="h-full w-full flex items-center justify-center text-muted-foreground">
