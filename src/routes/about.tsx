@@ -7,14 +7,20 @@ import logo from "@/assets/logo.png";
 export const Route = createFileRoute("/about")({
   head: () => ({
     meta: [
-      { title: "Our Story — Little Luxuries" },
+      { title: "Our Story — Little Luxuries Pakistan | Premium Baby Clothing" },
       {
         name: "description",
         content:
-          "Crafting heirloom-quality baby garments since 2018, with care for both babies and the planet.",
+          "Crafting heirloom-quality baby garments since 2018, with care for both babies and the planet. Learn about our sustainable practices and artisan partnerships.",
       },
-      { property: "og:title", content: "Our Story — Little Luxuries" },
-      { property: "og:description", content: "Heirloom baby garments hand-crafted with love." },
+      { name: "keywords", content: "Little Luxuries story, baby clothing brand Pakistan, sustainable baby clothes, organic baby garments, artisan baby clothing" },
+      { property: "og:title", content: "Our Story — Little Luxuries Pakistan" },
+      {
+        property: "og:description",
+        content: "Heirloom baby garments hand-crafted with love since 2018. Learn about our sustainable practices.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://littleluxuries.pk/about" },
     ],
   }),
   component: About,
@@ -39,7 +45,7 @@ function About() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="aspect-4/5 overflow-hidden rounded-3xl shadow-(--shadow-soft)">
-            <img src={hero} alt="Baby" className="h-full w-full object-cover" />
+            <img src={hero} alt="Baby wearing organic cotton clothing from Little Luxuries" className="h-full w-full object-cover" />
           </div>
           <div>
             <span className="label-eyebrow">Founded 2018</span>
@@ -89,7 +95,7 @@ function About() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 sm:px-6 py-16 sm:py-24 text-center">
-        <img src={logo} alt="" width={100} height={100} className="mx-auto" />
+        <img src={logo} alt="Little Luxuries Logo" width={100} height={100} className="mx-auto" />
         <blockquote className="mt-6 font-serif text-2xl italic leading-relaxed text-foreground md:text-3xl">
           "We are not making clothes. We are wrapping a beginning."
         </blockquote>

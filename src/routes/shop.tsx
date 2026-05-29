@@ -15,12 +15,20 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/shop")({
   head: () => ({
     meta: [
-      { title: "Shop — Little Luxuries" },
+      { title: "Shop Premium Baby Clothing & Accessories — Little Luxuries Pakistan" },
       {
         name: "description",
         content:
-          "Browse our curated collection of organic cotton, linen, and merino wool baby garments.",
+          "Browse our curated collection of organic cotton, linen, and merino wool baby garments. Onesies, sleepwear, swaddles, and accessories handcrafted with love in Pakistan.",
       },
+      { name: "keywords", content: "baby clothes shop, organic baby clothing, baby onesies, baby sleepwear, baby swaddles, baby accessories, Pakistan baby store" },
+      { property: "og:title", content: "Shop Premium Baby Clothing & Accessories — Little Luxuries" },
+      {
+        property: "og:description",
+        content: "Browse our curated collection of organic cotton, linen, and merino wool baby garments.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://littleluxuries.pk/shop" },
     ],
   }),
   validateSearch: (search: Record<string, unknown>): { category?: string } => {

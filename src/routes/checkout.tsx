@@ -39,8 +39,19 @@ import { OrderSuccessScreen } from "@/components/order-success-screen";
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
-      { title: "Checkout — Little Luxuries" },
-      { name: "description", content: "Review your order and complete your purchase." },
+      { title: "Checkout — Little Luxuries Pakistan" },
+      {
+        name: "description",
+        content: "Review your order and complete your purchase of premium organic baby clothing and accessories. Secure checkout with multiple payment options.",
+      },
+      { name: "keywords", content: "baby clothes checkout, buy baby clothes online, Pakistan baby store checkout" },
+      { property: "og:title", content: "Checkout — Little Luxuries" },
+      {
+        property: "og:description",
+        content: "Review your order and complete your purchase of premium organic baby clothing.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://littleluxuries.pk/checkout" },
     ],
   }),
   component: Checkout,

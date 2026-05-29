@@ -10,6 +10,24 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/favorites")({
+  head: () => ({
+    meta: [
+      { title: "My Favorites — Little Luxuries Pakistan" },
+      {
+        name: "description",
+        content:
+          "Save your favorite baby clothing and accessories. Create a wishlist of organic cotton onesies, sleepwear, swaddles, and more.",
+      },
+      { name: "keywords", content: "baby wishlist, favorites, baby clothes wishlist, save baby products" },
+      { property: "og:title", content: "My Favorites — Little Luxuries" },
+      {
+        property: "og:description",
+        content: "Save your favorite baby clothing and accessories.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://littleluxuries.pk/favorites" },
+    ],
+  }),
   component: FavoritesPage,
 });
 

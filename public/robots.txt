@@ -1,0 +1,20 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://littleluxuries.pk/sitemap.xml
+
+# Disallow admin and private areas
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /orders
+Disallow: /inbox
+Disallow: /content
+
+# Allow search engines to crawl public content
+Allow: /shop
+Allow: /about
+Allow: /favorites
+Allow: /product
+
+# Crawl-delay to prevent overloading
+Crawl-delay: 1
