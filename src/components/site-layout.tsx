@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingBag, Heart, Menu, Loader2, CheckCircle2 } from "lucide-react";
+import { ShoppingBag, Heart, Menu, Loader2, CheckCircle2, Instagram, Facebook } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useEffect, useState } from "react";
@@ -169,6 +169,26 @@ export function Footer({ className }: { className?: string }) {
             Crafting heirloom-quality baby garments with a commitment to ethics, comfort, and
             timeless luxury.
           </p>
+          <div className="mt-4 flex gap-3">
+            <a
+              href="https://www.facebook.com/share/1B8qfP9LFc/?mibextid=wwXIfr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+              aria-label="Facebook"
+            >
+              <Facebook className="size-4" />
+            </a>
+            <a
+              href="https://www.instagram.com/littleluxuries__pk?igsh=MTA2NDE0dGZlNmg1Yg%3D%3D&utm_source=qr"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
+              aria-label="Instagram"
+            >
+              <Instagram className="size-4" />
+            </a>
+          </div>
         </div>
         <FooterCol
           title="Shop"
