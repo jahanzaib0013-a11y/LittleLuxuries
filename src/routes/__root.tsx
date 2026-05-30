@@ -64,6 +64,15 @@ export const Route = createRootRoute({
         rel: "canonical",
         href: "https://littleluxuries.pk",
       },
+      {
+        rel: "icon",
+        type: "image/png",
+        href: "/logo.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/logo.png",
+      },
     ],
     scripts: [
       {
