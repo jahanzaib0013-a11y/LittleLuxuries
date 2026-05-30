@@ -30,6 +30,12 @@ export const Route = createFileRoute("/shop")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://littleluxuries.pk/shop" },
     ],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://littleluxuries.pk/shop",
+      },
+    ],
   }),
   validateSearch: (search: Record<string, unknown>): { category?: string } => {
     return {
@@ -850,7 +856,7 @@ function Shop() {
                             >
                               {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
                               color.image_url ? (
-                                <img src={color.image_url} alt="" className="h-full w-full object-contain" />
+                                <img src={color.image_url} alt="" loading="lazy" className="h-full w-full object-contain" />
                               ) : null}
                             </span>
                           ))}

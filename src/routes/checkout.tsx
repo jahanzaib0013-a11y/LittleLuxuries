@@ -53,6 +53,12 @@ export const Route = createFileRoute("/checkout")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://littleluxuries.pk/checkout" },
     ],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://littleluxuries.pk/checkout",
+      },
+    ],
   }),
   component: Checkout,
 });
@@ -477,7 +483,8 @@ function Checkout() {
                     <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-2xl bg-card border border-border shadow-sm">
                       <img
                         src={getProductDisplayImage(item.product) || item.product.image_url}
-                        alt={item.product.name} 
+                        alt={item.product.name}
+                        loading="lazy"
                         className="h-full w-full object-contain transition-transform hover:scale-105"
                       />
                     </div>

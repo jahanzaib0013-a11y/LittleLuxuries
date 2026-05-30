@@ -35,6 +35,14 @@ export const Route = createFileRoute("/product/$id")({
           { property: "og:url", content: `https://littleluxuries.pk/product/${loaderData.product.id}` },
         ]
       : [],
+    links: loaderData
+      ? [
+          {
+            rel: "canonical",
+            href: `https://littleluxuries.pk/product/${loaderData.product.id}`,
+          },
+        ]
+      : [],
     scripts: loaderData
       ? [
           {

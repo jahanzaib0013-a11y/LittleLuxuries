@@ -22,6 +22,12 @@ export const Route = createFileRoute("/about")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://littleluxuries.pk/about" },
     ],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://littleluxuries.pk/about",
+      },
+    ],
   }),
   component: About,
 });

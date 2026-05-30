@@ -27,6 +27,12 @@ export const Route = createFileRoute("/favorites")({
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://littleluxuries.pk/favorites" },
     ],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://littleluxuries.pk/favorites",
+      },
+    ],
   }),
   component: FavoritesPage,
 });
@@ -107,6 +113,7 @@ function FavoritesPage() {
                       <img
                         src={p.image}
                         alt={p.name}
+                        loading="lazy"
                         className="h-full w-full object-contain grayscale-[0.5]"
                       />
                     </div>
@@ -126,6 +133,7 @@ function FavoritesPage() {
                         <img
                           src={p.image}
                           alt={p.name}
+                          loading="lazy"
                           className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />
