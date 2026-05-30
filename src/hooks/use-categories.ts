@@ -29,7 +29,9 @@ export function useCategories() {
     const saved = localStorage.getItem("site_categories");
     if (saved) {
       try {
-        setCategoriesState(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        console.log('[useCategories] Loaded from localStorage:', parsed);
+        setCategoriesState(parsed);
       } catch (e) {
         console.error("Failed to parse categories", e);
       }

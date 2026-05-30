@@ -23,6 +23,7 @@ function CategoryCard({
   imageClassName?: string;
   titleClassName?: string;
 }) {
+  console.log('[CategoryCard] Rendering category:', category.name, 'image:', category.image);
   return (
     <Link
       to="/shop"
