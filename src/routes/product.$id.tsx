@@ -31,6 +31,66 @@ export const Route = createFileRoute("/product/$id")({
           { property: "og:title", content: loaderData.product.name },
           { property: "og:description", content: loaderData.product.description },
           { property: "og:image", content: loaderData.product.image },
+          { property: "og:type", content: "product" },
+          { property: "og:url", content: `https://littleluxuries.pk/product/${loaderData.product.id}` },
+        ]
+      : [],
+    scripts: loaderData
+      ? [
+          {
+            type: "application/ld+json",
+            innerHTML: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Product",
+              name: loaderData.product.name,
+              description: loaderData.product.description,
+              image: loaderData.product.image,
+              url: `https://littleluxuries.pk/product/${loaderData.product.id}`,
+              brand: {
+                "@type": "Brand",
+                name: "Little Luxuries",
+              },
+              category: loaderData.product.category,
+              offers: {
+                "@type": "Offer",
+                price: loaderData.product.price,
+                priceCurrency: "PKR",
+                availability:
+                  loaderData.product.badge === "Out of Stock" ||
+                  (loaderData.product.units !== undefined && loaderData.product.units <= 0)
+                    ? "https://schema.org/OutOfStock"
+                    : "https://schema.org/InStock",
+                url: `https://littleluxuries.pk/product/${loaderData.product.id}`,
+              },
+            }),
+          },
+          {
+            type: "application/ld+json",
+            innerHTML: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "BreadcrumbList",
+              itemListElement: [
+                {
+                  "@type": "ListItem",
+                  position: 1,
+                  name: "Home",
+                  item: "https://littleluxuries.pk/",
+                },
+                {
+                  "@type": "ListItem",
+                  position: 2,
+                  name: "Shop",
+                  item: "https://littleluxuries.pk/shop",
+                },
+                {
+                  "@type": "ListItem",
+                  position: 3,
+                  name: loaderData.product.name,
+                  item: `https://littleluxuries.pk/product/${loaderData.product.id}`,
+                },
+              ],
+            }),
+          },
         ]
       : [],
   }),
