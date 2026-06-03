@@ -22,7 +22,11 @@ import {
   Smartphone,
 } from "lucide-react";
 import { productService } from "@/lib/supabase-service";
-import { publishViaManus } from "@/lib/manus-server";
+import {
+  publishViaManus,
+  type PublishViaManusInput,
+  type PublishViaManusResult,
+} from "@/lib/manus-server";
 import { pushAdminNotification } from "@/lib/admin-notifications-bus";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -98,7 +102,11 @@ export function PublishProductModal({
 
             for (const platform of platforms) {
               toast.promise(
-                (publishViaManus as any)({
+                (
+                  publishViaManus as unknown as (payload: {
+                    data: PublishViaManusInput;
+                  }) => Promise<PublishViaManusResult>
+                )({
                   data: {
                     imageUrl: publicImageUrl,
                     caption,
@@ -135,7 +143,11 @@ export function PublishProductModal({
 
             if (addInstagramStory) {
               toast.promise(
-                (publishViaManus as any)({
+                (
+                  publishViaManus as unknown as (payload: {
+                    data: PublishViaManusInput;
+                  }) => Promise<PublishViaManusResult>
+                )({
                   data: {
                     imageUrl: publicImageUrl,
                     caption,
@@ -206,10 +218,10 @@ export function PublishProductModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden border-none shadow-2xl bg-white rounded-[40px]">
+      <DialogContent className="max-w-2xl p-0 overflow-y-auto md:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] md:rounded-[40px] max-h-[95vh] h-auto md:h-auto flex flex-col">
         <div className="flex flex-col h-full">
           {/* Header Section */}
-          <div className="p-10 pb-6 bg-primary-soft/30 relative">
+          <div className="p-6 pb-4 md:p-10 md:pb-6 bg-primary-soft/30 relative">
             <div className="flex items-center justify-between mb-6">
               <div className="h-10 w-10 rounded-2xl bg-white shadow-sm grid place-items-center">
                 <Globe className="h-5 w-5 text-primary" />
@@ -233,13 +245,13 @@ export function PublishProductModal({
             </div>
           </div>
 
-          <div className="p-10 pt-8 space-y-8">
+          <div className="p-6 pt-6 md:p-10 md:pt-8 space-y-6 md:space-y-8">
             {/* Launch Timing */}
             <section className="space-y-4">
               <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
                 Launch Strategy
               </Label>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button
                   onClick={() => setPublishType("now")}
                   className={cn(
@@ -294,7 +306,7 @@ export function PublishProductModal({
 
             {/* Schedule Picker */}
             {publishType === "schedule" && (
-              <div className="grid grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
                 <div className="space-y-2">
                   <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">
                     Launch Date
@@ -322,7 +334,7 @@ export function PublishProductModal({
 
             {/* Social Amplification */}
             <div className="space-y-4">
-              <div className="p-6 rounded-[32px] bg-muted/10 border border-border/30 flex items-center justify-between gap-6">
+              <div className="p-4 sm:p-6 rounded-[24px] sm:rounded-[32px] bg-muted/10 border border-border/30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
                 <div className="flex items-center gap-4">
                   <div className="h-12 w-12 rounded-2xl bg-white shadow-sm grid place-items-center shrink-0">
                     <Share2 className="h-5 w-5 text-primary" />
@@ -386,7 +398,7 @@ export function PublishProductModal({
                   )}
 
                   {publishType === "now" && postDelay === "0" && (
-                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/15 flex items-center justify-between gap-4 mt-2">
+                    <div className="p-4 rounded-2xl bg-primary/5 border border-primary/15 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-2">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="h-10 w-10 rounded-xl bg-white shadow-sm grid place-items-center shrink-0">
                           <Smartphone className="h-5 w-5 text-primary" />
@@ -424,19 +436,19 @@ export function PublishProductModal({
           </div>
 
           {/* Footer Action */}
-          <div className="p-10 border-t border-border/40 bg-muted/5 mt-auto">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
+          <div className="p-6 md:p-10 border-t border-border/40 bg-muted/5 mt-auto">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 w-full sm:w-auto">
                 <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
                 <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                   Ready for Deployment
                 </span>
               </div>
-              <div className="flex gap-3">
+              <div className="flex gap-3 w-full sm:w-auto justify-end">
                 <Button
                   variant="ghost"
                   onClick={() => onOpenChange(false)}
-                  className="rounded-full px-8 h-12 font-bold"
+                  className="rounded-full px-8 h-12 font-bold w-full sm:w-auto"
                 >
                   Cancel
                 </Button>
@@ -445,7 +457,7 @@ export function PublishProductModal({
                   disabled={
                     isPublishing || (publishType === "schedule" && (!publishDate || !publishTime))
                   }
-                  className="rounded-full px-12 h-12 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[180px]"
+                  className="rounded-full px-12 h-12 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[180px] w-full sm:w-auto"
                 >
                   {isPublishing ? (
                     <Clock className="h-4 w-4 animate-spin mr-2" />

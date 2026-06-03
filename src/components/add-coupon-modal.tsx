@@ -83,8 +83,8 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] p-0 overflow-hidden border-none shadow-2xl rounded-[32px]">
-        <div className="bg-linear-to-br from-primary/10 via-lilac/5 to-white p-8">
+      <DialogContent className="max-w-[95vw] sm:max-w-[600px] p-0 overflow-y-auto border-none shadow-2xl rounded-[28px] sm:rounded-[32px]">
+        <div className="bg-linear-to-br from-primary/10 via-lilac/5 to-white p-5 sm:p-8">
           <DialogHeader className="mb-6">
             <div className="h-12 w-12 rounded-2xl bg-primary/10 grid place-items-center mb-4">
               <Sparkles className="h-6 w-6 text-primary" />
@@ -126,7 +126,9 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
                   </Label>
                   <Tabs
                     value={formData.type}
-                    onValueChange={(v) => setFormData((prev) => ({ ...prev, type: v as any }))}
+                    onValueChange={(v) =>
+                      setFormData((prev) => ({ ...prev, type: v as "percentage" | "fixed" }))
+                    }
                   >
                     <TabsList className="grid grid-cols-2 h-12 rounded-xl bg-white/50 p-1 border border-border/50">
                       <TabsTrigger
@@ -214,19 +216,19 @@ export function AddCouponModal({ open, onOpenChange, onCouponAdded }: AddCouponM
               </div>
             </div>
 
-            <DialogFooter className="mt-8 gap-3 sm:gap-0">
+            <DialogFooter className="mt-8 flex flex-col sm:flex-row gap-3 sm:gap-2 justify-end">
               <Button
                 type="button"
                 variant="ghost"
                 onClick={() => onOpenChange(false)}
-                className="rounded-full h-12 px-8 text-muted-foreground"
+                className="rounded-full h-12 px-8 text-muted-foreground w-full sm:w-auto"
               >
                 Discard
               </Button>
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="rounded-full h-12 px-10 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20"
+                className="rounded-full h-12 px-10 bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20 w-full sm:w-auto"
               >
                 {isLoading ? "Crafting..." : "Publish Offer"}
               </Button>

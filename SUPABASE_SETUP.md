@@ -7,7 +7,7 @@ This guide will help you connect your Little Luxuries project to Supabase for re
 ### 1. Create a Supabase Project
 
 1. Go to [supabase.com](https://supabase.com)
-2. Click "Start your project" 
+2. Click "Start your project"
 3. Sign up/login with GitHub
 4. Click "New Project"
 5. Choose your organization
@@ -22,6 +22,7 @@ This guide will help you connect your Little Luxuries project to Supabase for re
 Once your project is created, go to Project Settings → API:
 
 Copy these values:
+
 - **Project URL**: `https://your-project-id.supabase.co`
 - **anon public key**: `eyJ...` (long string)
 
@@ -86,7 +87,7 @@ VALUES (
 
 -- Insert sample products
 INSERT INTO products (name, price, image_url, category, variant, badge, description, sizes)
-VALUES 
+VALUES
   ('Cloud-Soft Organic Onesie', 48.00, '/product-onesie.jpg', 'Onesies', 'Lavender / 100% Organic Cotton', 'New', 'Luxuriously soft organic cotton onesie, hand-finished with love for your baby''s delicate skin.', ARRAY['Newborn', '0–3M', '3–6M', '6–12M']),
   ('Pure Wool Knitted Booties', 32.00, '/product-booties.jpg', 'Knitwear', 'Dusty Rose / Merino Wool', 'Bestseller', 'Hand-knit in small batches from the finest merino wool. Tiny, tender, and irresistibly soft on little feet.', ARRAY['0–3M', '3–6M', '6–12M']),
   ('Blush Garden Linen Swaddle', 58.00, '/product-swaddle.jpg', 'Accessories', 'Blush / French Linen', '', 'A breathable French linen swaddle with delicate hand-embroidered botanical detail.', ARRAY['One Size']),
@@ -141,16 +142,19 @@ Once connected, you'll have:
 ## 🐛 Troubleshooting
 
 ### Connection Issues
+
 - Check that `.env` file exists and has correct values
 - Verify Supabase project URL and anon key
 - Ensure your Supabase project is active
 
 ### Database Issues
+
 - Run the SQL schema setup in Supabase SQL Editor
 - Check that tables were created correctly
 - Verify Row Level Security (RLS) policies if needed
 
 ### Real-time Updates
+
 - Ensure both Content Editor and Storefront are open
 - Check browser console for subscription messages
 - Verify network connection is stable

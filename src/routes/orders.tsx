@@ -41,6 +41,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { OrderTimelineModal } from "@/components/order-timeline-modal";
+import { AddOrderModal } from "@/components/add-order-modal";
 import { sendOrderStatusEmail } from "@/lib/email-server";
 import {
   AlertDialog,
@@ -94,6 +95,7 @@ function OrdersContent() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [isItemsModalOpen, setIsItemsModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -392,7 +394,7 @@ function OrdersContent() {
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ExportMenu onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
-          <Button className="rounded-full h-11">
+          <Button onClick={() => setIsAddModalOpen(true)} className="rounded-full h-11">
             <Plus className="h-4 w-4" /> New Order
           </Button>
         </div>
@@ -831,6 +833,12 @@ function OrdersContent() {
         </Button>
         <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-10 text-7xl">🌿</div>
       </div>
+
+      <AddOrderModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onOrderAdded={fetchOrders}
+      />
 
       <OrderTimelineModal
         isOpen={isTimelineOpen}

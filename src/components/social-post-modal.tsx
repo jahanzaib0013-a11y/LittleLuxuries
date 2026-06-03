@@ -20,7 +20,11 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { publishViaManus } from "@/lib/manus-server";
+import {
+  publishViaManus,
+  type PublishViaManusInput,
+  type PublishViaManusResult,
+} from "@/lib/manus-server";
 import { formatPkr } from "@/lib/format-currency";
 import { pushAdminNotification } from "@/lib/admin-notifications-bus";
 
@@ -69,7 +73,11 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
           productId: product.id,
         };
 
-        const feedResult = await (publishViaManus as any)({
+        const feedResult = await (
+          publishViaManus as unknown as (payload: {
+            data: PublishViaManusInput;
+          }) => Promise<PublishViaManusResult>
+        )({
           data: {
             ...basePayload,
             platform: platform.toLowerCase() as "instagram" | "facebook",
@@ -100,7 +108,11 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
         });
 
         if (platform === "Instagram" && addInstagramStory) {
-          const storyResult = await (publishViaManus as any)({
+          const storyResult = await (
+            publishViaManus as unknown as (payload: {
+              data: PublishViaManusInput;
+            }) => Promise<PublishViaManusResult>
+          )({
             data: {
               ...basePayload,
               platform: "instagram",
@@ -182,10 +194,10 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden border-none shadow-2xl bg-white rounded-[40px] max-h-[95vh] flex flex-col">
-        <div className="flex flex-1 overflow-hidden">
+      <DialogContent className="max-w-4xl p-0 overflow-y-auto md:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] md:rounded-[40px] max-h-[95vh] h-auto md:h-[90vh] flex flex-col">
+        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
           {/* Left: Preview */}
-          <div className="w-[380px] bg-muted/20 border-r border-border/50 p-10 flex flex-col gap-6 shrink-0 overflow-y-auto custom-scrollbar">
+          <div className="w-full md:w-[380px] bg-muted/20 border-b md:border-b-0 md:border-r border-border/50 p-6 md:p-10 flex flex-col gap-6 shrink-0 md:overflow-y-auto custom-scrollbar">
             <div className="space-y-1">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60 text-center">
                 Post Preview
@@ -241,8 +253,8 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
           </div>
 
           {/* Right: Editor */}
-          <div className="flex-1 flex flex-col bg-white overflow-hidden">
-            <div className="p-10 pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
+          <div className="flex-1 flex flex-col bg-white md:overflow-hidden">
+            <div className="p-6 pb-4 md:p-10 md:pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="space-y-1">
                 <DialogTitle className="text-3xl font-serif text-primary tracking-tight">
                   Post Studio
@@ -261,7 +273,7 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
               </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+            <div className="flex-1 md:overflow-y-auto p-6 md:p-10 space-y-6 md:space-y-10 custom-scrollbar">
               <section className="space-y-4">
                 <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
                   Target Platform
@@ -357,12 +369,12 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
               )}
             </div>
 
-            <div className="p-10 border-t border-border/40 bg-muted/5 mt-auto">
-              <div className="flex items-center justify-between gap-4">
+            <div className="p-6 md:p-10 border-t border-border/40 bg-muted/5 mt-auto">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
                 <Button
                   variant="outline"
                   onClick={handleCopy}
-                  className="rounded-full h-14 px-8 font-bold border-primary/20 hover:border-primary/40 text-primary"
+                  className="rounded-full h-14 px-8 font-bold border-primary/20 hover:border-primary/40 text-primary w-full sm:w-auto shrink-0"
                 >
                   {isCopied ? (
                     <>
@@ -378,7 +390,7 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
                 <Button
                   onClick={handleDirectPost}
                   disabled={isPublishing}
-                  className="rounded-full h-14 flex-1 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30"
+                  className="rounded-full h-14 flex-1 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 w-full sm:w-auto"
                 >
                   {isPublishing ? (
                     <>

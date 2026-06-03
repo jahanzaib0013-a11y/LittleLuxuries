@@ -3,5 +3,8 @@
   "name": "tanstack-start-app",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry"
+  "main": "@tanstack/react-start/server-entry",
+  "triggers": {
+    "crons": ["0 8 * * *", "0 9 * * 1", "0 10 1 * *", "0 10 1 1,4,7,10 *"],
+  },
 }

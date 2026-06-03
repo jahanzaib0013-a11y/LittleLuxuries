@@ -244,3 +244,57 @@ export async function getCustomerStats(): Promise<CustomerStats> {
     top_members: topMembers,
   };
 }
+
+export async function deleteCustomer(id: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { error } = await supabase.from("customers").delete().eq("id", id);
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "An unexpected error occurred",
+    };
+  }
+}
+
+export interface CreateCustomerInput {
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  membership_tier?: "Standard" | "Bronze" | "Silver" | "Gold" | "Platinum";
+}
+
+export async function createCustomer(
+  data: CreateCustomerInput,
+): Promise<{ success: boolean; error?: string; customer?: any }> {
+  try {
+    const { data: result, error } = await supabase
+      .from("customers")
+      .insert([
+        {
+          first_name: data.first_name,
+          last_name: data.last_name,
+          email: data.email,
+          phone: data.phone || null,
+          membership_tier: data.membership_tier || "Standard",
+          join_date: new Date().toISOString(),
+        },
+      ])
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, customer: result };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "An unexpected error occurred",
+    };
+  }
+}

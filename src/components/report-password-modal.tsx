@@ -43,21 +43,20 @@ export function ReportPasswordModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="h-4 w-4" />
-            Password Protected Report
+            Password required
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              The report <span className="font-medium">{reportName}</span> is password protected.
+          <div className="flex flex-col items-center justify-center py-4 bg-muted/30 rounded-xl border border-border/50">
+            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
+              <Lock className="h-6 w-6 text-primary" />
+            </div>
+            <p className="text-sm font-medium text-foreground text-center px-4 mb-3">
+              This document is password-protected. Please enter a password.
             </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Enter the password to download and view this report.
-            </p>
-            <p className="text-xs text-primary mt-2 font-medium">
-              💡 Hint: The default password is{" "}
-              <code className="bg-muted px-1 py-0.5 rounded">report123</code>
+            <p className="text-xs text-primary font-medium bg-primary/5 px-2 py-1 rounded-md">
+              💡 Hint: The default password is <code>report123</code>
             </p>
           </div>
 

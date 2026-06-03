@@ -13,6 +13,7 @@ export type OrderWithItems = Order & {
   }[];
   order_status_history?: { status: string }[];
 };
+export type OrderStatusHistoryItem = Database["public"]["Tables"]["order_status_history"]["Row"];
 export type OrderItem = Database["public"]["Tables"]["order_items"]["Row"];
 export type Customer = Database["public"]["Tables"]["customers"]["Row"];
 export type OrderStatus = Database["public"]["Tables"]["orders"]["Row"]["status"];
@@ -952,7 +953,7 @@ export const orderService = {
   },
 
   /** Fetches full status history for an order */
-  async getOrderStatusHistory(orderId: string): Promise<any[]> {
+  async getOrderStatusHistory(orderId: string): Promise<OrderStatusHistoryItem[]> {
     try {
       const { data, error } = await supabase
         .from("order_status_history")

@@ -31,12 +31,14 @@ import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ExportMenu } from "@/components/export-menu";
-import { getCustomers, getCustomerStats, Customer } from "@/lib/customers";
+import { getCustomers, getCustomerStats, deleteCustomer, Customer } from "@/lib/customers";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ViewCustomerModal } from "@/components/view-customer-modal";
 import { SendMessageModal } from "@/components/send-message-modal";
+import { CustomerDeleteConfirmationModal } from "@/components/customer-delete-confirmation-modal";
+import { AddCustomerModal } from "@/components/add-customer-modal";
 import { formatPkr } from "@/lib/format-currency";
 
 export const Route = createFileRoute("/customers")({
@@ -60,20 +62,49 @@ function CustomersContent({ search }: { search: string }) {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const {
     data: customersData,
     isLoading: customersLoading,
     error: customersError,
+    refetch: refetchCustomers,
   } = useQuery({
     queryKey: ["customers", currentPage, search, tierFilter],
     queryFn: () => getCustomers(currentPage, 10, { search, tier: tierFilter }),
   });
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    refetch: refetchStats,
+  } = useQuery({
     queryKey: ["customer-stats"],
     queryFn: getCustomerStats,
   });
+
+  const handleConfirmDelete = async () => {
+    if (!selectedCustomer) return;
+    setIsDeleting(true);
+    try {
+      const { success, error } = await deleteCustomer(selectedCustomer.id);
+      if (success) {
+        toast.success(`Client ${selectedCustomer.customer_name} deleted successfully.`);
+        refetchCustomers();
+        refetchStats();
+        setIsDeleteModalOpen(false);
+      } else {
+        toast.error(error || "Failed to delete customer");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("An unexpected error occurred while deleting the customer");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (customersLoading || statsLoading) {
     return (
@@ -201,7 +232,7 @@ function CustomersContent({ search }: { search: string }) {
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <ExportMenu onExportCSV={handleExportCSV} onExportPDF={handleExportPDF} />
-          <Button className="rounded-full h-11">
+          <Button className="rounded-full h-11" onClick={() => setIsAddCustomerModalOpen(true)}>
             <UserPlus className="h-4 w-4" /> Add Customer
           </Button>
         </div>
@@ -527,6 +558,15 @@ function CustomersContent({ search }: { search: string }) {
                           >
                             <ShieldAlert className="h-4 w-4 mr-2" /> Blacklist Customer
                           </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                            onClick={() => {
+                              setSelectedCustomer(c);
+                              setIsDeleteModalOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete Customer
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
@@ -642,6 +682,16 @@ function CustomersContent({ search }: { search: string }) {
         onOpenChange={setIsMessageModalOpen}
         customer={selectedCustomer}
       />
+
+      <CustomerDeleteConfirmationModal
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        customerName={selectedCustomer?.customer_name || ""}
+        onConfirm={handleConfirmDelete}
+        isDeleting={isDeleting}
+      />
+
+      <AddCustomerModal open={isAddCustomerModalOpen} onOpenChange={setIsAddCustomerModalOpen} />
     </div>
   );
 }

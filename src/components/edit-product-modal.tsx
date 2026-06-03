@@ -266,10 +266,10 @@ export function EditProductModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl p-0 overflow-hidden border-none shadow-2xl bg-white rounded-[40px] h-[90vh] flex flex-col">
-        <div className="flex flex-1 w-full overflow-hidden">
+      <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl p-0 overflow-y-auto lg:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] lg:rounded-[40px] h-auto lg:h-[90vh] max-h-[95vh] flex flex-col">
+        <div className="flex flex-col lg:flex-row flex-1 w-full lg:overflow-hidden">
           {/* Left Column: Media Workspace */}
-          <div className="w-[400px] bg-muted/20 border-r border-border/50 p-10 flex flex-col overflow-y-auto custom-scrollbar">
+          <div className="w-full lg:w-[400px] bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50 p-6 lg:p-10 flex flex-col lg:overflow-y-auto custom-scrollbar shrink-0">
             <div className="space-y-10">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
@@ -379,8 +379,8 @@ export function EditProductModal({
           </div>
 
           {/* Right Column: Configuration Workspace */}
-          <div className="flex-1 flex flex-col bg-white overflow-hidden">
-            <div className="p-10 pb-6">
+          <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
+            <div className="p-6 pb-4 lg:p-10 lg:pb-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <DialogTitle className="text-4xl font-serif text-primary tracking-tight">
@@ -415,12 +415,12 @@ export function EditProductModal({
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-10 pt-4 space-y-12 custom-scrollbar">
+            <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 lg:pt-4 pt-2 space-y-8 lg:space-y-12 custom-scrollbar">
               <form id="edit-luxury-product" onSubmit={handleSubmit} className="space-y-12">
                 {/* 1. Core Identity */}
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Product Title
                     </Label>
                     <Input
@@ -432,7 +432,7 @@ export function EditProductModal({
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Boutique price (PKR)
                     </Label>
                     <Input
@@ -448,7 +448,7 @@ export function EditProductModal({
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Gender / Classification
                     </Label>
                     <Select
@@ -471,11 +471,28 @@ export function EditProductModal({
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-3">
+                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
+                      Available Units
+                    </Label>
+                    <Input
+                      type="number"
+                      value={formData.units}
+                      onChange={(e) => handleInputChange("units", e.target.value)}
+                      placeholder="0"
+                      min="0"
+                      className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
+                    />
+                  </div>
                 </div>
+                <p className="text-[10px] text-muted-foreground italic -mt-6">
+                  Track inventory units. Products with fewer than 5 units will be marked as "Low
+                  stock".
+                </p>
 
                 <div className="grid grid-cols-2 gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Category
                     </Label>
                     <Select
@@ -495,7 +512,7 @@ export function EditProductModal({
                     </Select>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Status Indicator
                     </Label>
                     <Select
@@ -661,33 +678,12 @@ export function EditProductModal({
                     })}
                   </div>
                 </div>
-
-                {/* 4. Inventory */}
-                <div className="space-y-6">
-                  <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                      Available Units
-                    </Label>
-                    <Input
-                      type="number"
-                      value={formData.units}
-                      onChange={(e) => handleInputChange("units", e.target.value)}
-                      placeholder="0"
-                      min="0"
-                      className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
-                    />
-                    <p className="text-[10px] text-muted-foreground italic">
-                      Track inventory units. Products with fewer than 5 units will be marked as "Low
-                      stock".
-                    </p>
-                  </div>
-                </div>
               </form>
             </div>
 
             {/* Premium Footer */}
-            <div className="p-10 border-t border-border/40 bg-muted/5">
-              <div className="flex items-center justify-between">
+            <div className="p-6 lg:p-10 border-t border-border/40 bg-muted/5 rounded-b-[32px] lg:rounded-b-[40px]">
+              <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
                   <div className="flex -space-x-2">
                     <div className="w-8 h-8 rounded-full border-2 border-white bg-primary-soft flex items-center justify-center text-primary">
@@ -696,7 +692,7 @@ export function EditProductModal({
                   </div>
                   <span>Syncing with Global Inventory</span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center justify-end gap-4 w-full sm:w-auto">
                   <Button
                     variant="ghost"
                     onClick={handleClose}

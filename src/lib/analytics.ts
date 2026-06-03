@@ -400,6 +400,66 @@ function getSourceColor(source: string): string {
   return colorMap[source] || "var(--color-primary)";
 }
 
+export interface OrderStatusBreakdown {
+  label: string;
+  count: number;
+  pct: number;
+  color: string;
+}
+
+export async function getOrderStatusBreakdown(): Promise<OrderStatusBreakdown[]> {
+  const { data: orders } = await supabase.from("orders").select("status");
+
+  if (!orders || orders.length === 0) {
+    return [
+      { label: "Placed", count: 0, pct: 0, color: "var(--color-primary)" },
+      { label: "Delivered", count: 0, pct: 0, color: "oklch(0.55 0.16 145)" },
+      { label: "Cancelled", count: 0, pct: 0, color: "oklch(0.55 0.2 25)" },
+    ];
+  }
+
+  const total = orders.length;
+
+  // "Placed" = order_placed, pending_payment, payment_initiated, paid, confirmed, packed
+  const placedStatuses = [
+    "order_placed",
+    "pending_payment",
+    "payment_initiated",
+    "paid",
+    "confirmed",
+    "packed",
+  ];
+  // "Delivered" = shipped + delivered
+  const deliveredStatuses = ["shipped", "delivered"];
+  // "Cancelled" = cancelled + refunded
+  const cancelledStatuses = ["cancelled", "refunded"];
+
+  const placedCount = orders.filter((o) => placedStatuses.includes(o.status)).length;
+  const deliveredCount = orders.filter((o) => deliveredStatuses.includes(o.status)).length;
+  const cancelledCount = orders.filter((o) => cancelledStatuses.includes(o.status)).length;
+
+  return [
+    {
+      label: "Placed",
+      count: placedCount,
+      pct: total > 0 ? Math.round((placedCount / total) * 100) : 0,
+      color: "var(--color-primary)",
+    },
+    {
+      label: "Delivered",
+      count: deliveredCount,
+      pct: total > 0 ? Math.round((deliveredCount / total) * 100) : 0,
+      color: "oklch(0.55 0.16 145)",
+    },
+    {
+      label: "Cancelled",
+      count: cancelledCount,
+      pct: total > 0 ? Math.round((cancelledCount / total) * 100) : 0,
+      color: "oklch(0.55 0.2 25)",
+    },
+  ];
+}
+
 export async function getRecentReports(): Promise<RecentReport[]> {
   // Mock reports - in a real app, these would be actual generated reports
   return [

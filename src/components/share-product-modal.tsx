@@ -99,10 +99,10 @@ export function ShareProductModal({ open, onOpenChange, product }: ShareProductM
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0 overflow-hidden border-none shadow-2xl bg-white rounded-[40px] max-h-[95vh]">
-        <div className="flex h-full">
+      <DialogContent className="max-w-4xl p-0 overflow-y-auto md:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] md:rounded-[40px] max-h-[95vh] h-auto md:h-[90vh] flex flex-col">
+        <div className="flex flex-col md:flex-row h-full overflow-y-auto md:overflow-hidden">
           {/* Left Side: QR & Preview */}
-          <div className="w-[340px] bg-muted/20 border-r border-border/50 p-10 flex flex-col items-center justify-center gap-8 shrink-0">
+          <div className="w-full md:w-[340px] bg-muted/20 border-b md:border-b-0 md:border-r border-border/50 p-6 md:p-10 flex flex-col items-center justify-center gap-6 md:gap-8 shrink-0">
             <div className="space-y-2 text-center">
               <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
                 Campaign QR Code
@@ -159,8 +159,8 @@ export function ShareProductModal({ open, onOpenChange, product }: ShareProductM
           </div>
 
           {/* Right Side: UTM Configuration */}
-          <div className="flex-1 flex flex-col bg-white overflow-hidden">
-            <div className="p-10 pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
+          <div className="flex-1 flex flex-col bg-white md:overflow-hidden">
+            <div className="p-6 pb-4 md:p-10 md:pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
               <div className="space-y-1">
                 <DialogTitle className="text-3xl font-serif text-primary tracking-tight">
                   Link Architect
@@ -179,7 +179,7 @@ export function ShareProductModal({ open, onOpenChange, product }: ShareProductM
               </Button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-10 space-y-10 custom-scrollbar">
+            <div className="flex-1 md:overflow-y-auto p-6 md:p-10 space-y-6 md:space-y-10 custom-scrollbar">
               <section className="space-y-4">
                 <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
                   Quick Presets
@@ -263,15 +263,15 @@ export function ShareProductModal({ open, onOpenChange, product }: ShareProductM
               </div>
             </div>
 
-            <div className="p-10 border-t border-border/40 bg-muted/5 mt-auto">
-              <div className="flex items-center justify-between">
+            <div className="p-6 md:p-10 border-t border-border/40 bg-muted/5 mt-auto">
+              <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between w-full">
                 <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                   <Info className="h-3.5 w-3.5" />
                   Link is ready for production use
                 </div>
                 <Button
                   onClick={handleCopy}
-                  className="rounded-full h-14 px-12 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[200px]"
+                  className="rounded-full h-14 px-12 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[200px] w-full sm:w-auto"
                 >
                   <Copy className="h-4 w-4 mr-2" />
                   Copy Final Link
