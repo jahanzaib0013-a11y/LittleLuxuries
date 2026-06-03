@@ -162,7 +162,7 @@ export interface Database {
           delivered_at?: string;
           customer_notes?: string;
           admin_notes?: string;
-          metadata?: Record<string, any>;
+          metadata?: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };
