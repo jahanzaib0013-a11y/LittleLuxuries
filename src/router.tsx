@@ -1,5 +1,9 @@
 import { createRouter, useRouter } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
+import { CartProvider } from "@/context/CartContext";
+import { FavoritesProvider } from "@/context/FavoritesContext";
+import { StoreSettingsProvider } from "@/context/StoreSettingsContext";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
@@ -54,6 +58,8 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
   );
 }
 
+const queryClient = new QueryClient();
+
 export const getRouter = () => {
   const router = createRouter({
     routeTree,
@@ -61,6 +67,15 @@ export const getRouter = () => {
     scrollRestoration: true,
     defaultPreloadStaleTime: 0,
     defaultErrorComponent: DefaultErrorComponent,
+    Wrap: ({ children }) => (
+      <QueryClientProvider client={queryClient}>
+        <StoreSettingsProvider>
+          <FavoritesProvider>
+            <CartProvider>{children}</CartProvider>
+          </FavoritesProvider>
+        </StoreSettingsProvider>
+      </QueryClientProvider>
+    ),
   });
 
   return router;

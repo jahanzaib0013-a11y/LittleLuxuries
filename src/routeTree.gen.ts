@@ -9,11 +9,14 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as StorefrontRouteImport } from './routes/storefront'
 import { Route as ShopRouteImport } from './routes/shop'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as FavoritesRouteImport } from './routes/favorites'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CustomersRouteImport } from './routes/customers'
 import { Route as CouponsRouteImport } from './routes/coupons'
@@ -25,6 +28,11 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
 
+const StorefrontRoute = StorefrontRouteImport.update({
+  id: '/storefront',
+  path: '/storefront',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ShopRoute = ShopRouteImport.update({
   id: '/shop',
   path: '/shop',
@@ -48,6 +56,16 @@ const OrdersRoute = OrdersRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FavoritesRoute = FavoritesRouteImport.update({
+  id: '/favorites',
+  path: '/favorites',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -111,11 +129,14 @@ export interface FileRoutesByFullPath {
   '/coupons': typeof CouponsRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
+  '/favorites': typeof FavoritesRoute
+  '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
+  '/storefront': typeof StorefrontRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesByTo {
@@ -128,11 +149,14 @@ export interface FileRoutesByTo {
   '/coupons': typeof CouponsRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
+  '/favorites': typeof FavoritesRoute
+  '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
+  '/storefront': typeof StorefrontRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRoutesById {
@@ -146,11 +170,14 @@ export interface FileRoutesById {
   '/coupons': typeof CouponsRoute
   '/customers': typeof CustomersRoute
   '/dashboard': typeof DashboardRoute
+  '/favorites': typeof FavoritesRoute
+  '/inbox': typeof InboxRoute
   '/login': typeof LoginRoute
   '/orders': typeof OrdersRoute
   '/products': typeof ProductsRoute
   '/settings': typeof SettingsRoute
   '/shop': typeof ShopRoute
+  '/storefront': typeof StorefrontRoute
   '/product/$id': typeof ProductIdRoute
 }
 export interface FileRouteTypes {
@@ -165,11 +192,14 @@ export interface FileRouteTypes {
     | '/coupons'
     | '/customers'
     | '/dashboard'
+    | '/favorites'
+    | '/inbox'
     | '/login'
     | '/orders'
     | '/products'
     | '/settings'
     | '/shop'
+    | '/storefront'
     | '/product/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -182,11 +212,14 @@ export interface FileRouteTypes {
     | '/coupons'
     | '/customers'
     | '/dashboard'
+    | '/favorites'
+    | '/inbox'
     | '/login'
     | '/orders'
     | '/products'
     | '/settings'
     | '/shop'
+    | '/storefront'
     | '/product/$id'
   id:
     | '__root__'
@@ -199,11 +232,14 @@ export interface FileRouteTypes {
     | '/coupons'
     | '/customers'
     | '/dashboard'
+    | '/favorites'
+    | '/inbox'
     | '/login'
     | '/orders'
     | '/products'
     | '/settings'
     | '/shop'
+    | '/storefront'
     | '/product/$id'
   fileRoutesById: FileRoutesById
 }
@@ -217,16 +253,26 @@ export interface RootRouteChildren {
   CouponsRoute: typeof CouponsRoute
   CustomersRoute: typeof CustomersRoute
   DashboardRoute: typeof DashboardRoute
+  FavoritesRoute: typeof FavoritesRoute
+  InboxRoute: typeof InboxRoute
   LoginRoute: typeof LoginRoute
   OrdersRoute: typeof OrdersRoute
   ProductsRoute: typeof ProductsRoute
   SettingsRoute: typeof SettingsRoute
   ShopRoute: typeof ShopRoute
+  StorefrontRoute: typeof StorefrontRoute
   ProductIdRoute: typeof ProductIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/storefront': {
+      id: '/storefront'
+      path: '/storefront'
+      fullPath: '/storefront'
+      preLoaderRoute: typeof StorefrontRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/shop': {
       id: '/shop'
       path: '/shop'
@@ -260,6 +306,20 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/favorites': {
+      id: '/favorites'
+      path: '/favorites'
+      fullPath: '/favorites'
+      preLoaderRoute: typeof FavoritesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -345,13 +405,25 @@ const rootRouteChildren: RootRouteChildren = {
   CouponsRoute: CouponsRoute,
   CustomersRoute: CustomersRoute,
   DashboardRoute: DashboardRoute,
+  FavoritesRoute: FavoritesRoute,
+  InboxRoute: InboxRoute,
   LoginRoute: LoginRoute,
   OrdersRoute: OrdersRoute,
   ProductsRoute: ProductsRoute,
   SettingsRoute: SettingsRoute,
   ShopRoute: ShopRoute,
+  StorefrontRoute: StorefrontRoute,
   ProductIdRoute: ProductIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}

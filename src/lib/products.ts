@@ -9,12 +9,18 @@ export type Product = {
   id: string;
   name: string;
   price: number;
-  image: string;
+  image_url: string | null;
+  image: string; // For backward compatibility with sample data
   category: "Onesies" | "Sleepwear" | "Knitwear" | "Accessories" | "Gift Sets";
   variant: string;
-  badge?: "New" | "Bestseller" | "Low stock";
+  badge?: "New" | "Bestseller" | "Low stock" | "Out of Stock";
   description: string;
   sizes: string[];
+  secondary_images?: string[];
+  sustainability?: string;
+  care_instructions?: string;
+  units?: number;
+  gender?: string;
 };
 
 export const products: Product[] = [
@@ -23,6 +29,7 @@ export const products: Product[] = [
     name: "Cloud-Soft Organic Onesie",
     price: 48,
     image: onesie,
+    image_url: null,
     category: "Onesies",
     variant: "Lavender / 100% Organic Cotton",
     badge: "New",
@@ -35,6 +42,7 @@ export const products: Product[] = [
     name: "Pure Wool Knitted Booties",
     price: 32,
     image: booties,
+    image_url: null,
     category: "Knitwear",
     variant: "Dusty Rose / Merino Wool",
     badge: "Bestseller",
@@ -47,6 +55,7 @@ export const products: Product[] = [
     name: "Blush Garden Linen Swaddle",
     price: 58,
     image: swaddle,
+    image_url: null,
     category: "Accessories",
     variant: "Blush / French Linen",
     description:
@@ -58,6 +67,7 @@ export const products: Product[] = [
     name: "The Luxury Gift Box",
     price: 95,
     image: giftbox,
+    image_url: null,
     category: "Gift Sets",
     variant: "Lavender / Curated Trio",
     badge: "New",
@@ -70,6 +80,7 @@ export const products: Product[] = [
     name: "Essential Sleep Suit Duo",
     price: 78,
     image: sleepwear,
+    image_url: null,
     category: "Sleepwear",
     variant: "Sage & Ivory / Pima Cotton",
     description:
@@ -81,6 +92,7 @@ export const products: Product[] = [
     name: "Heirloom Knit Hat & Mittens",
     price: 42,
     image: accessories,
+    image_url: null,
     category: "Accessories",
     variant: "Lilac & Saffron / Hand-knit",
     badge: "Low stock",
@@ -93,5 +105,8 @@ export const products: Product[] = [
 export const collections = [
   { name: "Onesies", tagline: "Everyday softness", image: onesie },
   { name: "Sleepwear", tagline: "Gentle dreams", image: sleepwear },
+  { name: "Knitwear", tagline: "Warmth for the winter", image: booties },
   { name: "Accessories", tagline: "Tender finishing touches", image: accessories },
+  { name: "Gift Sets", tagline: "Perfect for giving", image: giftbox },
+  { name: "Swaddles", tagline: "Wrapped in love", image: swaddle },
 ];

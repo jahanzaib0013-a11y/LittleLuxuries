@@ -1,9 +1,15 @@
 import { Link } from "@tanstack/react-router";
-import { ShoppingBag, Search, Heart, Menu } from "lucide-react";
+import { ShoppingBag, Heart, Menu, Loader2, CheckCircle2 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
+import { useCart } from "@/context/CartContext";
+import { useFavorites } from "@/hooks/use-favorites";
+import { CartSidebar } from "@/components/cart-sidebar";
+import { storeUTMParameters } from "@/lib/utils";
+import { useStoreSettingsContext } from "@/context/StoreSettingsContext";
+import { subscribeToNewsletter } from "@/lib/email-server";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -15,6 +21,19 @@ const navItems = [
 export function Header() {
   const [open, setOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { getCartCount, isCartOpen, openCart, closeCart } = useCart();
+  const { favorites } = useFavorites();
+  const { settings } = useStoreSettingsContext();
+  const cartCount = getCartCount();
+  const favCount = favorites.length;
+
+  const storeName = settings?.store_name || "Little Luxuries";
+
+  // Initialize UTM tracking on every page load
+  useEffect(() => {
+    storeUTMParameters();
+  }, []);
+
   useEffect(() => setOpen(false), [pathname]);
 
   return (
@@ -31,7 +50,9 @@ export function Header() {
               </button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 bg-background">
-              <SheetTitle className="font-serif text-2xl italic text-primary">Little Luxuries</SheetTitle>
+              <SheetTitle className="font-serif text-2xl italic text-primary">
+                {storeName}
+              </SheetTitle>
               <nav className="mt-8 flex flex-col gap-1">
                 {navItems.map((item) => (
                   <Link
@@ -48,7 +69,9 @@ export function Header() {
             </SheetContent>
           </Sheet>
           <Link to="/" className="flex items-center gap-2 min-w-0">
-            <span className="font-serif text-xl sm:text-2xl italic text-primary truncate">Little Luxuries</span>
+            <span className="font-serif text-xl sm:text-2xl italic text-primary truncate">
+              {storeName}
+            </span>
           </Link>
         </div>
 
@@ -67,21 +90,29 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-1.5 shrink-0">
-          <button className="hidden rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex" aria-label="Search">
-            <Search className="size-4" />
-          </button>
-          <button className="hidden rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex" aria-label="Wishlist">
+          <Link
+            to="/favorites"
+            className="hidden relative rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-primary md:inline-flex"
+            aria-label="Wishlist"
+          >
             <Heart className="size-4" />
-          </button>
+            {favCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">
+                {favCount}
+              </span>
+            )}
+          </Link>
           <Link
             to="/checkout"
             className="relative rounded-full p-2.5 text-primary transition-colors hover:bg-primary-soft"
             aria-label="Cart"
           >
             <ShoppingBag className="size-5" />
-            <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-gold text-[10px] font-bold text-gold-foreground">
-              2
-            </span>
+            {cartCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-gold text-[10px] font-bold text-gold-foreground">
+                {cartCount}
+              </span>
+            )}
           </Link>
         </div>
       </div>
@@ -90,14 +121,35 @@ export function Header() {
 }
 
 export function Footer() {
+  const { settings } = useStoreSettingsContext();
+  const storeName = settings?.store_name || "Little Luxuries";
+  const currentYear = new Date().getFullYear();
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+
+  const handleSubscribe = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+
+    setStatus("loading");
+    try {
+      await (subscribeToNewsletter as any)({ data: { email } });
+      setStatus("success");
+    } catch (err) {
+      console.error(err);
+      setStatus("error");
+    }
+  };
+
   return (
     <footer className="mt-24 border-t border-border/60 bg-secondary/40">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-4">
         <div>
-          <img src={logo} alt="Little Luxuries" width={80} height={80} className="mb-3" />
-          <p className="font-serif text-xl italic text-primary">Little Luxuries</p>
+          <img src={logo} alt={storeName} width={80} height={80} className="mb-3" />
+          <p className="font-serif text-xl italic text-primary">{storeName}</p>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
-            Crafting heirloom-quality baby garments with a commitment to ethics, comfort, and timeless luxury.
+            Crafting heirloom-quality baby garments with a commitment to ethics, comfort, and
+            timeless luxury.
           </p>
         </div>
         <FooterCol
@@ -120,24 +172,46 @@ export function Footer() {
         />
         <div>
           <h4 className="label-eyebrow mb-4">Newsletter</h4>
-          <p className="mb-3 text-sm text-muted-foreground">
-            Join our circle for early access to new collections and gentle inspiration.
-          </p>
-          <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              className="flex-1 rounded-full border border-border bg-card px-4 py-2 text-sm outline-none transition-colors focus:border-primary"
-            />
-            <button className="rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90">
-              Join
-            </button>
-          </form>
+          {status === "success" ? (
+            <div className="flex flex-col items-center justify-center py-4 text-center animate-in fade-in zoom-in duration-500">
+              <CheckCircle2 className="size-6 text-green-500 mb-2" />
+              <p className="text-sm font-medium text-foreground">You're in the Circle.</p>
+              <p className="text-xs text-muted-foreground mt-1">Check your inbox for your gift.</p>
+            </div>
+          ) : (
+            <>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Join our circle for early access to new collections and gentle inspiration.
+              </p>
+              <form className="flex gap-2" onSubmit={handleSubscribe}>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                  className="flex-1 rounded-full border border-border bg-card px-4 py-2 text-sm outline-none transition-colors focus:border-primary"
+                />
+                <button
+                  type="submit"
+                  disabled={status === "loading"}
+                  className="min-w-[70px] flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
+                >
+                  {status === "loading" ? <Loader2 className="size-4 animate-spin" /> : "Join"}
+                </button>
+              </form>
+              {status === "error" && (
+                <p className="mt-2 text-xs text-red-500">Something went wrong. Please try again.</p>
+              )}
+            </>
+          )}
         </div>
       </div>
       <div className="border-t border-border/60 px-6 py-6 text-center text-xs text-muted-foreground">
-        © 2026 Little Luxuries Baby Garments. Ethically made with love. ·{" "}
-        <Link to="/login" className="hover:text-primary">Admin</Link>
+        © {currentYear} {storeName}. Ethically made with love. ·{" "}
+        <Link to="/login" className="hover:text-primary">
+          Admin
+        </Link>
       </div>
     </footer>
   );
@@ -150,7 +224,10 @@ function FooterCol({ title, links }: { title: string; links: { label: string; to
       <ul className="space-y-2.5">
         {links.map((l) => (
           <li key={l.label}>
-            <Link to={l.to} className="text-sm text-muted-foreground transition-colors hover:text-primary">
+            <Link
+              to={l.to}
+              className="text-sm text-muted-foreground transition-colors hover:text-primary"
+            >
               {l.label}
             </Link>
           </li>
@@ -161,11 +238,13 @@ function FooterCol({ title, links }: { title: string; links: { label: string; to
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const { isCartOpen, closeCart } = useCart();
   return (
     <div className="flex min-h-screen flex-col">
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />
+      <CartSidebar isOpen={isCartOpen} onOpenChange={closeCart} />
     </div>
   );
 }

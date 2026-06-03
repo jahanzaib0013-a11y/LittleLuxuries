@@ -21,9 +21,9 @@ function LoginPage() {
   const [password, setPassword] = useState("");
 
   return (
-    <div className="min-h-screen w-full grid place-items-center bg-gradient-to-br from-[oklch(0.98_0.01_300)] via-[oklch(0.97_0.015_320)] to-[oklch(0.96_0.02_25)] px-4 py-12">
+    <div className="min-h-screen w-full grid place-items-center bg-linear-to-br from-[oklch(0.98_0.01_300)] via-[oklch(0.97_0.015_320)] to-[oklch(0.96_0.02_25)] px-4 py-12">
       <div className="w-full max-w-md text-center">
-        <div className="mx-auto h-20 w-20 rounded-full bg-card shadow-[var(--shadow-card)] grid place-items-center mb-8">
+        <div className="mx-auto h-20 w-20 rounded-full bg-card shadow-(--shadow-card) grid place-items-center mb-8">
           <PawPrint className="h-9 w-9 text-primary" />
         </div>
 
@@ -37,10 +37,13 @@ function LoginPage() {
             e.preventDefault();
             navigate({ to: "/dashboard" });
           }}
-          className="mt-10 bg-card rounded-3xl shadow-[var(--shadow-soft)] p-8 text-left space-y-5"
+          className="mt-10 bg-card rounded-3xl shadow-(--shadow-soft) p-8 text-left space-y-5"
         >
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-xs tracking-[0.15em] uppercase text-foreground/70">
+            <Label
+              htmlFor="email"
+              className="text-xs tracking-[0.15em] uppercase text-foreground/70"
+            >
               Email Address
             </Label>
             <div className="relative">
@@ -58,10 +61,16 @@ function LoginPage() {
 
           <div className="space-y-2">
             <div className="flex justify-between items-center">
-              <Label htmlFor="password" className="text-xs tracking-[0.15em] uppercase text-foreground/70">
+              <Label
+                htmlFor="password"
+                className="text-xs tracking-[0.15em] uppercase text-foreground/70"
+              >
                 Password
               </Label>
-              <button type="button" className="text-[11px] tracking-[0.15em] uppercase text-[color:var(--color-gold-foreground)] hover:underline">
+              <button
+                type="button"
+                className="text-[11px] tracking-[0.15em] uppercase text-(--color-gold-foreground) hover:underline"
+              >
                 Forgot Password?
               </button>
             </div>
@@ -84,7 +93,7 @@ function LoginPage() {
         </form>
 
         <div className="mt-8 flex items-center justify-center gap-2 text-[11px] tracking-[0.18em] uppercase text-muted-foreground">
-          <ShieldCheck className="h-3.5 w-3.5 text-[color:var(--color-gold)]" />
+          <ShieldCheck className="h-3.5 w-3.5 text-gold" />
           Secure Session for Little Luxuries Team
         </div>
 
