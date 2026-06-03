@@ -18,10 +18,10 @@ function CustomersContent() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="font-serif text-4xl text-foreground">Customers</h1>
+          <h1 className="font-serif text-3xl sm:text-4xl text-foreground">Customers</h1>
           <p className="mt-2 text-sm text-muted-foreground">Managing 2,482 luxury client accounts and preferences.</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <Button variant="outline" className="rounded-full h-11"><Download className="h-4 w-4" /> Export CSV</Button>
           <Button className="rounded-full h-11"><UserPlus className="h-4 w-4" /> Add Customer</Button>
         </div>
@@ -44,7 +44,7 @@ function CustomersContent() {
           <div className="mt-6 text-xs uppercase tracking-[0.15em] text-muted-foreground">Avg. Lifetime Value</div>
           <div className="mt-1 text-3xl font-serif">$842.00</div>
         </div>
-        <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-primary-container text-primary-foreground relative overflow-hidden">
+        <div className="rounded-2xl p-6 bg-gradient-to-br from-primary to-lilac text-primary-foreground relative overflow-hidden">
           <div className="text-xs uppercase tracking-[0.15em] opacity-80">Exclusive Membership</div>
           <div className="mt-2 font-serif text-2xl">Little Luxuries Gold Club</div>
           <div className="mt-6 flex items-center gap-2">

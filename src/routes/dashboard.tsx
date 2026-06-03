@@ -78,14 +78,14 @@ function DashboardContent() {
             </div>
           </div>
 
-          <div className="mt-10 grid grid-cols-7 gap-3 h-56 items-end">
+          <div className="mt-8 grid grid-cols-7 gap-1.5 sm:gap-3 h-48 sm:h-56 items-end">
             {dailySales.map((d) => (
-              <div key={d.day} className="flex flex-col items-center gap-3">
+              <div key={d.day} className="flex flex-col items-center gap-2 sm:gap-3 h-full justify-end">
                 <div
                   className={`w-full rounded-t-lg transition-all ${d.value === max ? "bg-primary" : "bg-primary/15"}`}
                   style={{ height: `${(d.value / max) * 100}%` }}
                 />
-                <span className="text-xs text-muted-foreground">{d.day}</span>
+                <span className="text-[10px] sm:text-xs text-muted-foreground">{d.day}</span>
               </div>
             ))}
           </div>

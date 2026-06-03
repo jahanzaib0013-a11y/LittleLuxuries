@@ -110,9 +110,9 @@ function AnalyticsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div className="rounded-2xl bg-card p-6 shadow-[var(--shadow-card)]">
           <h2 className="font-serif text-xl text-foreground">Customer Acquisition</h2>
-          <div className="mt-6 flex items-center gap-8">
+          <div className="mt-6 flex flex-wrap items-center gap-6 sm:gap-8">
             <DonutChart segments={acquisition} total="1.2k" />
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 min-w-[180px] space-y-3">
               {acquisition.map((a) => (
                 <div key={a.source} className="flex items-center justify-between text-sm">
                   <span className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ background: a.color }} />{a.source}</span>

@@ -23,7 +23,7 @@ function SettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-5xl text-primary">Store Settings</h1>
+        <h1 className="font-serif text-3xl sm:text-4xl lg:text-5xl text-primary">Store Settings</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Manage your boutique's global configurations, payment methods, and regional logistics.
         </p>
@@ -103,19 +103,19 @@ function SettingsPage() {
       </div>
 
       {/* Admin account */}
-      <div className="rounded-2xl p-8 bg-gradient-to-br from-primary to-primary-container text-primary-foreground">
-        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] gap-6 items-center">
-          <div className="h-24 w-24 rounded-full bg-card/20 grid place-items-center text-4xl">👤</div>
-          <div>
+      <div className="rounded-2xl p-6 sm:p-8 bg-gradient-to-br from-primary to-lilac text-primary-foreground">
+        <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] xl:grid-cols-[auto_1fr_auto] gap-6 items-center">
+          <div className="h-20 w-20 sm:h-24 sm:w-24 rounded-full bg-card/20 grid place-items-center text-4xl">👤</div>
+          <div className="min-w-0">
             <div className="text-xs uppercase tracking-[0.2em] opacity-80">Administrator Account</div>
-            <div className="font-serif text-3xl mt-2">Eleanor Vance</div>
-            <div className="text-sm opacity-90 mt-1">Senior Store Manager • Access Level: Full Permissions</div>
-            <div className="mt-4 flex gap-3">
+            <div className="font-serif text-2xl sm:text-3xl mt-2">Eleanor Vance</div>
+            <div className="text-sm opacity-90 mt-1">Senior Store Manager • Full Permissions</div>
+            <div className="mt-4 flex flex-wrap gap-2 sm:gap-3">
               <Button variant="secondary" className="rounded-full">Edit Profile</Button>
               <Button variant="outline" className="rounded-full bg-transparent border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10">Two-Factor Auth</Button>
             </div>
           </div>
-          <div className="rounded-xl bg-card/15 p-4 text-xs space-y-2 min-w-[180px]">
+          <div className="rounded-xl bg-card/15 p-4 text-xs space-y-2 md:col-span-2 xl:col-span-1 xl:min-w-[200px]">
             <div className="uppercase tracking-[0.15em] opacity-80">Login Activity</div>
             <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-300" /> Current: London, UK</div>
             <div className="opacity-80">2h ago: iPhone 15 Pro</div>
@@ -123,8 +123,8 @@ function SettingsPage() {
         </div>
       </div>
 
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[color:var(--color-gold)]" /> Last settings backup performed: October 24, 2023 at 10:15 AM</div>
+      <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[color:var(--color-gold)] shrink-0" /> Last backup: October 24, 2023 at 10:15 AM</div>
         <div className="flex items-center gap-3">
           <button className="text-muted-foreground hover:text-foreground">Discard All</button>
           <Button className="rounded-full">Save All Changes</Button>
