@@ -28,7 +28,7 @@ function CategoryCard({
       to="/shop"
       search={{ category: category.name }}
       className={cn(
-        "group relative overflow-hidden rounded-3xl bg-muted block",
+        "group relative block max-w-full overflow-hidden rounded-3xl bg-muted",
         className,
       )}
     >
@@ -38,7 +38,11 @@ function CategoryCard({
         loading="lazy"
         width={1024}
         height={1024}
-        className={cn("h-full w-full object-cover transition-transform duration-700 group-hover:scale-105", imageClassName)}
+        draggable={false}
+        className={cn(
+          "h-full w-full max-w-full object-cover transition-transform duration-700 md:group-hover:scale-105",
+          imageClassName,
+        )}
       />
       <div className="absolute inset-0 bg-linear-to-t from-foreground/70 via-foreground/20 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 p-6 text-background">
@@ -51,14 +55,14 @@ function CategoryCard({
 
 function EditorialGrid({ categories, compact }: { categories: CategoryDef[]; compact?: boolean }) {
   return (
-    <div className={cn("flex flex-wrap justify-center gap-6", compact && "gap-3")}>
+    <div className={cn("flex min-w-0 flex-wrap justify-center gap-4 sm:gap-6", compact && "gap-3")}>
       {categories.map((c) => (
         <CategoryCard
           key={c.id}
           category={c}
           className={cn(
-            "aspect-4/5 w-full",
-            compact ? "w-28 shrink-0 rounded-xl" : "md:w-[calc(33.333%-1rem)]",
+            "aspect-4/5 w-full min-w-0 max-w-full",
+            compact ? "w-28 shrink-0 rounded-xl" : "sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-1rem)]",
           )}
           titleClassName={compact ? "text-sm" : undefined}
         />
@@ -80,7 +84,7 @@ function MinimalCarousel({ categories, compact }: { categories: CategoryDef[]; c
   };
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 max-w-full overflow-hidden">
       {!compact && categories.length > 1 && (
         <p className="mb-2 text-xs text-muted-foreground sm:hidden" aria-hidden>
           Swipe to browse collections →
@@ -89,7 +93,7 @@ function MinimalCarousel({ categories, compact }: { categories: CategoryDef[]; c
       <div
         ref={scrollRef}
         className={cn(
-          "flex gap-6 overflow-x-auto pb-4 hide-scrollbar",
+          "flex gap-4 overflow-x-auto overscroll-x-contain pb-4 hide-scrollbar sm:gap-6",
           compact && "gap-3 pb-2",
         )}
       >
@@ -97,7 +101,12 @@ function MinimalCarousel({ categories, compact }: { categories: CategoryDef[]; c
           <CategoryCard
             key={c.id}
             category={c}
-            className={cn("aspect-4/5 shrink-0", compact ? "w-28 rounded-xl" : "w-72 sm:w-80")}
+            className={cn(
+              "aspect-4/5 shrink-0",
+              compact
+                ? "w-28 rounded-xl"
+                : "w-[min(16rem,calc(100vw-2.5rem))] sm:w-72 md:w-80",
+            )}
             titleClassName={compact ? "text-sm" : undefined}
           />
         ))}

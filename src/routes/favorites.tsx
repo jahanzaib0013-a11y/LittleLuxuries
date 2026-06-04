@@ -37,7 +37,7 @@ function FavoritesPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="space-y-3">
                 <Skeleton className="aspect-square rounded-2xl w-full" />
@@ -63,7 +63,7 @@ function FavoritesPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
             {favoritedProducts.map((p) => {
               const isOutOfStock =
                 p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
@@ -89,7 +89,7 @@ function FavoritesPage() {
                       <img
                         src={p.image}
                         alt={p.name}
-                        className="h-full w-full object-cover grayscale-[0.5]"
+                        className="h-full w-full object-contain grayscale-[0.5]"
                       />
                     </div>
                   ) : (
@@ -108,7 +108,7 @@ function FavoritesPage() {
                         <img
                           src={p.image}
                           alt={p.name}
-                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />
                         <button

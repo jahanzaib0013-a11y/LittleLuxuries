@@ -6,6 +6,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Package, Calendar, DollarSign, User, Phone, MessageCircle, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatPkr } from "@/lib/format-currency";
+import { sheetModalClass, sheetModalInnerClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
+import { cn } from "@/lib/utils";
 
 interface ViewCustomerModalProps {
   open: boolean;
@@ -24,13 +27,15 @@ export function ViewCustomerModal({ open, onOpenChange, customer }: ViewCustomer
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="font-serif text-2xl">Customer Profile</DialogTitle>
-        </DialogHeader>
+      <DialogContent className={cn(sheetModalClass, "sm:max-w-2xl")}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} />
+        <div className={sheetModalInnerClass}>
+          <DialogHeader>
+            <DialogTitle className="font-serif text-xl sm:text-2xl">Customer Profile</DialogTitle>
+          </DialogHeader>
 
-        {customer && (
-          <div className="space-y-6">
+          {customer && (
+            <div className="space-y-6">
             {/* Header Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-muted/50 border border-border/50">
@@ -187,6 +192,7 @@ export function ViewCustomerModal({ open, onOpenChange, customer }: ViewCustomer
             </div>
           </div>
         )}
+        </div>
       </DialogContent>
     </Dialog>
   );

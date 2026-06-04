@@ -3,10 +3,6 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "";
 
-// Debug environment variables
-console.log("Supabase URL:", supabaseUrl || "(not set)");
-console.log("Supabase Key exists:", !!supabaseAnonKey);
-
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
     "[Little Luxuries] Missing Supabase environment variables — DB features will be unavailable.",
@@ -62,6 +58,7 @@ export interface Database {
           badge?: string;
           description: string;
           sizes: string[];
+          colors?: import("@/lib/product-colors").ProductColor[];
           secondary_images?: string[];
           sustainability?: string;
           care_instructions?: string;
@@ -86,6 +83,7 @@ export interface Database {
           first_name: string;
           last_name: string;
           phone?: string;
+          tier?: string;
           created_at: string;
           updated_at: string;
         };
@@ -138,10 +136,11 @@ export interface Database {
           currency: string;
           status:
             | "order_placed"
+            | "order_confirmed"
+            | "payment_confirmed"
             | "pending_payment"
             | "payment_initiated"
             | "paid"
-            | "confirmed"
             | "packed"
             | "shipped"
             | "delivered"

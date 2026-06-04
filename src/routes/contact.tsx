@@ -77,7 +77,7 @@ function Contact() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
+        <div className="grid gap-12 xl:grid-cols-[1fr_1.4fr]">
           <div className="space-y-6">
             <Info
               icon={Mail}

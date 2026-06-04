@@ -382,39 +382,63 @@
   }
 }
 
-/* Hide scrollbar utility */
-.hide-scrollbar {
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
-}
-.hide-scrollbar::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
-}
-.hide-scrollbar::-webkit-scrollbar-track {
-  display: none;
-}
-.hide-scrollbar::-webkit-scrollbar-thumb {
-  display: none;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--color-primary-soft);
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: var(--color-primary);
-}
-
+/* Hide scrollbars but keep scroll (touch, wheel, trackpad) */
+.hide-scrollbar,
 .custom-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.hide-scrollbar::-webkit-scrollbar,
+.custom-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Horizontal strip: visible thumb so tables/carousels are easy to slide */
+.easy-scroll-x {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
   scrollbar-width: thin;
-  scrollbar-color: var(--color-primary-soft) transparent;
+  scrollbar-color: color-mix(in oklch, var(--primary) 45%, transparent) transparent;
+}
+
+.easy-scroll-x::-webkit-scrollbar {
+  display: block !important;
+  width: 0;
+  height: 8px;
+}
+
+.easy-scroll-x::-webkit-scrollbar-track {
+  margin: 0 2.5rem;
+  background: color-mix(in oklch, var(--muted) 50%, transparent);
+  border-radius: 999px;
+}
+
+.easy-scroll-x::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--primary) 40%, transparent);
+}
+
+.easy-scroll-x::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in oklch, var(--primary) 55%, transparent);
+}
+
+/* App-wide: no visible scrollbars */
+html,
+body,
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }

@@ -1010,22 +1010,18 @@ function ContentPage() {
                       { immediatePreview: true },
                     )
                   }
-                  className="rounded-full p-3 -m-3"
+                  className={`h-6 w-11 rounded-full relative transition-colors ${
+                    content.promoBanner.isActive ? "bg-gold" : "bg-muted-foreground/30"
+                  }`}
                   aria-label={
                     content.promoBanner.isActive ? "Hide promo banner on site" : "Show promo banner on site"
                   }
                 >
-                  <span
-                    className={`relative block h-6 w-11 rounded-full transition-colors ${
-                      content.promoBanner.isActive ? "bg-gold" : "bg-muted-foreground/30"
+                  <div
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-transform ${
+                      content.promoBanner.isActive ? "translate-x-5" : "translate-x-0.5"
                     }`}
-                  >
-                    <span
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-card transition-transform ${
-                        content.promoBanner.isActive ? "translate-x-5" : "translate-x-0.5"
-                      }`}
-                    />
-                  </span>
+                  />
                 </button>
               </div>
             </div>
@@ -1379,7 +1375,11 @@ function ContentPage() {
               {isClient ? (
                 <CategorySection
                   layout={content.layout}
-                  categories={categories}
+                  categories={categories
+                    .filter((category, index, self) =>
+                      index === self.findIndex((c) => c.name === category.name)
+                    )
+                    .slice(0, 5)}
                   compact
                 />
               ) : (

@@ -18,14 +18,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  X,
-  Upload,
-  ImageIcon,
   Sparkles,
   Info,
   CheckCircle2,
   AlertCircle,
-  ImagePlus,
   Trash2,
   Wand2,
   Save,
@@ -36,11 +32,28 @@ import {
   generateCareInstructions,
 } from "@/lib/luxury-engine";
 import { productService } from "@/lib/supabase-service";
-import { useInvalidateProducts } from "@/lib/product-queries";
-import { imageService } from "@/lib/image-service";
+import { useAdminProducts, useInvalidateProducts } from "@/lib/product-queries";
+import { useCategories } from "@/hooks/use-categories";
+import { useSizes } from "@/hooks/use-sizes";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { type Database } from "@/lib/supabase";
+import { ProductColorsEditor } from "@/components/product-colors-editor";
+import {
+  getProductColors,
+  syncLegacyFieldsFromColors,
+  validateProductColors,
+  type ProductColor,
+} from "@/lib/product-colors";
+import {
+  productModalContentClass,
+  productModalFooterClass,
+  productModalInputClass,
+  productModalLabelClass,
+  productModalSelectClass,
+  productModalTextareaClass,
+} from "@/components/product-modal-layout";
+import { ProductModalShell } from "@/components/product-modal-shell";
 
 type Product = Database["public"]["Tables"]["products"]["Row"];
 
@@ -60,6 +73,7 @@ interface ProductFormData {
   badge: string;
   description: string;
   sizes: string[];
+  colors: ProductColor[];
   image_url: string;
   secondary_images: string[];
   sustainability: string;
@@ -68,11 +82,7 @@ interface ProductFormData {
   units: string;
 }
 
-const categories = ["Onesies", "Sleepwear", "Knitwear", "Accessories", "Gift Sets"];
-
 const badgeOptions = ["New", "Bestseller", "Low stock", "Limited edition", "Sale"];
-
-const sizeOptions = ["Newborn", "0–3M", "3–6M", "6–12M", "12–18M", "18–24M", "One Size"];
 
 export function EditProductModal({
   open,
@@ -82,6 +92,9 @@ export function EditProductModal({
   onSuccess,
 }: EditProductModalProps) {
   const invalidateProducts = useInvalidateProducts();
+  const { categories } = useCategories();
+  const { sizes: sizeOptions } = useSizes();
+  const { data: adminProducts = [] } = useAdminProducts();
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     price: "",
@@ -90,6 +103,7 @@ export function EditProductModal({
     badge: "",
     description: "",
     sizes: [],
+    colors: [],
     image_url: "",
     secondary_images: [],
     sustainability: "",
@@ -99,15 +113,18 @@ export function EditProductModal({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [secondaryPreviews, setSecondaryPreviews] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const secondaryInputRef = useRef<HTMLInputElement>(null);
+  const categoryOptions = React.useMemo(() => {
+    const fromManageCategories = categories.map((c) => c.name.trim()).filter(Boolean);
+    const fromProducts = adminProducts.map((p) => p.category?.trim() || "").filter(Boolean);
+    const merged = [...fromManageCategories, ...fromProducts, formData.category].filter(Boolean);
+    return Array.from(new Set(merged));
+  }, [categories, adminProducts, formData.category]);
 
   useEffect(() => {
     if (product && open) {
+      const colors = getProductColors(product);
       setFormData({
         name: product.name || "",
         price: product.price?.toString() || "",
@@ -116,6 +133,7 @@ export function EditProductModal({
         badge: product.badge || "",
         description: product.description || "",
         sizes: product.sizes || [],
+        colors,
         image_url: product.image_url || "",
         secondary_images: product.secondary_images || [],
         sustainability: product.sustainability || "",
@@ -123,8 +141,6 @@ export function EditProductModal({
         gender: product.gender || "unisex",
         units: product.units?.toString() || "0",
       });
-      setImagePreview(product.image_url || null);
-      setSecondaryPreviews(product.secondary_images || []);
     }
   }, [product, open]);
 
@@ -141,105 +157,35 @@ export function EditProductModal({
     }));
   };
 
-  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (!file.type.startsWith("image/")) {
-        toast.error("Please select an image file");
-        return;
-      }
-
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-      setIsUploading(true);
-
-      try {
-        const imageUrl = await imageService.uploadImage(file);
-        setFormData((prev) => ({ ...prev, image_url: imageUrl }));
-        toast.success("Main image updated");
-      } catch (error) {
-        toast.error("Failed to update main image");
-        setImagePreview(product?.image_url || null);
-      } finally {
-        setIsUploading(false);
-      }
-    }
-  };
-
-  const handleSecondaryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-
-    if (formData.secondary_images.length + files.length > 5) {
-      toast.error("Maximum 5 secondary images allowed");
-      return;
-    }
-
-    setIsUploading(true);
-    const newPreviews = [...secondaryPreviews];
-    const uploadedUrls = [...formData.secondary_images];
-
-    try {
-      for (const file of files) {
-        if (!file.type.startsWith("image/")) continue;
-
-        const previewUrl = URL.createObjectURL(file);
-        newPreviews.push(previewUrl);
-        setSecondaryPreviews([...newPreviews]);
-
-        const imageUrl = await imageService.uploadImage(file);
-        uploadedUrls.push(imageUrl);
-        setFormData((prev) => ({ ...prev, secondary_images: [...uploadedUrls] }));
-      }
-      toast.success(`${files.length} image(s) added`);
-    } catch (error) {
-      toast.error("Error uploading some images");
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const removeSecondaryImage = (index: number) => {
-    const newPreviews = [...secondaryPreviews];
-    const newUrls = [...formData.secondary_images];
-
-    if (newPreviews[index].startsWith("blob:")) {
-      URL.revokeObjectURL(newPreviews[index]);
-    }
-
-    newPreviews.splice(index, 1);
-    newUrls.splice(index, 1);
-
-    setSecondaryPreviews(newPreviews);
-    setFormData((prev) => ({ ...prev, secondary_images: newUrls }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.price || !formData.category || !formData.image_url) {
+    if (!formData.name || !formData.price || !formData.category) {
       toast.error("Please fill in all required fields");
       return;
     }
 
-    if (formData.secondary_images.length < 2) {
-      toast.error("Luxury products require at least 2 gallery images");
+    const colorError = validateProductColors(formData.colors);
+    if (colorError) {
+      toast.error(colorError);
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      const legacy = syncLegacyFieldsFromColors(formData.colors);
       const productData = {
         name: formData.name,
         price: parseFloat(formData.price),
         category: formData.category,
-        variant: formData.variant,
+        variant: legacy.variant,
         badge: formData.badge === "none" ? undefined : formData.badge,
         description: formData.description,
         sizes: formData.sizes,
-        image_url: formData.image_url,
-        secondary_images: formData.secondary_images,
+        image_url: legacy.image_url,
+        secondary_images: legacy.secondary_images,
+        colors: legacy.colors,
         sustainability: formData.sustainability,
         care_instructions: formData.care_instructions,
         gender: formData.gender,
@@ -271,181 +217,85 @@ export function EditProductModal({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-[95vw] w-full lg:max-w-5xl p-0 overflow-y-auto lg:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] lg:rounded-[40px] h-auto lg:h-[90vh] max-h-[95vh] flex flex-col">
-        <div className="flex flex-col lg:flex-row flex-1 w-full lg:overflow-hidden">
-          {/* Left Column: Media Workspace */}
-          <div className="w-full lg:w-[400px] bg-muted/20 border-b lg:border-b-0 lg:border-r border-border/50 p-6 lg:p-10 flex flex-col lg:overflow-y-auto custom-scrollbar shrink-0">
-            <div className="space-y-10">
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-primary uppercase tracking-[0.2em]">
-                    Primary View
-                  </h3>
-                  <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full uppercase">
-                    Current
-                  </span>
-                </div>
-                <div
+      <DialogContent className={productModalContentClass}>
+        <ProductModalShell
+          onClose={handleClose}
+          colorsPane={
+            <ProductColorsEditor
+              colors={formData.colors}
+              onChange={(colors) => setFormData((prev) => ({ ...prev, colors }))}
+              isUploading={isUploading}
+              onUploadingChange={setIsUploading}
+            />
+          }
+          header={
+            <div className="min-w-0 space-y-1.5">
+              <DialogTitle className="font-serif text-xl leading-tight text-primary sm:text-2xl lg:text-3xl">
+                Edit product
+              </DialogTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="line-clamp-2 min-w-0 text-xs text-muted-foreground sm:text-sm">
+                  {product?.name}
+                </p>
+                <span
                   className={cn(
-                    "relative aspect-square rounded-[32px] overflow-hidden border-2 border-dashed border-primary/10 bg-white transition-all duration-500 shadow-sm",
-                    imagePreview && "border-none shadow-xl scale-[1.02]",
+                    "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest",
+                    product?.status === "published"
+                      ? "border-emerald-100 bg-emerald-50 text-emerald-600"
+                      : product?.status === "scheduled"
+                        ? "border-blue-100 bg-blue-50 text-blue-600"
+                        : "border-border/50 bg-muted text-muted-foreground",
                   )}
                 >
-                  {imagePreview ? (
-                    <img
-                      src={imagePreview}
-                      alt="Preview"
-                      className="w-full h-full object-cover animate-in fade-in zoom-in duration-500"
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center text-muted-foreground/60">
-                      <ImageIcon className="h-10 w-10 mb-3 opacity-20" />
-                      <p className="text-[10px] font-bold uppercase tracking-widest">No Image</p>
+                  {product?.status || "Draft"}
+                </span>
                     </div>
-                  )}
                 </div>
+          }
+          footer={
+            <div className={productModalFooterClass}>
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <Button
                   type="button"
-                  variant="outline"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full rounded-2xl border-primary/20 hover:border-primary/40 h-12 font-semibold text-sm"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Update Main Image
-                </Button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleMainImageUpload}
-                  className="hidden"
-                />
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-xs font-bold text-primary uppercase tracking-[0.2em]">
-                    Secondary Gallery
-                  </h3>
-                  <span
-                    className={cn(
-                      "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                      formData.secondary_images.length < 2
-                        ? "text-amber-600 bg-amber-50"
-                        : "text-emerald-600 bg-emerald-50",
-                    )}
-                  >
-                    {formData.secondary_images.length}/5 Images
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                  {secondaryPreviews.map((preview, idx) => (
-                    <div
-                      key={idx}
-                      className="relative aspect-square rounded-2xl overflow-hidden group shadow-md border border-border/50 bg-white"
-                    >
-                      <img
-                        src={preview}
-                        alt={`Gallery ${idx}`}
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        onClick={() => removeSecondaryImage(idx)}
-                        className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"
-                      >
-                        <Trash2 className="h-6 w-6 text-white" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {formData.secondary_images.length < 5 && (
-                    <button
-                      onClick={() => secondaryInputRef.current?.click()}
-                      className="aspect-square rounded-2xl border-2 border-dashed border-primary/10 bg-white hover:bg-primary-soft/10 hover:border-primary/30 transition-all flex flex-col items-center justify-center gap-2 group"
-                    >
-                      <ImagePlus className="h-6 w-6 text-primary/40 group-hover:scale-110 transition-transform" />
-                      <span className="text-[10px] font-bold text-primary/40 uppercase tracking-tighter">
-                        Add More
-                      </span>
-                    </button>
-                  )}
-                </div>
-                <input
-                  ref={secondaryInputRef}
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleSecondaryUpload}
-                  className="hidden"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Configuration Workspace */}
-          <div className="flex-1 flex flex-col bg-white lg:overflow-hidden">
-            <div className="p-6 pb-4 lg:p-10 lg:pb-6">
-              <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <DialogTitle className="text-4xl font-serif text-primary tracking-tight">
-                    Edit Luxury Suite
-                  </DialogTitle>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm text-muted-foreground font-medium">
-                      Refining the narrative and details for {product?.name}.
-                    </p>
-                    <span
-                      className={cn(
-                        "px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-border/50",
-                        product?.status === "published"
-                          ? "bg-emerald-50 text-emerald-600 border-emerald-100"
-                          : product?.status === "scheduled"
-                            ? "bg-blue-50 text-blue-600 border-blue-100"
-                            : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {product?.status || "Draft"}
-                    </span>
-                  </div>
-                </div>
-                <Button
                   variant="ghost"
-                  size="icon"
                   onClick={handleClose}
-                  className="rounded-full hover:bg-muted/80"
+                  className="min-h-11 w-full rounded-full text-base font-semibold sm:min-h-12 sm:w-auto sm:px-8"
                 >
-                  <X className="h-5 w-5" />
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="edit-luxury-product"
+                  disabled={isSubmitting || isUploading}
+                  className="min-h-11 w-full rounded-full bg-primary text-base font-semibold shadow-md sm:min-h-12 sm:min-w-[180px] sm:w-auto"
+                >
+                  {isSubmitting ? "Saving…" : "Save changes"}
                 </Button>
               </div>
             </div>
-
-            <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 lg:pt-4 pt-2 space-y-8 lg:space-y-12 custom-scrollbar">
-              <form id="edit-luxury-product" onSubmit={handleSubmit} className="space-y-12">
+          }
+        >
+              <form id="edit-luxury-product" onSubmit={handleSubmit} className="space-y-8 pb-4 sm:space-y-10 lg:space-y-12">
                 {/* 1. Core Identity */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
-                      Product Title
-                    </Label>
+                    <Label className={productModalLabelClass}>Product Title</Label>
                     <Input
                       value={formData.name}
                       onChange={(e) => handleInputChange("name", e.target.value)}
                       placeholder="Product Title"
-                      className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
+                      className={cn(productModalInputClass, "font-medium")}
                       required
                     />
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
-                      Boutique price (PKR)
-                    </Label>
+                    <Label className={productModalLabelClass}>Price (PKR)</Label>
                     <Input
                       type="number"
                       value={formData.price}
                       onChange={(e) => handleInputChange("price", e.target.value)}
                       placeholder="0.00"
-                      className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
+                      className={cn(productModalInputClass, "font-medium")}
                       required
                     />
                   </div>
@@ -453,14 +303,12 @@ export function EditProductModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
-                      Gender / Classification
-                    </Label>
+                    <Label className={productModalLabelClass}>Gender</Label>
                     <Select
                       value={formData.gender}
                       onValueChange={(v) => handleInputChange("gender", v)}
                     >
-                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className={productModalSelectClass}>
                         <SelectValue placeholder="Select Gender" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-none shadow-2xl">
@@ -477,16 +325,14 @@ export function EditProductModal({
                     </Select>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
-                      Available Units
-                    </Label>
+                    <Label className={productModalLabelClass}>Available Units</Label>
                     <Input
                       type="number"
                       value={formData.units}
                       onChange={(e) => handleInputChange("units", e.target.value)}
                       placeholder="0"
                       min="0"
-                      className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 text-lg font-medium"
+                      className={cn(productModalInputClass, "font-medium")}
                     />
                   </div>
                 </div>
@@ -497,34 +343,30 @@ export function EditProductModal({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
-                      Category
-                    </Label>
+                    <Label className={productModalLabelClass}>Category</Label>
                     <Select
                       value={formData.category}
                       onValueChange={(v) => handleInputChange("category", v)}
                     >
-                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className={productModalSelectClass}>
                         <SelectValue placeholder="Select Category" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-none shadow-2xl">
-                        {categories.map((c) => (
-                          <SelectItem key={c} value={c} className="rounded-xl py-3">
-                            {c}
+                        {categoryOptions.map((categoryName) => (
+                          <SelectItem key={categoryName} value={categoryName} className="rounded-xl py-3">
+                            {categoryName}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-3">
-                    <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
-                      Status Indicator
-                    </Label>
+                    <Label className={productModalLabelClass}>Badge</Label>
                     <Select
                       value={formData.badge}
                       onValueChange={(v) => handleInputChange("badge", v)}
                     >
-                      <SelectTrigger className="h-14 rounded-2xl bg-muted/30 border-none focus:ring-2 focus:ring-primary/20">
+                      <SelectTrigger className={productModalSelectClass}>
                         <SelectValue placeholder="No Badge" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-none shadow-2xl">
@@ -546,7 +388,7 @@ export function EditProductModal({
                 </div>
 
                 {/* 2. Brand Narrative */}
-                <div className="space-y-6 bg-muted/10 p-8 rounded-[32px] border border-border/30">
+                <div className="space-y-6 rounded-2xl border border-border/30 bg-muted/10 p-4 sm:rounded-[32px] sm:p-8">
                   <div className="flex items-center justify-between">
                     <h4 className="text-xs font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-3">
                       <Sparkles className="h-4 w-4" />
@@ -598,7 +440,7 @@ export function EditProductModal({
                         value={formData.description}
                         onChange={(e) => handleInputChange("description", e.target.value)}
                         placeholder="Craft the narrative..."
-                        className="rounded-2xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[120px] resize-none p-5 text-base"
+                        className={productModalTextareaClass}
                       />
                     </div>
 
@@ -664,60 +506,27 @@ export function EditProductModal({
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {sizeOptions.map((size) => {
-                      const active = formData.sizes.includes(size);
+                      const active = formData.sizes.includes(size.name);
                       return (
                         <button
-                          key={size}
+                          key={size.id}
                           type="button"
-                          onClick={() => handleSizeToggle(size)}
+                          onClick={() => handleSizeToggle(size.name)}
                           className={cn(
-                            "px-6 py-3 rounded-full text-sm font-bold border-2 transition-all duration-300",
+                            "rounded-full border-2 px-4 py-2.5 text-sm font-bold transition-all duration-300 sm:px-6 sm:py-3",
                             active
                               ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105"
                               : "bg-white text-muted-foreground border-muted/20 hover:border-primary/30",
                           )}
                         >
-                          {size}
+                          {size.name}
                         </button>
                       );
                     })}
                   </div>
                 </div>
               </form>
-            </div>
-
-            {/* Premium Footer */}
-            <div className="p-6 lg:p-10 border-t border-border/40 bg-muted/5 rounded-b-[32px] lg:rounded-b-[40px]">
-              <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground">
-                  <div className="flex -space-x-2">
-                    <div className="w-8 h-8 rounded-full border-2 border-white bg-primary-soft flex items-center justify-center text-primary">
-                      <Save className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <span>Syncing with Global Inventory</span>
-                </div>
-                <div className="flex items-center justify-end gap-4 w-full sm:w-auto">
-                  <Button
-                    variant="ghost"
-                    onClick={handleClose}
-                    className="rounded-full px-8 h-14 font-bold"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    form="edit-luxury-product"
-                    disabled={isSubmitting || isUploading}
-                    className="rounded-full px-8 sm:px-12 h-14 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 w-full sm:w-auto sm:min-w-[220px] transition-transform active:scale-95"
-                  >
-                    {isSubmitting ? "Syncing..." : "Update Luxury Piece"}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        </ProductModalShell>
       </DialogContent>
     </Dialog>
   );

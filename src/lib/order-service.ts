@@ -43,10 +43,10 @@ export type CartItem = {
   variant?: string;
 };
 
-/** Fulfilment menu: hide repeating steps — packed → shipped → delivered only in order. */
+/** Fulfilment menu: allow packing only after the order is confirmed. */
 export function canMarkOrderPacked(status: OrderStatus | string): boolean {
   if (status === "cancelled" || status === "refunded") return false;
-  return !["packed", "shipped", "delivered"].includes(status as string);
+  return status === "order_confirmed";
 }
 
 export function canMarkOrderShipped(status: OrderStatus | string): boolean {
@@ -152,6 +152,27 @@ export const orderService = {
     input: CreateOrderInput,
   ): Promise<{ order: Order | null; error: string | null }> {
     try {
+      // 0. Check inventory availability before creating order
+      for (const item of input.items) {
+        const { data: product, error: productError } = await supabase
+          .from("products")
+          .select("units, name")
+          .eq("id", item.product_id)
+          .single();
+
+        if (productError) {
+          return { order: null, error: `Failed to check inventory for ${item.product_name}` };
+        }
+
+        const availableUnits = product?.units || 0;
+        if (availableUnits < item.quantity) {
+          return {
+            order: null,
+            error: `Insufficient stock for ${product?.name || item.product_name}. Available: ${availableUnits}, Requested: ${item.quantity}`,
+          };
+        }
+      }
+
       // 1. Create or get customer
       let customerId: string | null = null;
 
@@ -276,7 +297,7 @@ export const orderService = {
         notes: "Order initially placed at checkout.",
       });
 
-      // Create order items
+      // Create order items and decrement inventory
       const orderItems = input.items.map((item) => ({
         order_id: order.id,
         product_id: item.product_id,
@@ -292,6 +313,32 @@ export const orderService = {
       const { error: itemsError } = await supabase.from("order_items").insert(orderItems);
 
       if (itemsError) throw itemsError;
+
+      // Decrement product inventory for each item
+      for (const item of input.items) {
+        const { data: product, error: productError } = await supabase
+          .from("products")
+          .select("units")
+          .eq("id", item.product_id)
+          .single();
+
+        if (productError) {
+          console.error(`Error fetching product ${item.product_id}:`, productError);
+          continue;
+        }
+
+        const currentUnits = product?.units || 0;
+        const newUnits = Math.max(0, currentUnits - item.quantity);
+
+        const { error: updateError } = await supabase
+          .from("products")
+          .update({ units: newUnits })
+          .eq("id", item.product_id);
+
+        if (updateError) {
+          console.error(`Error updating inventory for product ${item.product_id}:`, updateError);
+        }
+      }
 
       if (customerId) {
         await syncDefaultShippingAddressForCustomer(customerId, input);
@@ -517,7 +564,31 @@ export const orderService = {
 
       if (error) throw error;
 
-      return { orders: data || [], count: count || 0, error: null };
+      // Fetch customer tiers for orders that have customer_email
+      const ordersWithTier = await Promise.all(
+        (data || []).map(async (order: any) => {
+          console.log("Processing order:", order.order_number, "customer_email:", order.customer_email);
+          if (order.customer_email) {
+            const { data: customer, error: customerError } = await supabase
+              .from("customers")
+              .select("tier")
+              .eq("email", order.customer_email)
+              .single();
+            console.log("Customer data for order", order.order_number, ":", customer, "Error:", customerError);
+            return {
+              ...order,
+              customer_tier: customer?.tier || "Standard",
+            };
+          }
+          console.log("No customer_email for order:", order.order_number, "defaulting to Standard");
+          return {
+            ...order,
+            customer_tier: "Standard",
+          };
+        }),
+      );
+
+      return { orders: ordersWithTier, count: count || 0, error: null };
     } catch (err: any) {
       console.error("Error fetching orders:", err);
       return { orders: [], count: 0, error: err.message || "Failed to fetch orders" };
@@ -549,25 +620,73 @@ export const orderService = {
     notes?: string,
   ): Promise<{ success: boolean; error: string | null }> {
     try {
-      // 1. Get current status for previous_status reference
+      // 1. Get current status for previous_status reference and existing payment status
       const { data: existing } = await supabase
         .from("orders")
-        .select("status")
+        .select("status, payment_status, total_amount")
         .eq("id", orderId)
         .single();
       const previousStatus = existing?.status;
+      const existingPaymentStatus = existing?.payment_status;
+      const orderAmount = existing?.total_amount;
+
+      const updates: Record<string, unknown> = { status };
+
+      if (
+        status === "payment_confirmed" &&
+        existingPaymentStatus &&
+        existingPaymentStatus !== "completed"
+      ) {
+        updates.payment_status = "completed";
+        updates.paid_at = new Date().toISOString();
+      }
 
       // 2. Update the order
-      const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+      const { error } = await supabase.from("orders").update(updates).eq("id", orderId);
 
       if (error) throw error;
 
-      // 3. Record in history
+      // 3. Restore inventory if order is being cancelled
+      if (status === "cancelled" && previousStatus !== "cancelled") {
+        const { data: orderItems } = await supabase
+          .from("order_items")
+          .select("product_id, quantity")
+          .eq("order_id", orderId);
+
+        if (orderItems) {
+          for (const item of orderItems) {
+            const { data: product } = await supabase
+              .from("products")
+              .select("units")
+              .eq("id", item.product_id)
+              .single();
+
+            if (product) {
+              const currentUnits = product.units || 0;
+              const newUnits = currentUnits + item.quantity;
+
+              await supabase
+                .from("products")
+                .update({ units: newUnits })
+                .eq("id", item.product_id);
+            }
+          }
+        }
+      }
+
+      // 4. Record in history with revenue impact note if cancelling after payment
+      let historyNotes = notes;
+      if (status === "cancelled" && existingPaymentStatus === "completed") {
+        historyNotes = `Order cancelled after payment confirmation. Revenue of ${formatPkr(Number(orderAmount))} excluded from totals. Inventory restored. ${notes || ""}`;
+      } else if (status === "cancelled") {
+        historyNotes = `Order cancelled. Inventory restored. ${notes || ""}`;
+      }
+
       await supabase.from("order_status_history").insert({
         order_id: orderId,
         status: status,
         previous_status: previousStatus,
-        notes: notes,
+        notes: historyNotes,
       });
 
       return { success: true, error: null };
@@ -742,7 +861,8 @@ export const orderService = {
     total_orders: number;
     pending_payment: number;
     paid: number;
-    confirmed: number;
+    order_confirmed: number;
+    payment_confirmed: number;
     packed: number;
     shipped: number;
     delivered: number;
@@ -771,11 +891,12 @@ export const orderService = {
       const stats = {
         total_orders: data?.length || 0,
         order_placed: data?.filter((o: any) => o.status === "order_placed").length || 0,
+        order_confirmed: data?.filter((o: any) => o.status === "order_confirmed").length || 0,
+        payment_confirmed: data?.filter((o: any) => o.status === "payment_confirmed").length || 0,
         pending_payment: data?.filter((o: any) => o.status === "pending_payment").length || 0,
         paid:
           data?.filter((o: any) => o.status === "paid" || o.payment_status === "completed")
             .length || 0,
-        confirmed: data?.filter((o: any) => o.status === "confirmed").length || 0,
         packed: data?.filter((o: any) => o.status === "packed").length || 0,
         shipped: data?.filter((o: any) => o.status === "shipped").length || 0,
         delivered: data?.filter((o: any) => o.status === "delivered").length || 0,
@@ -801,7 +922,8 @@ export const orderService = {
         total_orders: 0,
         pending_payment: 0,
         paid: 0,
-        confirmed: 0,
+        order_confirmed: 0,
+        payment_confirmed: 0,
         packed: 0,
         shipped: 0,
         delivered: 0,

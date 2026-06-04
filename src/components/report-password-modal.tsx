@@ -7,6 +7,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock, Download, AlertCircle } from "lucide-react";
 import { FieldError } from "@/components/field-error";
 import { validateRequired } from "@/lib/form-validation";
+import { sheetModalClass, sheetModalInnerClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
+import { cn } from "@/lib/utils";
 
 interface ReportPasswordModalProps {
   isOpen: boolean;
@@ -46,7 +49,9 @@ export function ReportPasswordModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={sheetModalClass}>
+        <ModalCloseBar onClose={handleClose} />
+        <div className={sheetModalInnerClass}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Lock className="h-4 w-4" />
@@ -92,17 +97,21 @@ export function ReportPasswordModal({
               <FieldError message={passwordError} />
             </div>
 
-            <div className="flex gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-2 sm:flex-row">
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleClose}
                 disabled={isLoading}
-                className="flex-1"
+                className="min-h-11 flex-1 rounded-full text-base font-semibold"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={!password.trim() || isLoading} className="flex-1">
+              <Button
+                type="submit"
+                disabled={!password.trim() || isLoading}
+                className="min-h-11 flex-1 rounded-full text-base font-semibold"
+              >
                 {isLoading ? (
                   <>
                     <Download className="h-4 w-4 mr-2 animate-pulse" />
@@ -125,6 +134,7 @@ export function ReportPasswordModal({
               only.
             </p>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

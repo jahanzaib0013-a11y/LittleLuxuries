@@ -14,6 +14,15 @@ import { toast } from "sonner";
 import { FieldError, inputWithError } from "@/components/field-error";
 import { validateRequired, hasFieldErrors, type FieldErrors } from "@/lib/form-validation";
 import { Mail, Send, Sparkles } from "lucide-react";
+import {
+  sheetModalClass,
+  sheetModalInnerClass,
+  modalFooterClass,
+  modalInputClass,
+  modalTextareaClass,
+} from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
+import { cn } from "@/lib/utils";
 
 interface SendMessageModalProps {
   open: boolean;
@@ -39,7 +48,6 @@ export function SendMessageModal({ open, onOpenChange, customer }: SendMessageMo
     setFieldErrors({});
 
     setIsSending(true);
-    // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     toast.success(`Message sent to ${customer?.customer_name}!`);
@@ -66,82 +74,90 @@ export function SendMessageModal({ open, onOpenChange, customer }: SendMessageMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-8 w-8 rounded-full bg-primary-soft grid place-items-center text-primary">
-              <Mail className="h-4 w-4" />
+      <DialogContent className={sheetModalClass}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} />
+        <div className={sheetModalInnerClass}>
+          <DialogHeader>
+            <div className="mb-2 flex items-center gap-2">
+              <div className="grid h-8 w-8 place-items-center rounded-full bg-primary-soft text-primary">
+                <Mail className="h-4 w-4" />
+              </div>
+              <DialogTitle className="font-serif text-xl">Direct Message</DialogTitle>
             </div>
-            <DialogTitle className="font-serif text-xl">Direct Message</DialogTitle>
-          </div>
-          <div className="text-sm text-muted-foreground italic">
-            To: {customer?.customer_name} ({customer?.email})
-          </div>
-        </DialogHeader>
+            <div className="text-sm italic text-muted-foreground">
+              To: {customer?.customer_name} ({customer?.email})
+            </div>
+          </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Subject
-            </label>
-            <Input
-              placeholder="Enter message subject..."
-              value={subject}
-              onChange={(e) => {
-                setSubject(e.target.value);
-                setFieldErrors((prev) => ({ ...prev, subject: undefined }));
-              }}
-              aria-invalid={Boolean(fieldErrors.subject)}
-              className={inputWithError(
-                Boolean(fieldErrors.subject),
-                "rounded-xl bg-muted/30 border-border",
-              )}
-            />
-            <FieldError message={fieldErrors.subject} />
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Message
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Subject
               </label>
-              <button
-                onClick={handleAISuggest}
-                className="text-[10px] uppercase tracking-wider text-primary font-bold flex items-center gap-1 hover:opacity-70 transition-opacity"
-              >
-                <Sparkles className="h-3 w-3" /> Suggest with AI
-              </button>
+              <Input
+                placeholder="Enter message subject..."
+                value={subject}
+                onChange={(e) => {
+                  setSubject(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, subject: undefined }));
+                }}
+                aria-invalid={Boolean(fieldErrors.subject)}
+                className={inputWithError(
+                  Boolean(fieldErrors.subject),
+                  cn(modalInputClass, "border border-border bg-muted/30"),
+                )}
+              />
+              <FieldError message={fieldErrors.subject} />
             </div>
-            <Textarea
-              placeholder="Type your personal message here..."
-              value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                setFieldErrors((prev) => ({ ...prev, message: undefined }));
-              }}
-              aria-invalid={Boolean(fieldErrors.message)}
-              className={inputWithError(
-                Boolean(fieldErrors.message),
-                "min-h-[150px] rounded-2xl bg-muted/30 border-border resize-none",
-              )}
-            />
-            <FieldError message={fieldErrors.message} />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Message
+                </label>
+                <button
+                  type="button"
+                  onClick={handleAISuggest}
+                  className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-primary transition-opacity hover:opacity-70"
+                >
+                  <Sparkles className="h-3 w-3" /> Suggest with AI
+                </button>
+              </div>
+              <Textarea
+                placeholder="Type your personal message here..."
+                value={message}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, message: undefined }));
+                }}
+                aria-invalid={Boolean(fieldErrors.message)}
+                className={inputWithError(
+                  Boolean(fieldErrors.message),
+                  cn(modalTextareaClass, "border border-border bg-muted/30"),
+                )}
+              />
+              <FieldError message={fieldErrors.message} />
+            </div>
           </div>
-        </div>
 
-        <DialogFooter className="flex sm:justify-between items-center gap-3">
-          <div className="text-[10px] text-muted-foreground italic">
-            Messages are sent via the email server.
-          </div>
-          <Button onClick={handleSend} disabled={isSending} className="rounded-full px-8 h-11">
-            {isSending ? (
-              "Sending..."
-            ) : (
-              <>
-                Send Message <Send className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </DialogFooter>
+          <DialogFooter className={cn(modalFooterClass, "flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between")}>
+            <div className="text-center text-[10px] italic text-muted-foreground sm:text-left">
+              Messages are sent via the email server.
+            </div>
+            <Button
+              onClick={handleSend}
+              disabled={isSending}
+              className="min-h-11 w-full rounded-full px-8 text-base font-semibold sm:w-auto"
+            >
+              {isSending ? (
+                "Sending..."
+              ) : (
+                <>
+                  Send Message <Send className="ml-2 h-4 w-4" />
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

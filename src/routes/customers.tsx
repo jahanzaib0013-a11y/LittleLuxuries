@@ -279,7 +279,7 @@ function CustomersContent({ search }: { search: string }) {
       </div>
 
       {/* Membership Tiers Pipeline */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {[
           {
             label: "Platinum",

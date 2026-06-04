@@ -2,6 +2,8 @@ import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle } from "lucide-react";
+import { confirmModalClass, sheetModalInnerClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 
 interface DeleteConfirmationModalProps {
   open: boolean;
@@ -20,8 +22,10 @@ export function DeleteConfirmationModal({
 }: DeleteConfirmationModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-card border-0 shadow-2xl">
-        <DialogHeader className="pb-6">
+      <DialogContent className={confirmModalClass + " bg-card"}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} label="Cancel" />
+        <div className={sheetModalInnerClass}>
+        <DialogHeader className="pb-4">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center">
               <AlertTriangle className="h-6 w-6 text-destructive" />
@@ -72,6 +76,7 @@ export function DeleteConfirmationModal({
               )}
             </Button>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>

@@ -15,6 +15,8 @@ import {
   Download,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fullScreenModalClass } from "@/components/product-modal-layout";
+import { ModalCloseBar } from "@/components/modal-close-bar";
 import { cn } from "@/lib/utils";
 import { formatPkr } from "@/lib/format-currency";
 import {
@@ -280,8 +282,10 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[95vh] max-w-5xl flex-col overflow-hidden rounded-[32px] border-none bg-white p-0 shadow-2xl">
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border/40 px-6 py-5 md:px-8">
+      <DialogContent className={fullScreenModalClass}>
+        <ModalCloseBar onClose={() => onOpenChange(false)} />
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border/40 px-4 py-4 sm:px-6 sm:py-5 md:px-8">
           <div className="flex min-w-0 items-center gap-4">
             {productImg && (
               <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border/50 bg-muted">
@@ -469,6 +473,7 @@ export function SocialPostModal({ open, onOpenChange, product }: SocialPostModal
               </p>
             </div>
           </div>
+        </div>
         </div>
       </DialogContent>
     </Dialog>
