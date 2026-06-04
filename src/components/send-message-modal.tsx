@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Customer } from "@/lib/customers";
 import { useState } from "react";
 import { toast } from "sonner";
+import { FieldError, inputWithError } from "@/components/field-error";
+import { validateRequired, hasFieldErrors, type FieldErrors } from "@/lib/form-validation";
 import { Mail, Send, Sparkles } from "lucide-react";
 
 interface SendMessageModalProps {
@@ -23,12 +25,18 @@ export function SendMessageModal({ open, onOpenChange, customer }: SendMessageMo
   const [subject, setSubject] = useState("");
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<"subject" | "message">>({});
 
   const handleSend = async () => {
-    if (!message || !subject) {
-      toast.error("Please fill in both subject and message");
+    const errors: FieldErrors<"subject" | "message"> = {
+      subject: validateRequired(subject, "Subject"),
+      message: validateRequired(message, "Message"),
+    };
+    if (hasFieldErrors(errors)) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     setIsSending(true);
     // Simulate API call
@@ -79,9 +87,17 @@ export function SendMessageModal({ open, onOpenChange, customer }: SendMessageMo
             <Input
               placeholder="Enter message subject..."
               value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              className="rounded-xl bg-muted/30 border-border"
+              onChange={(e) => {
+                setSubject(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, subject: undefined }));
+              }}
+              aria-invalid={Boolean(fieldErrors.subject)}
+              className={inputWithError(
+                Boolean(fieldErrors.subject),
+                "rounded-xl bg-muted/30 border-border",
+              )}
             />
+            <FieldError message={fieldErrors.subject} />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -97,10 +113,18 @@ export function SendMessageModal({ open, onOpenChange, customer }: SendMessageMo
             </div>
             <Textarea
               placeholder="Type your personal message here..."
-              className="min-h-[150px] rounded-2xl bg-muted/30 border-border resize-none"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => {
+                setMessage(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, message: undefined }));
+              }}
+              aria-invalid={Boolean(fieldErrors.message)}
+              className={inputWithError(
+                Boolean(fieldErrors.message),
+                "min-h-[150px] rounded-2xl bg-muted/30 border-border resize-none",
+              )}
             />
+            <FieldError message={fieldErrors.message} />
           </div>
         </div>
 

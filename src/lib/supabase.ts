@@ -41,6 +41,7 @@ export interface Database {
             }[];
           };
           layout: string;
+          promo_banner: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };

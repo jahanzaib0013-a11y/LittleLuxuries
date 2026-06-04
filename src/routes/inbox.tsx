@@ -72,6 +72,7 @@ function InboxPage() {
   const [conversations, setConversations] = useState<any[]>(mockConversations);
   const [activeChat, setActiveChat] = useState<any>(mockConversations[0]);
   const [message, setMessage] = useState("");
+  const [messageError, setMessageError] = useState<string | undefined>();
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -180,7 +181,11 @@ function InboxPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim()) {
+      setMessageError("Type a message before sending.");
+      return;
+    }
+    setMessageError(undefined);
 
     if (isRealApiConnected && activeChat.recipientId) {
       setIsSending(true);
@@ -408,7 +413,10 @@ function InboxPage() {
               <div className="flex-1 relative">
                 <textarea
                   value={message}
-                  onChange={(e) => setMessage(e.target.value)}
+                  onChange={(e) => {
+                    setMessage(e.target.value);
+                    setMessageError(undefined);
+                  }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
@@ -420,9 +428,19 @@ function InboxPage() {
                       ? "Type a message to send via Instagram API..."
                       : "Type a message (Sandbox Mode)..."
                   }
-                  className="w-full max-h-32 min-h-[44px] bg-muted/30 border border-border rounded-2xl py-3 px-4 text-sm resize-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-foreground placeholder:text-muted-foreground"
+                  aria-invalid={Boolean(messageError)}
+                  className={`w-full max-h-32 min-h-[44px] bg-muted/30 border rounded-2xl py-3 px-4 text-sm resize-none focus:outline-none focus:ring-1 transition-all text-foreground placeholder:text-muted-foreground ${
+                    messageError
+                      ? "border-destructive focus:border-destructive focus:ring-destructive/20"
+                      : "border-border focus:border-primary focus:ring-primary"
+                  }`}
                   rows={1}
                 />
+                {messageError && (
+                  <p className="absolute -bottom-5 left-0 text-[10px] text-destructive" role="alert">
+                    {messageError}
+                  </p>
+                )}
               </div>
               <Button
                 size="icon"

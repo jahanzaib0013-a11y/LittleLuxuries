@@ -1,4 +1,148 @@
 import { supabase, Database } from "./supabase";
+import type {
+  SiteContent,
+  HeroBanner,
+  AnnouncementBar,
+  PromoBanner,
+  PromoBannerPlacements,
+  PromoBannerVariant,
+  PromoBannerTheme,
+} from "./content-data";
+import {
+  defaultPromoBanner,
+  defaultPromoPlacements,
+  normalizePromoPlacements,
+} from "./content-data";
+
+const FALLBACK_HERO: HeroBanner = {
+  headline: "Gentle luxuries\nfor your little one.",
+  buttonLabel: "Shop Collection",
+  buttonLink: "/shop",
+  seasonTag: "New Collection 2026",
+  description:
+    "Thoughtfully designed garments that embrace your baby in softest ethically-sourced materials. Timeless elegance for modern nursery.",
+  badgeTitle: "Hand-crafted",
+  badgeSubtitle: "In small artisan batches",
+  socialProofText: "Loved by 12,000+ families worldwide",
+  showSocialProof: true,
+  socialProofIconName: "Star",
+};
+
+const FALLBACK_PROMISES: AnnouncementBar["promises"] = [
+  { title: "Ethically Made", description: "Responsibly sourced and sustainably produced with love for the planet." },
+  { title: "Heirloom Quality", description: "Standards of craftsmanship designed to last through generations." },
+  { title: "Soft on Skin", description: "Hypoallergenic and ultra-soft fabrics for the most sensitive skin." },
+];
+
+function mapHeroFromDb(raw: unknown): HeroBanner {
+  const hb = (raw ?? {}) as Record<string, unknown>;
+  if (typeof hb.buttonLabel === "string" || typeof hb.seasonTag === "string") {
+    return {
+      headline: String(hb.headline ?? FALLBACK_HERO.headline),
+      buttonLabel: String(hb.buttonLabel ?? FALLBACK_HERO.buttonLabel),
+      buttonLink: String(hb.buttonLink ?? FALLBACK_HERO.buttonLink),
+      seasonTag: String(hb.seasonTag ?? FALLBACK_HERO.seasonTag),
+      description: String(hb.description ?? FALLBACK_HERO.description),
+      badgeTitle: String(hb.badgeTitle ?? FALLBACK_HERO.badgeTitle),
+      badgeSubtitle: String(hb.badgeSubtitle ?? FALLBACK_HERO.badgeSubtitle),
+      imageUrl: typeof hb.imageUrl === "string" ? hb.imageUrl : undefined,
+      socialProofText: String(hb.socialProofText ?? FALLBACK_HERO.socialProofText),
+      showSocialProof: hb.showSocialProof !== false,
+      socialProofIconName: String(hb.socialProofIconName ?? FALLBACK_HERO.socialProofIconName),
+    };
+  }
+  return {
+    ...FALLBACK_HERO,
+    headline: String(hb.headline ?? hb.title ?? FALLBACK_HERO.headline),
+    description: String(hb.subtitle ?? hb.headline ?? FALLBACK_HERO.description),
+    badgeTitle: String(hb.badge_text ?? hb.badgeTitle ?? FALLBACK_HERO.badgeTitle),
+    imageUrl:
+      typeof hb.image_url === "string"
+        ? hb.image_url
+        : typeof hb.imageUrl === "string"
+          ? hb.imageUrl
+          : undefined,
+    socialProofText: String(hb.socialProofText ?? FALLBACK_HERO.socialProofText),
+    showSocialProof: hb.showSocialProof !== false,
+    socialProofIconName: String(hb.socialProofIconName ?? FALLBACK_HERO.socialProofIconName),
+  };
+}
+
+function mapAnnouncementFromDb(raw: unknown): AnnouncementBar {
+  const bar = (raw ?? {}) as Record<string, unknown>;
+  const promises = Array.isArray(bar.promises)
+    ? (bar.promises as AnnouncementBar["promises"])
+    : FALLBACK_PROMISES;
+  return {
+    isActive: Boolean(bar.isActive ?? bar.is_active ?? false),
+    promises,
+  };
+}
+
+const PROMO_VARIANTS: PromoBannerVariant[] = ["sale", "festival", "minimal"];
+const PROMO_THEMES: PromoBannerTheme[] = ["gold", "primary", "blush", "lilac"];
+
+function mapPlacementsFromDb(raw: unknown): PromoBannerPlacements {
+  const p = (raw ?? {}) as Record<string, unknown> & { belowHero?: boolean; below_hero?: boolean };
+  const hasPlacements = raw !== null && typeof raw === "object" && Object.keys(p).length > 0;
+  if (!hasPlacements) return defaultPromoPlacements;
+  return normalizePromoPlacements({
+    top: p.top !== false,
+    stickyBottom: Boolean(
+      p.stickyBottom ?? p.sticky_bottom ?? p.belowHero ?? p.below_hero,
+    ),
+    aboveBrandPromises: Boolean(p.aboveBrandPromises ?? p.above_brand_promises),
+    belowBrandPromises: Boolean(p.belowBrandPromises ?? p.below_brand_promises),
+  });
+}
+
+function mapPromoBannerFromDb(raw: unknown): PromoBanner {
+  const pb = (raw ?? {}) as Record<string, unknown>;
+  const variant = PROMO_VARIANTS.includes(pb.variant as PromoBannerVariant)
+    ? (pb.variant as PromoBannerVariant)
+    : defaultPromoBanner.variant;
+  const backgroundTheme = PROMO_THEMES.includes(pb.backgroundTheme as PromoBannerTheme)
+    ? (pb.backgroundTheme as PromoBannerTheme)
+    : defaultPromoBanner.backgroundTheme;
+  const textAlign = pb.textAlign === "left" ? "left" : "center";
+
+  return {
+    isActive: Boolean(pb.isActive ?? pb.is_active ?? defaultPromoBanner.isActive),
+    placements: mapPlacementsFromDb(pb.placements),
+    variant,
+    eyebrow: String(pb.eyebrow ?? defaultPromoBanner.eyebrow),
+    headline: String(pb.headline ?? defaultPromoBanner.headline),
+    description: String(pb.description ?? defaultPromoBanner.description),
+    promoCode: String(pb.promoCode ?? defaultPromoBanner.promoCode),
+    showPromoCode: pb.showPromoCode !== false,
+    buttonLabel: String(pb.buttonLabel ?? defaultPromoBanner.buttonLabel),
+    buttonLink: String(pb.buttonLink ?? defaultPromoBanner.buttonLink),
+    showButton: pb.showButton !== false,
+    iconName: String(pb.iconName ?? defaultPromoBanner.iconName),
+    textAlign,
+    backgroundTheme,
+    endsAt:
+      typeof pb.endsAt === "string" && pb.endsAt.length > 0
+        ? pb.endsAt
+        : pb.endsAt === null
+          ? null
+          : defaultPromoBanner.endsAt,
+  };
+}
+
+function mapRowToSiteContent(row: {
+  hero_banner: unknown;
+  announcement_bar: unknown;
+  promo_banner?: unknown;
+  layout: string;
+}): SiteContent {
+  return {
+    heroBanner: mapHeroFromDb(row.hero_banner),
+    announcementBar: mapAnnouncementFromDb(row.announcement_bar),
+    promoBanner: mapPromoBannerFromDb(row.promo_banner),
+    layout: row.layout || "Editorial Grid",
+  };
+}
 
 // Content management
 export const contentService = {
@@ -45,6 +189,40 @@ export const contentService = {
     }
 
     return data;
+  },
+
+  async getSiteContent(): Promise<SiteContent | null> {
+    const { data, error } = await supabase.from("content").select("*").eq("id", "default").maybeSingle();
+
+    if (error) {
+      console.error("Error fetching site content:", error);
+      return null;
+    }
+    if (!data) return null;
+
+    return mapRowToSiteContent(data);
+  },
+
+  async saveSiteContent(content: SiteContent): Promise<{ success: boolean; error?: string }> {
+    const { error } = await supabase.from("content").upsert(
+      {
+        id: "default",
+        hero_banner: content.heroBanner as unknown as Database["public"]["Tables"]["content"]["Row"]["hero_banner"],
+        announcement_bar: {
+          is_active: content.announcementBar.isActive,
+          promises: content.announcementBar.promises,
+        },
+        layout: content.layout,
+        promo_banner: content.promoBanner as unknown as Record<string, unknown>,
+      },
+      { onConflict: "id" },
+    );
+
+    if (error) {
+      console.error("Error saving site content:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
   },
 };
 

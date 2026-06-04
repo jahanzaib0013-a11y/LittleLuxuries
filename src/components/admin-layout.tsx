@@ -140,7 +140,14 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
               asChild
               className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
             >
-              <Link to="/login" onClick={onNavigate} className="flex items-center">
+              <Link 
+                to="/login" 
+                onClick={(e) => {
+                  localStorage.removeItem("isAuthenticated");
+                  if (onNavigate) onNavigate();
+                }} 
+                className="flex items-center"
+              >
                 <LogOut className="h-4 w-4 mr-2" /> Sign Out
               </Link>
             </DropdownMenuItem>
@@ -181,6 +188,14 @@ export function AdminLayout({
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
+
+  // Auth check
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem("isAuthenticated");
+    if (isAuthenticated !== "true") {
+      navigate({ to: "/login" });
+    }
+  }, [navigate]);
 
   return (
     <div className="flex h-screen w-full bg-[oklch(0.97_0.005_300)]">
@@ -232,7 +247,7 @@ export function AdminLayout({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-[420px] p-0 rounded-2xl shadow-(--shadow-card) border-border/50 overflow-hidden"
+                  className="w-[min(420px,calc(100vw-2rem))] p-0 rounded-2xl shadow-(--shadow-card) border-border/50 overflow-hidden"
                   align="end"
                 >
                   <div className="bg-linear-to-br from-gold/10 to-transparent p-4 border-b border-border/50 flex items-center justify-between">
@@ -421,7 +436,7 @@ export function AdminLayout({
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-[380px] p-0 rounded-2xl shadow-(--shadow-card) border-border/50 overflow-hidden"
+                  className="w-[min(380px,calc(100vw-2rem))] p-0 rounded-2xl shadow-(--shadow-card) border-border/50 overflow-hidden"
                   align="end"
                 >
                   <div className="bg-muted/30 p-4 border-b border-border/50 flex items-center justify-between">

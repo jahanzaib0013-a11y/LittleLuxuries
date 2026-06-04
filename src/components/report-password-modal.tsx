@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/password-input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Lock, Download, AlertCircle } from "lucide-react";
+import { FieldError } from "@/components/field-error";
+import { validateRequired } from "@/lib/form-validation";
 
 interface ReportPasswordModalProps {
   isOpen: boolean;
@@ -24,12 +26,17 @@ export function ReportPasswordModal({
   error,
 }: ReportPasswordModalProps) {
   const [password, setPassword] = useState("");
+  const [passwordError, setPasswordError] = useState<string | undefined>();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.trim()) {
-      onPasswordSubmit(password);
+    const err = validateRequired(password, "Password");
+    if (err) {
+      setPasswordError(err);
+      return;
     }
+    setPasswordError(undefined);
+    onPasswordSubmit(password);
   };
 
   const handleClose = () => {
@@ -70,15 +77,19 @@ export function ReportPasswordModal({
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="report-password">Report Password</Label>
-              <Input
+              <PasswordInput
                 id="report-password"
-                type="password"
+                showLockIcon={false}
                 placeholder="Enter password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setPasswordError(undefined);
+                }}
                 disabled={isLoading}
                 autoComplete="off"
               />
+              <FieldError message={passwordError} />
             </div>
 
             <div className="flex gap-2 pt-2">

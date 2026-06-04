@@ -1,6 +1,6 @@
 import { supabase, Database } from "./supabase";
 import { formatPkr } from "./format-currency";
-import { sendOrderStatusEmail } from "./email-server";
+import { sendOrderStatusEmail } from "./email.server";
 
 // Types
 export type Order = Database["public"]["Tables"]["orders"]["Row"];

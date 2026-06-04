@@ -1,9 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Mail, Lock, ShieldCheck, PawPrint } from "lucide-react";
+import { Mail, ShieldCheck, PawPrint, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/password-input";
+import { FieldError, inputWithError } from "@/components/field-error";
+import { validateEmail, validateRequired } from "@/lib/form-validation";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -19,6 +22,9 @@ function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   return (
     <div className="min-h-screen w-full grid place-items-center bg-linear-to-br from-[oklch(0.98_0.01_300)] via-[oklch(0.97_0.015_320)] to-[oklch(0.96_0.02_25)] px-4 py-12">
@@ -33,9 +39,37 @@ function LoginPage() {
         </p>
 
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            navigate({ to: "/dashboard" });
+            setError("");
+            const errors: { email?: string; password?: string } = {
+              email: validateEmail(email),
+              password: validateRequired(password, "Password"),
+            };
+            if (errors.email || errors.password) {
+              setFieldErrors(errors);
+              return;
+            }
+            setFieldErrors({});
+            setIsSubmitting(true);
+            try {
+              const res = await fetch("/api/admin-login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email: email.trim(), password }),
+              });
+              const result = (await res.json()) as { success?: boolean; message?: string };
+              if (result.success) {
+                localStorage.setItem("isAuthenticated", "true");
+                navigate({ to: "/dashboard" });
+              } else {
+                setError(result.message || "Invalid admin credentials");
+              }
+            } catch {
+              setError("Could not reach the server. Restart the dev server and try again.");
+            } finally {
+              setIsSubmitting(false);
+            }
           }}
           className="mt-10 bg-card rounded-3xl shadow-(--shadow-soft) p-8 text-left space-y-5"
         >
@@ -52,10 +86,18 @@ function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }}
                 placeholder="name@littleluxuries.com"
-                className="pl-11 h-12 bg-muted/60 border-0 rounded-xl"
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={inputWithError(
+                  Boolean(fieldErrors.email),
+                  "pl-11 h-12 bg-muted/60 border-0 rounded-xl",
+                )}
               />
+              <FieldError message={fieldErrors.email} />
             </div>
           </div>
 
@@ -67,28 +109,45 @@ function LoginPage() {
               >
                 Password
               </Label>
-              <button
-                type="button"
+              <Link
+                to="/forgot-password"
                 className="text-[11px] tracking-[0.15em] uppercase text-(--color-gold-foreground) hover:underline"
               >
                 Forgot Password?
-              </button>
+              </Link>
             </div>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="pl-11 h-12 bg-muted/60 border-0 rounded-xl"
-              />
-            </div>
+            <PasswordInput
+              id="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setFieldErrors((prev) => ({ ...prev, password: undefined }));
+              }}
+              placeholder="••••••••"
+              disabled={isSubmitting}
+              className={inputWithError(
+                Boolean(fieldErrors.password),
+                "h-12 bg-muted/60 border-0 rounded-xl",
+              )}
+            />
+            <FieldError message={fieldErrors.password} />
           </div>
 
-          <Button type="submit" className="w-full h-12 rounded-full text-sm tracking-wide">
-            Login to Dashboard
+          {error && <p className="text-xs text-destructive">{error}</p>}
+
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full h-12 rounded-full text-sm tracking-wide"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Signing in…
+              </>
+            ) : (
+              "Login to Dashboard"
+            )}
           </Button>
         </form>
 

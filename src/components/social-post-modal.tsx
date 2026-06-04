@@ -1,32 +1,30 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import {
   Copy,
   Instagram,
   Facebook,
-  Twitter,
   MessageSquare,
   Sparkles,
   X,
   CheckCircle2,
-  Link2,
+  ExternalLink,
+  ImageIcon,
   Share2,
-  Loader2,
-  Smartphone,
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import {
-  publishViaManus,
-  type PublishViaManusInput,
-  type PublishViaManusResult,
-} from "@/lib/manus-server";
 import { formatPkr } from "@/lib/format-currency";
-import { pushAdminNotification } from "@/lib/admin-notifications-bus";
+import {
+  buildFacebookShareUrl,
+  buildWhatsAppShareUrl,
+  downloadImage,
+  shareWithNativeSheet,
+  canShareFiles,
+  fetchImageAsFile,
+} from "@/lib/social-share";
 
 interface SocialPostModalProps {
   open: boolean;
@@ -42,408 +40,437 @@ interface SocialPostModalProps {
   };
 }
 
-type Platform = "Instagram" | "Facebook" | "X" | "TikTok";
+type PlatformId = "instagram" | "facebook" | "whatsapp" | "tiktok";
+
+function WhatsAppIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden>
+      <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.435 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+    </svg>
+  );
+}
+
+type ContentPass = "full" | "partial" | "native" | "manual";
+
+type PlatformPost = {
+  id: PlatformId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  caption: string;
+  trackingUrl: string;
+  copyText: string;
+  openUrl: string;
+  openLabel: string;
+  tip: string;
+  charCount: number;
+  contentPass: ContentPass;
+  passSummary: string;
+};
+
+const PLATFORMS: Array<{
+  id: PlatformId;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  utmSource: string;
+}> = [
+  { id: "instagram", label: "Instagram", icon: Instagram, utmSource: "instagram" },
+  { id: "facebook", label: "Facebook", icon: Facebook, utmSource: "facebook" },
+  { id: "whatsapp", label: "WhatsApp", icon: WhatsAppIcon, utmSource: "whatsapp" },
+  { id: "tiktok", label: "TikTok", icon: MessageSquare, utmSource: "tiktok" },
+];
+
+function buildPlatformPosts(product: SocialPostModalProps["product"]): PlatformPost[] {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://littleluxuries.pk";
+  const price = formatPkr(Number(product.price));
+  const shortDesc =
+    product.description?.trim().slice(0, 120) ||
+    "Crafted for comfort and timeless style.";
+
+  return PLATFORMS.map(({ id, label, icon, utmSource }) => {
+    const trackingUrl = `${origin}/product/${product.id}?utm_source=${utmSource}&utm_medium=social&utm_campaign=product_share`;
+
+    const captions: Record<PlatformId, string> = {
+      instagram: `✨ ${product.name}\n\n${shortDesc}\n\n${price} · Link in bio 🎀\n\n#LittleLuxuries #BabyFashion #LuxuryLiving #OrganicCotton`,
+      facebook: `${product.name} — ${shortDesc}\n\n${price}\n\n#LittleLuxuries #BabyStyle #NurseryEssentials`,
+      whatsapp: `✨ *${product.name}*\n${shortDesc}\n\n💰 ${price}\n\n_Little Luxuries — luxury for your little one_`,
+      tiktok: `${product.name} ☁️✨ ${price}\n\n${shortDesc}\n\n#LittleLuxuries #BabyRegistry #AestheticBaby`,
+    };
+
+    const caption = captions[id];
+    const copyText =
+      id === "instagram"
+        ? `${caption}\n\n🔗 Product page (for bio / link sticker):\n${trackingUrl}`
+        : `${caption}\n\n${trackingUrl}`;
+
+    const meta: Record<
+      PlatformId,
+      { openUrl: string; openLabel: string; tip: string; contentPass: ContentPass; passSummary: string }
+    > = {
+      instagram: {
+        openUrl: "https://www.instagram.com/",
+        openLabel: "Open Instagram",
+        contentPass: "native",
+        passSummary: "Caption copied · use Share with image on phone to pass photo + text",
+        tip: "On mobile: Share with image opens the system sheet (pick Instagram). Caption is copied automatically. Desktop: paste caption after upload.",
+      },
+      facebook: {
+        openUrl: buildFacebookShareUrl(trackingUrl, `${caption}\n\n${trackingUrl}`),
+        openLabel: "Open Facebook with link + caption",
+        contentPass: "partial",
+        passSummary: "Passes product link + quote text · preview image from your product page",
+        tip: "Opens Facebook share with your link and caption pre-filled. Image preview uses your live product page OG tags.",
+      },
+      whatsapp: {
+        openUrl: buildWhatsAppShareUrl(copyText),
+        openLabel: "Open WhatsApp with message",
+        contentPass: "native",
+        passSummary: "Message + link in WhatsApp · use Share with image for Status",
+        tip: "Opens WhatsApp with caption + link ready to send. For Status: on phone tap Share with image + caption, pick WhatsApp, then add to My Status. Desktop: forward the message to Status after sending to yourself.",
+      },
+      tiktok: {
+        openUrl: "https://www.tiktok.com/upload",
+        openLabel: "Open TikTok upload",
+        contentPass: "native",
+        passSummary: "Caption copied · Share with image on phone can pass photo + text",
+        tip: "On mobile: Share with image → choose TikTok. Caption copied to clipboard for the description field.",
+      },
+    };
+
+    const m = meta[id];
+
+    return {
+      id,
+      label,
+      icon,
+      caption,
+      trackingUrl,
+      copyText,
+      openUrl: m.openUrl,
+      openLabel: m.openLabel,
+      tip: m.tip,
+      charCount: caption.length,
+      contentPass: m.contentPass,
+      passSummary: m.passSummary,
+    };
+  });
+}
 
 export function SocialPostModal({ open, onOpenChange, product }: SocialPostModalProps) {
-  const [platform, setPlatform] = useState<Platform>("Instagram");
-  const [caption, setCaption] = useState("");
-  const [trackingUrl, setTrackingUrl] = useState("");
-  const [isCopied, setIsCopied] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [addInstagramStory, setAddInstagramStory] = useState(false);
+  const [selectedId, setSelectedId] = useState<PlatformId>("instagram");
+  const [copiedId, setCopiedId] = useState<PlatformId | null>(null);
+  const [posts, setPosts] = useState<PlatformPost[]>([]);
+  const [nativeImageShare, setNativeImageShare] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
 
   const productImg = product.image_url || product.image;
+  const isPublicImage = Boolean(productImg?.startsWith("http"));
 
-  const manusSupports = (p: Platform): p is "Instagram" | "Facebook" =>
-    p === "Instagram" || p === "Facebook";
+  const refreshPosts = useCallback(() => {
+    setPosts(buildPlatformPosts(product));
+  }, [product]);
 
-  const handleDirectPost = async () => {
-    if (manusSupports(platform)) {
-      if (!productImg || !productImg.startsWith("http")) {
-        toast.error("Product image must be a public URL to publish via Manus AI.");
-        return;
-      }
+  useEffect(() => {
+    if (open) refreshPosts();
+  }, [open, refreshPosts]);
 
-      setIsPublishing(true);
-      try {
-        const captionWithLink = `${caption}\n\n${trackingUrl}`;
-        const basePayload = {
-          imageUrl: productImg,
-          caption: captionWithLink,
-          productId: product.id,
-        };
-
-        const feedResult = await (
-          publishViaManus as unknown as (payload: {
-            data: PublishViaManusInput;
-          }) => Promise<PublishViaManusResult>
-        )({
-          data: {
-            ...basePayload,
-            platform: platform.toLowerCase() as "instagram" | "facebook",
-            placement: "feed",
-          },
-        });
-
-        if (!feedResult?.ok) {
-          toast.error(`Manus publish failed: ${feedResult?.error ?? "Unknown error"}`);
-          return;
-        }
-
-        toast.success(
-          feedResult.postUrl
-            ? `Posted to ${platform}: ${feedResult.postUrl}`
-            : `Posted to ${platform} via Manus AI`,
-        );
-
-        const feedLabel = platform === "Instagram" ? "Instagram" : "Facebook";
-        pushAdminNotification({
-          id: `manus-feed-studio-${product.id}-${feedLabel}-${Date.now()}`,
-          type: "social_feed",
-          message: `${feedLabel} post uploaded`,
-          description: feedResult.postUrl
-            ? `${product.name} — ${feedResult.postUrl}`
-            : `${product.name} was published to ${feedLabel}.`,
-          timestamp: new Date(),
-        });
-
-        if (platform === "Instagram" && addInstagramStory) {
-          const storyResult = await (
-            publishViaManus as unknown as (payload: {
-              data: PublishViaManusInput;
-            }) => Promise<PublishViaManusResult>
-          )({
-            data: {
-              ...basePayload,
-              platform: "instagram",
-              placement: "story",
-            },
-          });
-          if (storyResult?.ok) {
-            toast.success(
-              storyResult.postUrl
-                ? `Instagram Story: ${storyResult.postUrl}`
-                : storyResult.storyDesignSummary
-                  ? `Story live — ${storyResult.storyDesignSummary}`
-                  : "Instagram Story published via Manus",
-            );
-            pushAdminNotification({
-              id: `manus-story-studio-${product.id}-${Date.now()}`,
-              type: "social_story",
-              message: "Instagram Story uploaded",
-              description: storyResult.postUrl
-                ? `${product.name} — ${storyResult.postUrl}`
-                : storyResult.storyDesignSummary
-                  ? `${product.name}. ${storyResult.storyDesignSummary}`
-                  : `${product.name} is live on your Story.`,
-              timestamp: new Date(),
-            });
-          } else {
-            toast.error(`Instagram Story failed: ${storyResult?.error ?? "Unknown error"}`);
-          }
-        }
-      } catch (err: unknown) {
-        const error = err as Error;
-        toast.error(`Manus error: ${error?.message ?? "Unknown error"}`);
-      } finally {
-        setIsPublishing(false);
-      }
+  useEffect(() => {
+    if (!open || !isPublicImage || !productImg) {
+      setNativeImageShare(false);
       return;
     }
+    void fetchImageAsFile(productImg, product.name).then(async (file) => {
+      setNativeImageShare(file ? await canShareFiles([file]) : false);
+    });
+  }, [open, isPublicImage, productImg, product.name]);
 
-    const urls: Record<Platform, string> = {
-      Instagram: "https://www.instagram.com/",
-      Facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(trackingUrl)}&quote=${encodeURIComponent(caption)}`,
-      X: `https://twitter.com/intent/tweet?text=${encodeURIComponent(caption)}&url=${encodeURIComponent(trackingUrl)}`,
-      TikTok: "https://www.tiktok.com/upload",
-    };
-    window.open(urls[platform], "_blank");
-    toast.info(`Opening ${platform} composer (Manus connector not configured for ${platform}).`);
+  const selected = useMemo(
+    () => posts.find((p) => p.id === selectedId) ?? posts[0],
+    [posts, selectedId],
+  );
+
+  const handleCopy = async (post: PlatformPost) => {
+    await navigator.clipboard.writeText(post.copyText);
+    setCopiedId(post.id);
+    toast.success(`${post.label} post copied`);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const generateContent = useCallback(() => {
-    const baseUrl = `${window.location.origin}/product/${product.id}`;
-    const utm = `utm_source=${platform.toLowerCase()}&utm_medium=social&utm_campaign=product_share`;
-    const finalUrl = `${baseUrl}?${utm}`;
-    setTrackingUrl(finalUrl);
-
-    const captions: Record<Platform, string> = {
-      Instagram: `✨ Pure elegance for your little one. Our ${product.name} is a masterpiece of comfort and style. 🕊️\n\nShop the collection now. Only ${formatPkr(Number(product.price))}.\n\nLink in bio! 🎀\n\n#LittleLuxuries #BabyFashion #LuxuryLiving #OrganicCotton`,
-      Facebook: `Discover the heirloom quality of the ${product.name}. Crafted with the softest materials for delicate skin, it's the perfect addition to your nursery collection. 🍼✨\n\nPrice: ${formatPkr(Number(product.price))}\nShop here: ${finalUrl}\n\n#LittleLuxuries #BabyStyle #NurseryEssentials`,
-      X: `Elevate their first wardrobe with the ${product.name}. Sophistication meets comfort in every stitch. 🧵✨\n\nShop now: ${finalUrl}\n\n#LuxuryBaby #LittleLuxuries #Style`,
-      TikTok: `The ${product.name} is here and it's everything! ☁️✨ Pure luxury for your mini-me. \n\nCheck the link to shop! 🛍️\n\n#LittleLuxuries #BabyRegistry #AestheticBaby`,
-    };
-
-    setCaption(captions[platform]);
-  }, [product, platform]);
-
-  useEffect(() => {
-    generateContent();
-  }, [generateContent]);
-
-  useEffect(() => {
-    if (platform !== "Instagram") setAddInstagramStory(false);
-  }, [platform]);
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(`${caption}\n\nLink: ${trackingUrl}`);
-    setIsCopied(true);
-    toast.success(`${platform} post copied to clipboard`);
-    setTimeout(() => setIsCopied(false), 2000);
+  const handleCopyImageUrl = async () => {
+    if (!productImg) {
+      toast.error("No product image to copy.");
+      return;
+    }
+    await navigator.clipboard.writeText(productImg);
+    toast.success("Image URL copied");
   };
+
+  const handleDownloadImage = async () => {
+    if (!productImg) {
+      toast.error("No product image available.");
+      return;
+    }
+    const ok = await downloadImage(productImg, product.name);
+    toast.success(ok ? "Image downloaded — attach when posting" : "Opened image in a new tab");
+  };
+
+  const handleNativeShare = async (post: PlatformPost) => {
+    if (!productImg?.startsWith("http")) {
+      toast.error("Image must be a public URL to share with photo.");
+      return;
+    }
+    setIsSharing(true);
+    await navigator.clipboard.writeText(post.copyText);
+    const result = await shareWithNativeSheet({
+      title: product.name,
+      text: post.copyText,
+      url: post.trackingUrl,
+      imageUrl: productImg,
+    });
+    setIsSharing(false);
+    if (result === "shared") {
+      toast.success("Pick WhatsApp, Instagram, or another app — caption already copied too");
+    } else if (result === "aborted") {
+      return;
+    } else {
+      toast.info("Native share unavailable — use Open platform instead");
+    }
+  };
+
+  /** Copy caption, then open deep link or native share where possible */
+  const handleOpenWithContent = async (post: PlatformPost) => {
+    await navigator.clipboard.writeText(post.copyText);
+
+    if (
+      (post.id === "instagram" || post.id === "tiktok" || post.id === "whatsapp") &&
+      nativeImageShare &&
+      isPublicImage
+    ) {
+      setIsSharing(true);
+      const result = await shareWithNativeSheet({
+        title: product.name,
+        text: post.copyText,
+        url: post.trackingUrl,
+        imageUrl: productImg,
+      });
+      setIsSharing(false);
+      if (result === "shared") {
+        toast.success(`${post.label}: caption copied · image shared via system sheet`);
+        return;
+      }
+      if (result === "aborted") return;
+    }
+
+    window.open(post.openUrl, "_blank", "noopener,noreferrer");
+    toast.success(`${post.label}: ${post.passSummary}`, { duration: 5000 });
+  };
+
+  if (!selected) return null;
+
+  const passBadge =
+    selected.contentPass === "full"
+        ? "Text + link auto-filled"
+      : selected.contentPass === "partial"
+        ? "Link + caption passed"
+        : selected.contentPass === "native"
+          ? selected.id === "whatsapp"
+            ? "Message or Status via share sheet"
+            : "Use Share with image (mobile)"
+          : "Copy + paste";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl p-0 overflow-y-auto md:overflow-hidden border-none shadow-2xl bg-white rounded-[32px] md:rounded-[40px] max-h-[95vh] h-auto md:h-[90vh] flex flex-col">
-        <div className="flex flex-col md:flex-row flex-1 overflow-y-auto md:overflow-hidden">
-          {/* Left: Preview */}
-          <div className="w-full md:w-[380px] bg-muted/20 border-b md:border-b-0 md:border-r border-border/50 p-6 md:p-10 flex flex-col gap-6 shrink-0 md:overflow-y-auto custom-scrollbar">
-            <div className="space-y-1">
-              <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60 text-center">
-                Post Preview
-              </h3>
-              <p className="text-[11px] text-muted-foreground font-medium text-center italic">
-                How it might look on {platform}
+      <DialogContent className="flex max-h-[95vh] max-w-5xl flex-col overflow-hidden rounded-[32px] border-none bg-white p-0 shadow-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border/40 px-6 py-5 md:px-8">
+          <div className="flex min-w-0 items-center gap-4">
+            {productImg && (
+              <div className="h-14 w-14 shrink-0 overflow-hidden rounded-2xl border border-border/50 bg-muted">
+                <img src={productImg} alt="" className="h-full w-full object-cover" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <DialogTitle className="font-serif text-2xl text-primary tracking-tight">
+                Quick post kit
+              </DialogTitle>
+              <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                {product.name} · {formatPkr(Number(product.price))}
               </p>
             </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="hidden rounded-full text-xs font-bold sm:inline-flex"
+              onClick={refreshPosts}
+            >
+              <Sparkles className="mr-1.5 size-3.5" />
+              Refresh copy
+            </Button>
+            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} className="rounded-full">
+              <X className="size-5" />
+            </Button>
+          </div>
+        </div>
 
-            <div className="bg-white rounded-[32px] shadow-2xl border border-border/50 overflow-hidden">
-              <div className="p-4 border-b border-border/30 flex items-center gap-3">
-                <div className="h-8 w-8 rounded-full bg-primary-soft flex items-center justify-center text-primary font-bold text-[10px]">
-                  LL
-                </div>
-                <div className="text-[10px] font-bold text-foreground">littleluxuries_official</div>
-              </div>
-
-              <div className="aspect-square bg-muted/30">
-                <img src={productImg} alt={product.name} className="w-full h-full object-cover" />
-              </div>
-
-              <div className="p-4 space-y-3">
-                <div className="flex gap-3">
-                  <Heart className="h-5 w-5 text-muted-foreground" />
-                  <MessageSquare className="h-5 w-5 text-muted-foreground" />
-                  <Send className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[10px] leading-relaxed line-clamp-3">
-                    <span className="font-bold mr-2">littleluxuries_official</span>
-                    {caption}
-                  </p>
-                  <p className="text-[9px] text-primary font-medium">{trackingUrl}</p>
-                </div>
-              </div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+          <div className="shrink-0 border-b border-border/40 bg-muted/15 p-4 lg:w-52 lg:border-b-0 lg:border-r">
+            <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-primary/60">
+              Platforms
+            </p>
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
+              {posts.map((post) => {
+                const Icon = post.icon;
+                const active = selectedId === post.id;
+                return (
+                  <button
+                    key={post.id}
+                    type="button"
+                    onClick={() => setSelectedId(post.id)}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-2xl border px-3 py-3 text-left transition-all",
+                      active
+                        ? "border-primary bg-primary text-white shadow-md shadow-primary/20"
+                        : "border-border/50 bg-white hover:border-primary/30",
+                    )}
+                  >
+                    <Icon className={cn("size-5 shrink-0", active ? "text-white" : "text-primary")} />
+                    <div className="min-w-0">
+                      <span className="block text-[11px] font-bold">{post.label}</span>
+                      <span
+                        className={cn(
+                          "text-[9px]",
+                          active ? "text-white/80" : "text-muted-foreground",
+                        )}
+                      >
+                        {post.charCount} chars
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
-
-            <div className="space-y-4 pt-4">
-              <div className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-border/50 shadow-sm">
-                <div className="h-8 w-8 rounded-full bg-primary-soft flex items-center justify-center shrink-0">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-foreground uppercase tracking-tight">
-                    AI Caption Generated
-                  </p>
-                  <p className="text-[9px] text-muted-foreground mt-0.5">
-                    Optimized for high engagement.
-                  </p>
-                </div>
+            {productImg && (
+              <div className="mt-4 space-y-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full rounded-full text-[10px] font-bold"
+                  onClick={handleDownloadImage}
+                >
+                  <Download className="mr-1.5 size-3.5" />
+                  Download image
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full rounded-full text-[10px] font-bold"
+                  onClick={handleCopyImageUrl}
+                >
+                  <ImageIcon className="mr-1.5 size-3.5" />
+                  Copy image URL
+                </Button>
               </div>
-            </div>
+            )}
           </div>
 
-          {/* Right: Editor */}
-          <div className="flex-1 flex flex-col bg-white md:overflow-hidden">
-            <div className="p-6 pb-4 md:p-10 md:pb-6 border-b border-border/30 flex items-center justify-between bg-white sticky top-0 z-10">
-              <div className="space-y-1">
-                <DialogTitle className="text-3xl font-serif text-primary tracking-tight">
-                  Post Studio
-                </DialogTitle>
-                <p className="text-sm text-muted-foreground font-medium">
-                  Craft the perfect social presence for {product.name}.
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <selected.icon className="size-5 text-primary" />
+                  <h3 className="font-serif text-xl text-foreground">{selected.label} post</h3>
+                </div>
+                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-[10px] font-bold text-emerald-700">
+                  {passBadge}
+                </span>
+              </div>
+
+              <p className="mb-2 text-xs font-medium text-foreground/80">{selected.passSummary}</p>
+              <p className="mb-4 text-xs text-muted-foreground leading-relaxed">{selected.tip}</p>
+
+              <div className="rounded-[24px] border border-border/50 bg-muted/10 overflow-hidden">
+                <div className="border-b border-border/40 bg-white/80 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Caption (auto-copied when you open / share)
+                  </p>
+                </div>
+                <pre className="whitespace-pre-wrap break-words p-5 font-sans text-sm leading-relaxed text-foreground">
+                  {selected.caption}
+                </pre>
+                <div className="border-t border-border/40 bg-white/80 px-4 py-3">
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                    Tracking link
+                  </p>
+                </div>
+                <p className="break-all px-5 pb-5 font-mono text-[11px] text-primary">
+                  {selected.trackingUrl}
                 </p>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onOpenChange(false)}
-                className="rounded-full h-10 w-10 hover:bg-muted/80"
-              >
-                <X className="h-5 w-5" />
-              </Button>
-            </div>
 
-            <div className="flex-1 md:overflow-y-auto p-6 md:p-10 space-y-6 md:space-y-10 custom-scrollbar">
-              <section className="space-y-4">
-                <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                  Target Platform
-                </Label>
-                <div className="flex gap-3">
-                  {[
-                    { id: "Instagram", icon: Instagram },
-                    { id: "Facebook", icon: Facebook },
-                    { id: "X", icon: Twitter },
-                    { id: "TikTok", icon: MessageSquare },
-                  ].map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => setPlatform(p.id as Platform)}
-                      className={cn(
-                        "flex-1 p-4 rounded-2xl border transition-all flex flex-col items-center gap-2 group",
-                        platform === p.id
-                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105"
-                          : "bg-white text-muted-foreground border-border/50 hover:border-primary/30",
-                      )}
-                    >
-                      <p.icon
-                        className={cn(
-                          "h-6 w-6",
-                          platform === p.id
-                            ? "text-white"
-                            : "text-primary/40 group-hover:text-primary",
-                        )}
-                      />
-                      <span className="text-[10px] font-bold uppercase tracking-tighter">
-                        {p.id}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </section>
-
-              <section className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                    Caption Editor
-                  </Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={generateContent}
-                    className="h-7 text-[10px] font-bold text-primary px-2"
-                  >
-                    <Sparkles className="h-3 w-3 mr-1.5" /> Regenerate
-                  </Button>
-                </div>
-                <Textarea
-                  value={caption}
-                  onChange={(e) => setCaption(e.target.value)}
-                  className="min-h-[180px] rounded-[24px] bg-muted/30 border-none focus:ring-2 focus:ring-primary/20 p-6 text-sm leading-relaxed custom-scrollbar"
-                />
-              </section>
-
-              <section className="space-y-4 pt-4">
-                <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                  Tracking Attribution
-                </Label>
-                <div className="relative">
-                  <div className="w-full bg-muted/10 p-4 rounded-2xl pr-14 break-all text-[10px] font-mono text-muted-foreground border border-border/30 flex items-center gap-2">
-                    <Link2 className="h-3.5 w-3.5 shrink-0 text-primary/60" />
-                    {trackingUrl}
-                  </div>
-                </div>
-              </section>
-
-              {platform === "Instagram" && (
-                <section className="space-y-3 pt-2">
-                  <div className="p-4 rounded-2xl bg-primary/5 border border-primary/15 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="h-9 w-9 rounded-xl bg-white shadow-sm grid place-items-center shrink-0">
-                        <Smartphone className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-foreground">Add Instagram Story</p>
-                        <p className="text-[9px] text-muted-foreground leading-relaxed mt-0.5">
-                          After the feed post: a more designed Story—typography, margins, and
-                          accents—product image unchanged.
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={addInstagramStory}
-                      onCheckedChange={setAddInstagramStory}
-                      className="data-[state=checked]:bg-primary shrink-0"
-                    />
-                  </div>
-                </section>
+              {!isPublicImage && productImg && (
+                <p className="mt-4 rounded-xl bg-amber-500/10 px-4 py-3 text-xs text-amber-900">
+                  Image is not a public http(s) URL — download it or use Supabase public storage so
+                  Facebook preview and mobile share can include the photo.
+                </p>
               )}
             </div>
 
-            <div className="p-6 md:p-10 border-t border-border/40 bg-muted/5 mt-auto">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 w-full">
+            <div className="shrink-0 border-t border-border/40 bg-muted/5 p-6 md:px-8">
+              <div className="flex flex-col gap-3">
                 <Button
-                  variant="outline"
-                  onClick={handleCopy}
-                  className="rounded-full h-14 px-8 font-bold border-primary/20 hover:border-primary/40 text-primary w-full sm:w-auto shrink-0"
+                  onClick={() => handleOpenWithContent(selected)}
+                  disabled={isSharing}
+                  className="h-12 w-full rounded-full font-bold bg-primary shadow-lg shadow-primary/25"
                 >
-                  {isCopied ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 mr-2" /> Copied
-                    </>
+                  {isSharing ? (
+                    "Opening share…"
                   ) : (
                     <>
-                      <Copy className="h-4 w-4 mr-2" /> Copy Content
+                      <ExternalLink className="mr-2 size-4" />
+                      {selected.openLabel}
                     </>
                   )}
                 </Button>
 
+                {nativeImageShare && isPublicImage && (
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleNativeShare(selected)}
+                    disabled={isSharing}
+                    className="h-12 w-full rounded-full font-bold"
+                  >
+                    <Share2 className="mr-2 size-4" />
+                    Share with image + caption (phone)
+                  </Button>
+                )}
+
                 <Button
-                  onClick={handleDirectPost}
-                  disabled={isPublishing}
-                  className="rounded-full h-14 flex-1 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 w-full sm:w-auto"
+                  variant="outline"
+                  onClick={() => handleCopy(selected)}
+                  className="h-11 w-full rounded-full font-bold border-primary/25 text-primary"
                 >
-                  {isPublishing ? (
+                  {copiedId === selected.id ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Publishing via Manus…
+                      <CheckCircle2 className="mr-2 size-4" />
+                      Copied
                     </>
                   ) : (
                     <>
-                      <Share2 className="h-4 w-4 mr-2" />
-                      {manusSupports(platform)
-                        ? `Publish to ${platform} via Manus`
-                        : `Open ${platform} Composer`}
+                      <Copy className="mr-2 size-4" />
+                      Copy only
                     </>
                   )}
                 </Button>
               </div>
+              <p className="mt-3 text-center text-[10px] text-muted-foreground leading-relaxed">
+                We always copy the caption first. Facebook &amp; WhatsApp open with your message.
+                Instagram, TikTok &amp; WhatsApp Status work best via Share with image on your phone.
+              </p>
             </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// Icons for the preview
-function Heart({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-    </svg>
-  );
-}
-function Send({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-    >
-      <path d="m22 2-7 20-4-9-9-4Z" />
-      <path d="M22 2 11 13" />
-    </svg>
   );
 }

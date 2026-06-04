@@ -201,7 +201,7 @@ class TaxSettingsService {
         tax_type: "GST",
         tax_inclusive: true,
         description: "Standard Federal Sales Tax (GST)",
-        status: "ACTIVE",
+        status: "INACTIVE",
       },
       uae: {
         country_code: "AE",
@@ -210,7 +210,7 @@ class TaxSettingsService {
         tax_type: "VAT",
         tax_inclusive: true,
         description: "Standard Value Added Tax",
-        status: "ACTIVE",
+        status: "INACTIVE",
       },
       thailand: {
         country_code: "TH",
@@ -219,7 +219,7 @@ class TaxSettingsService {
         tax_type: "VAT",
         tax_inclusive: true,
         description: "Standard VAT (reduced from 10% until 2026)",
-        status: "ACTIVE",
+        status: "INACTIVE",
       },
       uk: {
         country_code: "GB",
@@ -228,7 +228,7 @@ class TaxSettingsService {
         tax_type: "VAT",
         tax_inclusive: true,
         description: "Standard Value Added Tax",
-        status: "ACTIVE",
+        status: "INACTIVE",
       },
       usa: {
         country_code: "US",

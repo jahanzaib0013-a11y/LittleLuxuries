@@ -14,6 +14,13 @@ import {
 import { toast } from "sonner";
 import { createCustomer, CreateCustomerInput } from "@/lib/customers";
 import { useQueryClient } from "@tanstack/react-query";
+import { FieldError, inputWithError } from "@/components/field-error";
+import {
+  validateEmail,
+  validateRequired,
+  hasFieldErrors,
+  type FieldErrors,
+} from "@/lib/form-validation";
 
 interface AddCustomerModalProps {
   open: boolean;
@@ -23,6 +30,9 @@ interface AddCustomerModalProps {
 export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) {
   const queryClient = useQueryClient();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrors<"first_name" | "last_name" | "email">
+  >({});
   const [formData, setFormData] = useState<CreateCustomerInput>({
     first_name: "",
     last_name: "",
@@ -32,10 +42,16 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
   });
 
   const handleSubmit = async () => {
-    if (!formData.first_name || !formData.last_name || !formData.email) {
-      toast.error("Please fill in all required fields (First Name, Last Name, Email).");
+    const errors: FieldErrors<"first_name" | "last_name" | "email"> = {
+      first_name: validateRequired(formData.first_name, "First name"),
+      last_name: validateRequired(formData.last_name, "Last name"),
+      email: validateEmail(formData.email),
+    };
+    if (hasFieldErrors(errors)) {
+      setFieldErrors(errors);
       return;
     }
+    setFieldErrors({});
 
     setIsSubmitting(true);
     try {
@@ -92,9 +108,17 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               <Input
                 placeholder="Eleanor"
                 value={formData.first_name}
-                onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                className="h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20"
+                onChange={(e) => {
+                  setFormData({ ...formData, first_name: e.target.value });
+                  setFieldErrors((prev) => ({ ...prev, first_name: undefined }));
+                }}
+                aria-invalid={Boolean(fieldErrors.first_name)}
+                className={inputWithError(
+                  Boolean(fieldErrors.first_name),
+                  "h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20",
+                )}
               />
+              <FieldError message={fieldErrors.first_name} />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -103,9 +127,17 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
               <Input
                 placeholder="Vance"
                 value={formData.last_name}
-                onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                className="h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20"
+                onChange={(e) => {
+                  setFormData({ ...formData, last_name: e.target.value });
+                  setFieldErrors((prev) => ({ ...prev, last_name: undefined }));
+                }}
+                aria-invalid={Boolean(fieldErrors.last_name)}
+                className={inputWithError(
+                  Boolean(fieldErrors.last_name),
+                  "h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20",
+                )}
               />
+              <FieldError message={fieldErrors.last_name} />
             </div>
 
             <div className="space-y-2 sm:col-span-2">
@@ -117,9 +149,17 @@ export function AddCustomerModal({ open, onOpenChange }: AddCustomerModalProps) 
                 type="email"
                 placeholder="eleanor.v@example.com"
                 value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20"
+                onChange={(e) => {
+                  setFormData({ ...formData, email: e.target.value });
+                  setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                }}
+                aria-invalid={Boolean(fieldErrors.email)}
+                className={inputWithError(
+                  Boolean(fieldErrors.email),
+                  "h-12 bg-white rounded-xl border-border focus-visible:ring-primary/20",
+                )}
               />
+              <FieldError message={fieldErrors.email} />
             </div>
 
             <div className="space-y-2">

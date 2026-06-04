@@ -231,42 +231,51 @@ function ProductPage() {
                 </div>
               )}
 
-              <div className="flex gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex w-full flex-col gap-3 sm:flex-1 sm:flex-row">
+                  <button
+                    type="button"
+                    disabled={isOutOfStock}
+                    onClick={handleAddToCart}
+                    className={cn(
+                      "min-h-11 w-full rounded-full px-8 py-4 text-sm font-semibold uppercase tracking-wider shadow-(--shadow-soft) transition-all sm:flex-1",
+                      isOutOfStock
+                        ? "cursor-not-allowed bg-muted text-muted-foreground"
+                        : "bg-primary text-primary-foreground hover:opacity-90",
+                    )}
+                  >
+                    {isOutOfStock ? "Sold Out" : "Add to Cart"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isOutOfStock}
+                    onClick={handleBuyNow}
+                    className={cn(
+                      "min-h-11 w-full rounded-full border-2 px-8 py-4 text-sm font-semibold uppercase tracking-wider shadow-(--shadow-soft) transition-all sm:flex-1",
+                      isOutOfStock
+                        ? "cursor-not-allowed border-muted text-muted-foreground"
+                        : "border-border text-foreground hover:bg-primary hover:text-primary-foreground",
+                    )}
+                  >
+                    Buy Now
+                  </button>
+                </div>
                 <button
-                  disabled={isOutOfStock}
-                  onClick={handleAddToCart}
-                  className={cn(
-                    "flex-1 rounded-full px-8 py-4 text-sm font-semibold uppercase tracking-wider shadow-(--shadow-soft) transition-all",
-                    isOutOfStock
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-primary text-primary-foreground hover:opacity-90",
-                  )}
-                >
-                  {isOutOfStock ? "Sold Out" : "Add to Cart"}
-                </button>
-                <button
-                  disabled={isOutOfStock}
-                  onClick={handleBuyNow}
-                  className={cn(
-                    "flex-1 rounded-full border-2 px-8 py-4 text-sm font-semibold uppercase tracking-wider shadow-(--shadow-soft) transition-all",
-                    isOutOfStock
-                      ? "border-muted text-muted-foreground cursor-not-allowed"
-                      : "border-border text-foreground hover:bg-primary hover:text-primary-foreground",
-                  )}
-                >
-                  Buy Now
-                </button>
-                <button
+                  type="button"
                   onClick={handleToggleFavorite}
-                  className={`grid size-14 place-items-center rounded-full border-2 transition-all duration-300 ${
+                  className={cn(
+                    "mx-auto grid min-h-11 min-w-11 place-items-center rounded-full border-2 transition-all duration-300 sm:mx-0 sm:size-14",
                     isFavorite(product.id)
-                      ? "border-primary bg-primary text-white scale-110"
-                      : "border-border bg-card text-primary hover:bg-primary-soft hover:scale-105"
-                  }`}
+                      ? "scale-110 border-primary bg-primary text-white"
+                      : "border-border bg-card text-primary hover:scale-105 hover:bg-primary-soft",
+                  )}
                   aria-label="Wishlist"
                 >
                   <Heart
-                    className={`size-5 transition-all ${isFavorite(product.id) ? "fill-white scale-110" : ""}`}
+                    className={cn(
+                      "size-5 transition-all",
+                      isFavorite(product.id) && "scale-110 fill-white",
+                    )}
                   />
                 </button>
               </div>

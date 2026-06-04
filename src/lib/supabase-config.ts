@@ -56,6 +56,28 @@ export class SupabaseConfig {
             ],
           },
           layout: "Editorial Grid",
+          promo_banner: {
+            isActive: false,
+            placements: {
+              top: true,
+              stickyBottom: false,
+              aboveBrandPromises: false,
+              belowBrandPromises: false,
+            },
+            variant: "festival",
+            eyebrow: "Limited time",
+            headline: "Seasonal Sale — 20% off",
+            description: "On selected heirloom pieces.",
+            promoCode: "LUXE10",
+            showPromoCode: true,
+            buttonLabel: "Shop the sale",
+            buttonLink: "/shop",
+            showButton: true,
+            iconName: "Gift",
+            textAlign: "center",
+            backgroundTheme: "gold",
+            endsAt: null,
+          },
         };
 
         const { data, error } = await supabase

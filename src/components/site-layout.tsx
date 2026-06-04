@@ -9,7 +9,11 @@ import { useFavorites } from "@/hooks/use-favorites";
 import { CartSidebar } from "@/components/cart-sidebar";
 import { storeUTMParameters } from "@/lib/utils";
 import { useStoreSettingsContext } from "@/context/StoreSettingsContext";
-import { subscribeToNewsletter } from "@/lib/email-server";
+import { subscribeToNewsletter } from "@/lib/email.server";
+import { validateEmail } from "@/lib/form-validation";
+import { cn } from "@/lib/utils";
+
+const stickyPromoPad = "pb-28 sm:pb-32";
 
 const navItems = [
   { to: "/", label: "Home" },
@@ -37,13 +41,13 @@ export function Header() {
   useEffect(() => setOpen(false), [pathname]);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b border-border/60 bg-background/85 backdrop-blur-md pt-[env(safe-area-inset-top)]">
       <div className="mx-auto flex h-16 sm:h-20 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
         <div className="flex items-center gap-2 min-w-0">
           <Sheet open={open} onOpenChange={setOpen}>
             <SheetTrigger asChild>
               <button
-                className="md:hidden rounded-full p-2.5 text-muted-foreground hover:bg-muted hover:text-primary"
+                className="md:hidden flex min-h-11 min-w-11 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-primary"
                 aria-label="Open menu"
               >
                 <Menu className="size-5" />
@@ -65,6 +69,13 @@ export function Header() {
                     {item.label}
                   </Link>
                 ))}
+                <Link
+                  to="/favorites"
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground hover:bg-muted hover:text-primary data-[status=active]:bg-primary-soft data-[status=active]:text-primary"
+                >
+                  Favorites
+                </Link>
               </nav>
             </SheetContent>
           </Sheet>
@@ -102,9 +113,10 @@ export function Header() {
               </span>
             )}
           </Link>
-          <Link
-            to="/checkout"
-            className="relative rounded-full p-2.5 text-primary transition-colors hover:bg-primary-soft"
+          <button
+            type="button"
+            onClick={openCart}
+            className="relative flex min-h-11 min-w-11 items-center justify-center rounded-full text-primary transition-colors hover:bg-primary-soft"
             aria-label="Cart"
           >
             <ShoppingBag className="size-5" />
@@ -113,27 +125,33 @@ export function Header() {
                 {cartCount}
               </span>
             )}
-          </Link>
+          </button>
         </div>
       </div>
     </header>
   );
 }
 
-export function Footer() {
+export function Footer({ className }: { className?: string }) {
   const { settings } = useStoreSettingsContext();
   const storeName = settings?.store_name || "Little Luxuries";
   const currentYear = new Date().getFullYear();
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [emailError, setEmailError] = useState<string | undefined>();
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-
+    const validation = validateEmail(email);
+    if (validation) {
+      setEmailError(validation);
+      setStatus("idle");
+      return;
+    }
+    setEmailError(undefined);
     setStatus("loading");
     try {
-      await (subscribeToNewsletter as any)({ data: { email } });
+      await (subscribeToNewsletter as any)({ data: { email: email.trim() } });
       setStatus("success");
     } catch (err) {
       console.error(err);
@@ -142,7 +160,7 @@ export function Footer() {
   };
 
   return (
-    <footer className="mt-24 border-t border-border/60 bg-secondary/40">
+    <footer className={cn("mt-24 border-t border-border/60 bg-secondary/40", className)}>
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-4">
         <div>
           <img src={logo} alt={storeName} width={80} height={80} className="mb-3" />
@@ -183,25 +201,40 @@ export function Footer() {
               <p className="mb-3 text-sm text-muted-foreground">
                 Join our circle for early access to new collections and gentle inspiration.
               </p>
-              <form className="flex gap-2" onSubmit={handleSubscribe}>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
-                  required
-                  className="flex-1 rounded-full border border-border bg-card px-4 py-2 text-sm outline-none transition-colors focus:border-primary"
-                />
-                <button
-                  type="submit"
-                  disabled={status === "loading"}
-                  className="min-w-[70px] flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
-                >
-                  {status === "loading" ? <Loader2 className="size-4 animate-spin" /> : "Join"}
-                </button>
+              <form className="flex flex-col gap-2" onSubmit={handleSubscribe} noValidate>
+                <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setEmailError(undefined);
+                    }}
+                    placeholder="your@email.com"
+                    aria-invalid={Boolean(emailError)}
+                    className={cn(
+                      "flex-1 rounded-full border bg-card px-4 py-2 text-sm outline-none transition-colors focus:border-primary",
+                      emailError ? "border-destructive" : "border-border",
+                    )}
+                  />
+                  <button
+                    type="submit"
+                    disabled={status === "loading"}
+                    className="min-w-[70px] flex items-center justify-center rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-70"
+                  >
+                    {status === "loading" ? <Loader2 className="size-4 animate-spin" /> : "Join"}
+                  </button>
+                </div>
+                {emailError && (
+                  <p className="text-xs text-destructive" role="alert">
+                    {emailError}
+                  </p>
+                )}
               </form>
-              {status === "error" && (
-                <p className="mt-2 text-xs text-red-500">Something went wrong. Please try again.</p>
+              {status === "error" && !emailError && (
+                <p className="mt-2 text-xs text-destructive" role="alert">
+                  Something went wrong. Please try again.
+                </p>
               )}
             </>
           )}
@@ -237,13 +270,25 @@ function FooterCol({ title, links }: { title: string; links: { label: string; to
   );
 }
 
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout({
+  children,
+  beforeHeader,
+  padForStickyPromo,
+}: {
+  children: React.ReactNode;
+  /** Renders above the site header (e.g. homepage promo strip). */
+  beforeHeader?: React.ReactNode;
+  /** Extra bottom padding so sticky promo + footer are not covered. */
+  padForStickyPromo?: boolean;
+}) {
   const { isCartOpen, closeCart } = useCart();
+  const pad = padForStickyPromo ? stickyPromoPad : undefined;
   return (
     <div className="flex min-h-screen flex-col">
+      {beforeHeader}
       <Header />
-      <main className="flex-1">{children}</main>
-      <Footer />
+      <main className={cn("flex-1", pad)}>{children}</main>
+      <Footer className={pad} />
       <CartSidebar isOpen={isCartOpen} onOpenChange={closeCart} />
     </div>
   );

@@ -141,6 +141,31 @@ class ShippingZonesService {
     }
   }
 
+  calculateShipping(orderSubtotal: number, zoneId: string): number {
+    const zone = this.cache.find((z) => z.id === zoneId);
+    if (!zone) {
+      return zoneId === "pakistan"
+        ? orderSubtotal >= 10_000
+          ? 0
+          : 250
+        : 0;
+    }
+
+    const isDomesticPk = zoneId === "pakistan";
+    if (!isDomesticPk && zone.status !== "ACTIVE") {
+      return 0;
+    }
+
+    if (
+      zone.free_shipping_threshold != null &&
+      orderSubtotal >= zone.free_shipping_threshold
+    ) {
+      return 0;
+    }
+
+    return zone.shipping_cost;
+  }
+
   clearCache(): void {
     this.cache = [];
     this.cacheExpiry = 0;
@@ -152,11 +177,11 @@ class ShippingZonesService {
         id: "pakistan",
         name: "Pakistan",
         description: "Domestic shipping across all major cities and regions",
-        status: "ACTIVE",
+        status: "INACTIVE",
         icon: "globe",
-        shipping_cost: 0,
-        free_shipping_threshold: 1000,
-        delivery_info: "Free from PKR 1,000",
+        shipping_cost: 250,
+        free_shipping_threshold: 10_000,
+        delivery_info: "Flat PKR 250 · Free from PKR 10,000",
         countries: ["Pakistan"],
       },
       {

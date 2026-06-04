@@ -25,7 +25,7 @@ import {
   type OrderWithItems,
   type OrderStatusHistoryItem,
 } from "@/lib/order-service";
-import { sendOrderStatusEmail } from "@/lib/email-server";
+import { sendOrderStatusEmail } from "@/lib/email.server";
 import { toast } from "sonner";
 
 interface OrderTimelineModalProps {
