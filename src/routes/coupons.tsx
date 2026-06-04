@@ -32,6 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/coupons")({
   head: () => ({ meta: [{ title: "Coupons — Little Luxuries Admin" }] }),
@@ -183,9 +184,34 @@ function CouponsContent() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse font-serif">Curating your offers...</p>
+      <div className="space-y-6">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="max-w-2xl space-y-2">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-96 max-w-full" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-11 w-32 rounded-full" />
+            <Skeleton className="h-12 w-36 rounded-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
+        <div className="rounded-full bg-card p-2 shadow-(--shadow-card) flex items-center justify-between flex-wrap gap-3">
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-28 rounded-full" />
+            <Skeleton className="h-10 w-24 rounded-full" />
+            <Skeleton className="h-10 w-28 rounded-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 w-full rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }
@@ -394,7 +420,9 @@ function CouponCard({ c, onDelete }: { c: Coupon; onDelete: () => void }) {
           />
           {status}
         </span>
-        <div className="font-serif text-5xl text-primary/40 leading-none">{discountLabel}</div>
+        <div className="font-serif text-3xl sm:text-4xl lg:text-5xl text-primary/40 leading-none">
+          {discountLabel}
+        </div>
         <div className="mt-4 font-serif text-2xl text-primary tracking-wider">{c.code}</div>
       </div>
       <div className="bg-card p-5">

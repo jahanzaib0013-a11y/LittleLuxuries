@@ -34,7 +34,7 @@ export function VIPPulseFeed() {
   const activities = data?.activities || [];
 
   return (
-    <div className="bg-card rounded-[32px] border border-border/50 shadow-(--shadow-card) overflow-hidden flex flex-col h-full min-h-[500px]">
+    <div className="bg-card rounded-[32px] border border-border/50 shadow-(--shadow-card) overflow-hidden flex flex-col h-full min-h-[280px] sm:min-h-[400px] lg:min-h-[500px]">
       <div className="p-6 border-b border-border/30 flex items-center justify-between bg-primary-soft/30">
         <div className="flex items-center gap-3">
           <div className="h-10 w-10 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
@@ -192,7 +192,7 @@ export function VIPPulseFeed() {
                   <div className="flex-1 min-w-0 text-left">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
-                        <h4 className="text-sm font-bold text-foreground truncate max-w-[140px]">
+                        <h4 className="text-sm font-bold text-foreground truncate max-w-full sm:max-w-[140px]">
                           {act.name}
                         </h4>
                         <span
@@ -223,7 +223,7 @@ export function VIPPulseFeed() {
                           Transaction Detail
                         </span>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-primary truncate max-w-[120px]">
+                          <span className="text-sm font-bold text-primary truncate max-w-full sm:max-w-[120px]">
                             {act.detail}
                           </span>
                           <span

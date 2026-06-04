@@ -12,7 +12,9 @@ import {
   PackageSearch,
   AlertTriangle,
   Loader2,
+  ChevronLeft,
 } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { instagramService, IGConversation } from "@/lib/instagram-service";
 import { toast } from "sonner";
@@ -68,9 +70,11 @@ const mockConversations = [
 function InboxPage() {
   const { recipientId, message: initialMessage, customerName } = useSearch({ from: "/inbox" });
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [conversations, setConversations] = useState<any[]>(mockConversations);
   const [activeChat, setActiveChat] = useState<any>(mockConversations[0]);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
   const [message, setMessage] = useState("");
   const [messageError, setMessageError] = useState<string | undefined>();
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(true);
@@ -88,6 +92,7 @@ function InboxPage() {
       );
       if (existing) {
         setActiveChat(existing);
+        if (isMobile) setMobileShowChat(true);
       } else if (customerName) {
         // Create a temporary "new" conversation for this VIP
         const newChat = {
@@ -103,13 +108,19 @@ function InboxPage() {
         };
         setConversations((prev) => [newChat, ...prev]);
         setActiveChat(newChat);
+        if (isMobile) setMobileShowChat(true);
       }
     }
 
     if (initialMessage) {
       setMessage(initialMessage);
     }
-  }, [recipientId, initialMessage, customerName]);
+  }, [recipientId, initialMessage, customerName, isMobile]);
+
+  const selectChat = (chat: (typeof mockConversations)[0]) => {
+    setActiveChat(chat);
+    if (isMobile) setMobileShowChat(true);
+  };
 
   const isRealApiConnected = instagramService.isConfigured();
 
@@ -233,9 +244,13 @@ function InboxPage() {
           </Button>
         </div>
       )}
-      <div className="h-[calc(100vh-140px)] flex gap-6 mt-2">
+      <div className="min-h-[calc(100dvh-140px)] flex flex-col lg:flex-row gap-4 lg:gap-6 mt-2">
         {/* Left Sidebar - Conversations */}
-        <div className="w-80 shrink-0 flex flex-col bg-card rounded-2xl shadow-(--shadow-card) overflow-hidden border border-border">
+        <div
+          className={`w-full lg:w-80 lg:shrink-0 flex flex-col bg-card rounded-2xl shadow-(--shadow-card) overflow-hidden border border-border min-h-[280px] lg:min-h-0 ${
+            mobileShowChat ? "hidden lg:flex" : "flex flex-1 lg:flex-none"
+          }`}
+        >
           <div className="p-4 border-b border-border/50">
             <h2 className="font-serif text-xl font-medium flex items-center justify-between text-foreground">
               Inbox
@@ -261,7 +276,7 @@ function InboxPage() {
             {conversations.map((chat) => (
               <button
                 key={chat.id}
-                onClick={() => setActiveChat(chat)}
+                onClick={() => selectChat(chat)}
                 className={`w-full text-left p-4 border-b border-border/30 transition-colors ${activeChat.id === chat.id ? "bg-primary/5" : "hover:bg-muted/30"}`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -298,31 +313,48 @@ function InboxPage() {
         </div>
 
         {/* Right Area - Active Chat */}
-        <div className="flex-1 flex flex-col bg-card rounded-2xl shadow-(--shadow-card) overflow-hidden border border-border">
+        <div
+          className={`flex-1 flex flex-col bg-card rounded-2xl shadow-(--shadow-card) overflow-hidden border border-border min-h-[400px] lg:min-h-0 ${
+            mobileShowChat ? "flex" : "hidden lg:flex"
+          }`}
+        >
           {/* Chat Header */}
-          <div className="h-16 px-6 border-b border-border/50 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="min-h-16 px-4 sm:px-6 py-2 border-b border-border/50 flex items-center justify-between gap-2 shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full shrink-0 lg:hidden"
+                onClick={() => setMobileShowChat(false)}
+                aria-label="Back to conversations"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
               <div className="h-10 w-10 rounded-full bg-gold/20 text-(--color-gold-foreground) grid place-items-center font-serif text-lg border border-gold/30">
                 {activeChat.avatar}
               </div>
-              <div>
-                <h3 className="font-semibold text-foreground leading-none">{activeChat.name}</h3>
-                <span className="text-[11px] text-muted-foreground">
+              <div className="min-w-0">
+                <h3 className="font-semibold text-foreground leading-none truncate">
+                  {activeChat.name}
+                </h3>
+                <span className="text-[11px] text-muted-foreground truncate block">
                   {activeChat.handle} • Instagram Direct
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 rounded-full text-xs"
+                className="h-8 rounded-full text-xs px-2 sm:px-3"
                 onClick={() => setAutoReplyEnabled(!autoReplyEnabled)}
               >
                 <Bot
-                  className={`h-3 w-3 mr-1.5 ${autoReplyEnabled ? "text-primary" : "text-muted-foreground"}`}
+                  className={`h-3 w-3 sm:mr-1.5 ${autoReplyEnabled ? "text-primary" : "text-muted-foreground"}`}
                 />
-                {autoReplyEnabled ? "AI Concierge: ON" : "AI Concierge: OFF"}
+                <span className="hidden sm:inline">
+                  {autoReplyEnabled ? "AI Concierge: ON" : "AI Concierge: OFF"}
+                </span>
               </Button>
               <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
                 <MoreVertical className="h-4 w-4" />
@@ -344,7 +376,7 @@ function InboxPage() {
                 {activeChat.avatar}
               </div>
               <div className="bg-white border border-border/50 rounded-2xl rounded-tl-none p-4 max-w-[70%] shadow-sm text-sm text-foreground">
-                <div className="aspect-square w-48 bg-muted rounded-xl mb-3 overflow-hidden">
+                <div className="aspect-square w-full max-w-48 bg-muted rounded-xl mb-3 overflow-hidden">
                   <img
                     src="https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=400&h=400"
                     className="w-full h-full object-cover"

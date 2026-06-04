@@ -1,13 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
 import { Heart, Search, ShoppingBag } from "lucide-react";
-import { useState, useEffect } from "react";
-import { products, type Product } from "@/lib/products";
+import { type Product } from "@/lib/products";
 import { useFavorites } from "@/hooks/use-favorites";
-import { productService } from "@/lib/supabase-service";
+import { usePublishedProducts } from "@/lib/product-queries";
 import { formatPkr } from "@/lib/format-currency";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/favorites")({
   component: FavoritesPage,
@@ -16,28 +16,7 @@ export const Route = createFileRoute("/favorites")({
 function FavoritesPage() {
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToCart, openCart } = useCart();
-  const [allProducts, setAllProducts] = useState<Product[]>(products);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadAll = async () => {
-      try {
-        const fetched = await productService.getProducts("published");
-        if (fetched.length > 0) {
-          const formatted = fetched.map((p) => ({
-            ...p,
-            image: p.image_url || products[0]?.image,
-          }));
-          setAllProducts(formatted as Product[]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch products", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadAll();
-  }, []);
+  const { data: allProducts = [], isLoading: loading } = usePublishedProducts();
 
   const favoritedProducts = allProducts.filter((p) => favorites.includes(p.id));
 
@@ -60,7 +39,11 @@ function FavoritesPage() {
         {loading ? (
           <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="aspect-square animate-pulse rounded-2xl bg-muted" />
+              <div key={i} className="space-y-3">
+                <Skeleton className="aspect-square rounded-2xl w-full" />
+                <Skeleton className="h-4 w-3/4 rounded-md" />
+                <Skeleton className="h-4 w-1/3 rounded-md" />
+              </div>
             ))}
           </div>
         ) : favoritedProducts.length === 0 ? (

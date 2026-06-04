@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DatePickerWithRangeProps {
   className?: string;
@@ -14,6 +15,7 @@ interface DatePickerWithRangeProps {
 }
 
 export function DatePickerWithRange({ className, date, onApply }: DatePickerWithRangeProps) {
+  const isMobile = useIsMobile();
   const [tempDate, setTempDate] = React.useState<DateRange | undefined>(date);
   const [isOpen, setIsOpen] = React.useState(false);
 
@@ -31,7 +33,7 @@ export function DatePickerWithRange({ className, date, onApply }: DatePickerWith
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[260px] justify-start text-left font-normal rounded-full h-10 border-border bg-card",
+              "w-full max-w-full sm:w-[260px] justify-start text-left font-normal rounded-full h-10 border-border bg-card text-sm",
               !date && "text-muted-foreground",
             )}
           >
@@ -49,15 +51,18 @@ export function DatePickerWithRange({ className, date, onApply }: DatePickerWith
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 rounded-2xl shadow-(--shadow-card)" align="end">
-          <div className="p-4 space-y-4">
+        <PopoverContent
+          className="w-auto max-w-[calc(100vw-2rem)] p-0 rounded-2xl shadow-(--shadow-card)"
+          align={isMobile ? "center" : "end"}
+        >
+          <div className="p-3 sm:p-4 space-y-4">
             <Calendar
               initialFocus
               mode="range"
               defaultMonth={tempDate?.from}
               selected={tempDate}
               onSelect={setTempDate}
-              numberOfMonths={2}
+              numberOfMonths={isMobile ? 1 : 2}
               disabled={{ after: new Date() }}
             />
             <div className="flex justify-end gap-2 pt-2 border-t border-border">

@@ -36,6 +36,7 @@ import {
   generateCareInstructions,
 } from "@/lib/luxury-engine";
 import { productService } from "@/lib/supabase-service";
+import { useInvalidateProducts } from "@/lib/product-queries";
 import { imageService } from "@/lib/image-service";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -78,7 +79,9 @@ export function EditProductModal({
   onOpenChange,
   product,
   onProductUpdated,
+  onSuccess,
 }: EditProductModalProps) {
+  const invalidateProducts = useInvalidateProducts();
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
     price: "",
@@ -246,8 +249,10 @@ export function EditProductModal({
       const result = await productService.updateProduct(product.id, productData);
 
       if (result) {
+        await invalidateProducts();
         toast.success("Product updated successfully!");
         onProductUpdated?.();
+        onSuccess?.(result);
         onOpenChange(false);
       }
     } catch (error) {
@@ -334,7 +339,7 @@ export function EditProductModal({
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
                   {secondaryPreviews.map((preview, idx) => (
                     <div
                       key={idx}
@@ -418,7 +423,7 @@ export function EditProductModal({
             <div className="flex-1 lg:overflow-y-auto p-6 lg:p-10 lg:pt-4 pt-2 space-y-8 lg:space-y-12 custom-scrollbar">
               <form id="edit-luxury-product" onSubmit={handleSubmit} className="space-y-12">
                 {/* 1. Core Identity */}
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
                     <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Product Title
@@ -446,7 +451,7 @@ export function EditProductModal({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
                     <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Gender / Classification
@@ -490,7 +495,7 @@ export function EditProductModal({
                   stock".
                 </p>
 
-                <div className="grid grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
                   <div className="space-y-3">
                     <Label className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60 min-h-[36px] flex items-end pb-1.5">
                       Category
@@ -704,7 +709,7 @@ export function EditProductModal({
                     type="submit"
                     form="edit-luxury-product"
                     disabled={isSubmitting || isUploading}
-                    className="rounded-full px-12 h-14 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 min-w-[220px] transition-transform active:scale-95"
+                    className="rounded-full px-8 sm:px-12 h-14 font-bold bg-primary hover:bg-primary/90 shadow-2xl shadow-primary/30 w-full sm:w-auto sm:min-w-[220px] transition-transform active:scale-95"
                   >
                     {isSubmitting ? "Syncing..." : "Update Luxury Piece"}
                   </Button>

@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
-import { productService } from "@/lib/supabase-service";
+import { usePublishedProducts } from "@/lib/product-queries";
 import { orderService, type CartItem, type CheckoutPrefillSnapshot } from "@/lib/order-service";
 import { couponService, type Coupon } from "@/lib/coupon-service";
 import { toast } from "sonner";
@@ -32,6 +32,7 @@ import {
   type FieldErrors,
 } from "@/lib/form-validation";
 import { useCheckoutPricing } from "@/hooks/use-checkout-pricing";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -126,7 +127,8 @@ function Checkout() {
   const navigate = useNavigate();
   const { cart, removeFromCart, updateQuantity, clearCart, isCartOpen, openCart, closeCart } =
     useCart();
-  const [products, setProducts] = useState<ProductRow[]>([]);
+  const { data: publishedProducts = [], isLoading: productsLoading } = usePublishedProducts();
+  const products = publishedProducts as ProductRow[];
   const [formData, setFormData] = useState(initialCheckoutForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -137,7 +139,7 @@ function Checkout() {
     >
   >({});
   const [createdOrderId, setCreatedOrderId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const loading = productsLoading;
   const [addressLookup, setAddressLookup] = useState<"idle" | "loading">("idle");
   const [prefillBanner, setPrefillBanner] = useState<CheckoutPrefillBanner | null>(null);
   const prefillBannerKey = useRef(0);
@@ -156,21 +158,7 @@ function Checkout() {
     [],
   );
   useEffect(() => {
-    // Store UTM parameters when component mounts
     storeUTMParameters();
-    
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const fetchedProducts = await productService.getProducts("published");
-        setProducts(fetchedProducts);
-      } catch (error) {
-        console.error("Error loading products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadProducts();
   }, []);
 
   // Restore last checkout details (browser) then align with latest order for that email (any device)
@@ -401,16 +389,16 @@ function Checkout() {
     <Layout>
       <CartSidebar isOpen={isCartOpen} onOpenChange={closeCart} />
       <section className="bg-secondary/30 py-12">
-        <div className="mx-auto max-w-7xl px-6">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <span className="label-eyebrow">Almost there</span>
-          <h1 className="mt-2 font-serif text-5xl text-foreground">Checkout</h1>
+          <h1 className="mt-2 font-serif text-4xl sm:text-5xl text-foreground">Checkout</h1>
           <p className="mt-2 text-muted-foreground">
             Review your selection of hand-crafted essentials.
           </p>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-10 px-6 py-12 lg:grid-cols-[1.5fr_1fr]">
+      <section className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 py-8 sm:py-12 lg:grid-cols-[1.5fr_1fr]">
         {/* LEFT */}
         <div className="space-y-10">
           {/* Items */}
@@ -421,13 +409,11 @@ function Checkout() {
                 <div className="space-y-4">
                   {[1, 2].map((_, index) => (
                     <div key={index} className="flex items-start gap-4 py-4 first:pt-0 last:pb-0">
-                      <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-2xl bg-muted animate-pulse">
-                        <div className="h-full w-full bg-gray-200" />
-                      </div>
+                      <Skeleton className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-2xl" />
                       <div className="flex-1 min-w-0 py-1">
-                        <div className="h-4 w-32 bg-muted rounded animate-pulse mb-2" />
-                        <div className="h-3 w-24 bg-muted rounded animate-pulse mb-1" />
-                        <div className="h-3 w-20 bg-muted rounded animate-pulse" />
+                        <Skeleton className="h-4 w-32 rounded mb-2" />
+                        <Skeleton className="h-3 w-24 rounded mb-1" />
+                        <Skeleton className="h-3 w-20 rounded" />
                       </div>
                     </div>
                   ))}

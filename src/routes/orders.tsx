@@ -448,7 +448,7 @@ function OrdersContent() {
       </div>
 
       {/* Pipeline Status Breakdown */}
-      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3 sm:gap-5">
         {[
           { label: "Order Placed", value: stats.order_placed, color: "text-blue-600" },
           { label: "Packed", value: stats.packed, color: "text-indigo-600" },
@@ -560,8 +560,8 @@ function OrdersContent() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[640px] text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border">
                 <th className="px-6 py-4 text-left font-medium">Order ID</th>

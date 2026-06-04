@@ -1,8 +1,8 @@
 import { Link } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { ArrowRight, Leaf, CheckCircle2, Loader2, Heart } from "lucide-react";
-import { products, type Product } from "@/lib/products";
-import { productService } from "@/lib/supabase-service";
+import { products as fallbackProducts } from "@/lib/products";
+import { usePublishedProducts } from "@/lib/product-queries";
 import { useCategories } from "@/hooks/use-categories";
 import { useBadges } from "@/hooks/use-badges";
 import { useFavorites } from "@/hooks/use-favorites";
@@ -82,25 +82,8 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
   const { categories } = useCategories();
   const { badges } = useBadges();
   const { toggleFavorite, isFavorite } = useFavorites();
-  const [realProducts, setRealProducts] = useState<Product[]>(products);
-
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const fetched = await productService.getProducts("published");
-        if (fetched.length > 0) {
-          const formatted = fetched.map((p) => ({
-            ...p,
-            image: p.image_url || products[0]?.image,
-          }));
-          setRealProducts(formatted as Product[]);
-        }
-      } catch (err) {
-        console.error("Failed to fetch products for home page", err);
-      }
-    };
-    fetchProducts();
-  }, []);
+  const { data: fetchedProducts } = usePublishedProducts();
+  const realProducts = fetchedProducts ?? fallbackProducts;
 
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");

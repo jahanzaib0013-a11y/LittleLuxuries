@@ -1,8 +1,7 @@
 import { useCart } from "@/context/CartContext";
 import { formatPkr } from "@/lib/format-currency";
-import { productService } from "@/lib/supabase-service";
+import { usePublishedProducts } from "@/lib/product-queries";
 import { Minus, Plus, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
-import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -16,27 +15,7 @@ export function CartSidebar({
   onOpenChange: (open: boolean) => void;
 }) {
   const { cart, removeFromCart, updateQuantity, getCartCount } = useCart();
-  const [products, setProducts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasOpenedOnce, setHasOpenedOnce] = useState(false);
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const fetchedProducts = await productService.getProducts("published");
-        setProducts(fetchedProducts);
-      } catch (error) {
-        console.error("Error loading products:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (!hasOpenedOnce) {
-      setHasOpenedOnce(true);
-      loadProducts();
-    }
-  }, [isOpen, hasOpenedOnce]);
+  const { data: products = [], isLoading: loading, isFetched } = usePublishedProducts();
 
   const items = cart
     .map((c) => {
@@ -72,7 +51,7 @@ export function CartSidebar({
         </SheetHeader>
 
         <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-6">
-          {loading || (!hasItems && cart.length > 0) || !allItemsLoaded || !hasOpenedOnce ? (
+          {loading || (!hasItems && cart.length > 0) || !allItemsLoaded || !isFetched ? (
             <div className="space-y-4">
               {[1, 2].map((_, index) => (
                 <div key={index} className="flex gap-4 rounded-xl border border-border bg-card p-4">

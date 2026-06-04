@@ -87,6 +87,7 @@ import { toast } from "sonner";
 import { CategorySection } from "@/components/category-section";
 import { useCategories } from "@/hooks/use-categories";
 import hero from "@/assets/hero-baby.jpg";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/content")({
   head: () => ({ meta: [{ title: "Content Editor — Little Luxuries Admin" }] }),
@@ -1382,7 +1383,10 @@ function ContentPage() {
                   compact
                 />
               ) : (
-                <p className="text-xs text-muted-foreground text-center py-4">Loading preview…</p>
+                <div className="space-y-3 py-2">
+                  <Skeleton className="h-24 w-full rounded-xl" />
+                  <Skeleton className="h-24 w-full rounded-xl" />
+                </div>
               )}
               <div className="text-center py-3 border-t border-border/20">
                 <p className="text-xs text-muted-foreground">
@@ -1451,7 +1455,7 @@ function ContentPage() {
               <p className="text-xs text-muted-foreground">
                 Current:{" "}
                 <span className="text-primary font-medium">
-                  {isClient ? content.layout : "Loading..."}
+                  {isClient ? content.layout : "Loading…"}
                 </span>
               </p>
             </div>

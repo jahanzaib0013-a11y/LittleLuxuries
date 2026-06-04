@@ -279,7 +279,7 @@ function CustomersContent({ search }: { search: string }) {
       </div>
 
       {/* Membership Tiers Pipeline */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
         {[
           {
             label: "Platinum",
@@ -384,7 +384,7 @@ function CustomersContent({ search }: { search: string }) {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border bg-muted/20">

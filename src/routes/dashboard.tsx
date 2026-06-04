@@ -524,7 +524,7 @@ function DashboardContent() {
           </div>
 
           <div
-            className={`mt-8 grid gap-1.5 sm:gap-3 h-48 sm:h-56 items-end ${period === "Weekly" ? "grid-cols-7" : "grid-cols-4"}`}
+            className={`mt-8 grid gap-1 sm:gap-1.5 md:gap-3 h-48 sm:h-56 items-end ${period === "Weekly" ? "grid-cols-4 sm:grid-cols-7" : "grid-cols-2 sm:grid-cols-4"}`}
           >
             {chartData.map((d) => (
               <div
@@ -602,7 +602,7 @@ function DashboardContent() {
               View Reports <ExternalLink className="h-3.5 w-3.5" />
             </button>
           </div>
-          <div className="mt-6 overflow-x-auto">
+          <div className="mt-6 -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border">

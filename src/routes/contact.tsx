@@ -63,10 +63,12 @@ function Contact() {
 
   return (
     <Layout>
-      <section className="bg-secondary/30 py-20">
-        <div className="mx-auto max-w-3xl px-6 text-center">
+      <section className="bg-secondary/30 py-12 sm:py-20">
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 text-center">
           <span className="label-eyebrow">We'd love to hear from you</span>
-          <h1 className="mt-3 font-serif text-5xl text-foreground md:text-6xl">Get in touch</h1>
+          <h1 className="mt-3 font-serif text-4xl sm:text-5xl text-foreground md:text-6xl">
+            Get in touch
+          </h1>
           <p className="mt-5 text-muted-foreground">
             Questions about an order, a gift, or our craftsmanship? Our small, attentive team is
             here to help.
@@ -74,7 +76,7 @@ function Contact() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 py-20">
+      <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
         <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
           <div className="space-y-6">
             <Info

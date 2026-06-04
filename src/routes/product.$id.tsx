@@ -1,8 +1,10 @@
 import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
-import { products } from "@/lib/products";
+import { queryClient } from "@/lib/query-client";
+import { productDetailQueryOptions } from "@/lib/product-queries";
 import { Heart, Minus, Plus, Truck, RotateCcw, Leaf } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { ProductImageGallery } from "@/components/product-image-gallery";
 import { useCart } from "@/context/CartContext";
 import { useFavorites } from "@/hooks/use-favorites";
 import { formatPkr } from "@/lib/format-currency";
@@ -11,25 +13,7 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/product/$id")({
   loader: async ({ params }) => {
-    // First try to find in the static products array
-    let product = products.find((p) => p.id === params.id);
-
-    // If not found, try to load from Supabase
-    if (!product) {
-      try {
-        const { productService } = await import("@/lib/supabase-service");
-        const fetchedProducts = await productService.getProducts("published");
-        product = fetchedProducts.find((p: any) => p.id === params.id);
-
-        // If found in Supabase, ensure it has an image
-        if (product && !product.image && product.image_url) {
-          product.image = product.image_url;
-        }
-      } catch (error) {
-        console.log("Error loading from Supabase:", error);
-      }
-    }
-
+    const product = await queryClient.ensureQueryData(productDetailQueryOptions(params.id));
     if (!product) throw notFound();
     return { product };
   },
@@ -74,7 +58,6 @@ function ProductPage() {
   const navigate = useNavigate();
   const { addToCart, openCart } = useCart();
   const { toggleFavorite, isFavorite } = useFavorites();
-  const [activeImage, setActiveImage] = useState<string | null>(null);
   const [size, setSize] = useState<string>(product.sizes[0]);
   const [qty, setQty] = useState(1);
   const [tab, setTab] = useState<"sustainability" | "care">("sustainability");
@@ -105,11 +88,17 @@ function ProductPage() {
     }
   };
 
-  const mainImage = activeImage || product.image_url || product.image;
+  const galleryImages = useMemo(
+    () =>
+      [product.image_url || product.image, ...(product.secondary_images || [])]
+        .filter(Boolean)
+        .slice(0, 5) as string[],
+    [product.image, product.image_url, product.secondary_images],
+  );
 
   return (
     <Layout>
-      <div className="mx-auto max-w-7xl px-6 py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-12">
         <Link
           to="/shop"
           search={{ category: undefined }}
@@ -119,40 +108,11 @@ function ProductPage() {
         </Link>
 
         <div className="mt-8 grid gap-12 lg:grid-cols-2">
-          {/* Image */}
-          <div>
-            <div className="relative aspect-square overflow-hidden rounded-3xl bg-card shadow-(--shadow-card)">
-              {product.badge && (
-                <span className="absolute left-4 top-4 z-10 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
-                  {product.badge}
-                </span>
-              )}
-              <img
-                src={mainImage}
-                alt={product.name}
-                width={1024}
-                height={1024}
-                className="h-full w-full object-cover transition-all duration-500"
-              />
-            </div>
-            <div className="mt-4 grid grid-cols-4 gap-3">
-              {[product.image_url || product.image, ...(product.secondary_images || [])]
-                .slice(0, 5)
-                .map((img, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setActiveImage(img)}
-                    className={`aspect-square overflow-hidden rounded-xl border-2 transition-all ${
-                      mainImage === img
-                        ? "border-primary scale-95"
-                        : "border-transparent hover:border-border"
-                    }`}
-                  >
-                    <img src={img} alt="" className="h-full w-full object-cover" />
-                  </button>
-                ))}
-            </div>
-          </div>
+          <ProductImageGallery
+            images={galleryImages}
+            alt={product.name}
+            badge={product.badge}
+          />
 
           {/* Info */}
           <div className="space-y-6">
@@ -160,10 +120,12 @@ function ProductPage() {
               <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
                 {product.category}
               </span>
-              <div className="mt-2 flex items-center gap-3">
-                <h1 className="font-serif text-3xl md:text-4xl text-foreground">{product.name}</h1>
+              <div className="mt-2 flex flex-wrap items-start gap-2 sm:gap-3">
+                <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl text-foreground break-words">
+                  {product.name}
+                </h1>
                 {product.badge && (
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary-soft text-primary text-xs font-semibold uppercase tracking-wider">
+                  <span className="inline-flex shrink-0 items-center px-3 py-1 rounded-full bg-primary-soft text-primary text-xs font-semibold uppercase tracking-wider">
                     {product.badge}
                   </span>
                 )}

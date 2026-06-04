@@ -13,6 +13,7 @@ import { useShippingZones } from "@/hooks/use-shipping-zones";
 import { useTaxSettings } from "@/hooks/use-tax-settings";
 import { ShippingZone } from "@/lib/shipping-zones";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Store Settings — Little Luxuries Admin" }] }),
@@ -794,10 +795,14 @@ function SettingsPage() {
               Administrator Account
             </div>
             <div className="font-serif text-2xl sm:text-3xl mt-2">
-              {adminSettings?.admin_name || "Loading..."}
+              {adminSettings?.admin_name || <Skeleton className="h-8 w-48 bg-white/30" />}
             </div>
             <p className="text-sm opacity-90 mt-1">
-              {adminSettings?.admin_role} • {adminSettings?.admin_permissions}
+              {adminSettings ? (
+                `${adminSettings.admin_role} • ${adminSettings.admin_permissions}`
+              ) : (
+                <Skeleton className="h-4 w-64 bg-white/30" />
+              )}
             </p>
             <div className="mt-4 flex flex-wrap gap-2 sm:gap-3">
               <Button
