@@ -63,7 +63,9 @@ export const getRouter = () => {
   const router = createRouter({
     routeTree,
     context: {},
-    scrollRestoration: true,
+    // Lenis (smooth-scroll) owns scroll; SmoothScroll resets to top on navigation.
+    // Native restoration would fight it and cause double-scroll jank.
+    scrollRestoration: false,
     defaultPreloadStaleTime: 0,
     defaultErrorComponent: DefaultErrorComponent,
     Wrap: ({ children }) => (

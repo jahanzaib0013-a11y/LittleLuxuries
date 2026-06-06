@@ -22,6 +22,7 @@ import {
   Layers,
 } from "lucide-react";
 import { orderService, type CartItem } from "@/lib/order-service";
+import { sendOrderStatusEmail } from "@/lib/email.server";
 import { productService } from "@/lib/supabase-service";
 import { toast } from "sonner";
 import { formatPkr } from "@/lib/format-currency";
@@ -250,6 +251,22 @@ export function AddOrderModal({ open, onOpenChange, onOrderAdded }: AddOrderModa
       if (error) {
         toast.error(error);
         return;
+      }
+
+      // Send the "order placed" email from the component (real server RPC).
+      if (order) {
+        try {
+          await (sendOrderStatusEmail as any)({
+            data: {
+              orderNumber: order.order_number,
+              customerEmail: order.customer_email,
+              customerName: `${order.customer_first_name} ${order.customer_last_name}`,
+              status: "order_placed",
+            },
+          });
+        } catch (emailErr) {
+          console.error("Failed to send order placed email:", emailErr);
+        }
       }
 
       onOrderAdded();

@@ -118,7 +118,13 @@
   );
   --gradient-gold: linear-gradient(135deg, oklch(0.82 0.14 85) 0%, oklch(0.74 0.12 75) 100%);
   --shadow-soft: 0 10px 40px -12px oklch(0.45 0.13 295 / 0.18);
-  --shadow-card: 0 4px 24px -8px oklch(0.4 0.1 295 / 0.12);
+  --shadow-card:
+    0 1px 2px -1px oklch(0.4 0.1 295 / 0.08), 0 6px 24px -10px oklch(0.4 0.1 295 / 0.14);
+  /* Larger, softer lift used on hover / featured surfaces */
+  --shadow-hover:
+    0 2px 4px -2px oklch(0.4 0.1 295 / 0.1), 0 24px 60px -20px oklch(0.45 0.13 295 / 0.28);
+  /* Hairline inset ring to crisp up cards & imagery */
+  --shadow-ring: inset 0 0 0 1px oklch(1 0 0 / 0.55);
   --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -158,7 +164,7 @@
 }
 
 @layer base {
-  @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
+  @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
 
   * {
     border-color: var(--color-border);
@@ -183,16 +189,39 @@
   h5 {
     font-family: var(--font-serif);
     font-weight: 400;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Fluid display headings — consistent, refined scale for hero + section H2s. */
+  .display-serif {
+    font-family: var(--font-serif);
+    font-weight: 400;
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
   }
 
   .label-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
     font-family: var(--font-sans);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     font-weight: 600;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.22em;
     text-transform: uppercase;
     color: var(--color-primary);
+  }
+  .label-eyebrow::before {
+    content: "";
+    width: 1.5rem;
+    height: 1px;
+    background: linear-gradient(to right, var(--color-gold), transparent);
   }
 
   .divider-ornament {
@@ -214,6 +243,46 @@
     height: 8px;
     transform: rotate(45deg);
     background: var(--color-gold);
+    box-shadow: 0 0 0 4px oklch(0.78 0.13 85 / 0.12);
+  }
+
+  /* Subtle film grain — adds tactile, expensive depth over gradient surfaces. */
+  .lux-grain {
+    position: relative;
+    isolation: isolate;
+  }
+  .lux-grain::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* When the custom cursor is active, hide the native one on non-text targets. */
+  body.lux-cursor-none,
+  body.lux-cursor-none a,
+  body.lux-cursor-none button,
+  body.lux-cursor-none [role="button"],
+  body.lux-cursor-none [data-cursor="view"] {
+    cursor: none;
+  }
+
+  /* Crisp hairline ring + soft lilac scrim for cohesive product/hero imagery. */
+  .lux-img-ring {
+    position: relative;
+    box-shadow: var(--shadow-ring);
+  }
+  .lux-img-ring::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(180deg, transparent 55%, oklch(0.45 0.13 295 / 0.05) 100%);
   }
 
   /* Premium promo banner */
@@ -441,4 +510,577 @@ body::-webkit-scrollbar,
   display: none;
   width: 0;
   height: 0;
+}
+
+/* =====================================================================
+   Premium animation templates (Content > Animation template)
+   Each template coordinates four layers, all scoped by an ancestor
+   [data-anim-template="…"]: scroll reveals · hero choreography ·
+   page transitions · hover micro-interactions.
+   ===================================================================== */
+
+/* ---- Layer 1: scroll reveals ---- */
+.reveal {
+  opacity: 0;
+  transition:
+    opacity var(--reveal-dur, 720ms) var(--reveal-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    transform var(--reveal-dur, 720ms) var(--reveal-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    filter var(--reveal-dur, 720ms) var(--reveal-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  will-change: opacity, transform;
+}
+.reveal[data-revealed="true"] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* Editorial — smooth upward glide */
+[data-anim-template="editorial"] .reveal {
+  transform: translateY(28px);
+}
+
+/* Boutique — rise with a subtle scale */
+[data-anim-template="boutique"] .reveal {
+  transform: translateY(24px) scale(0.98);
+  --reveal-dur: 780ms;
+}
+
+/* Couture — deeper lift + scale reveal, directional (no blur) */
+[data-anim-template="couture"] .reveal {
+  transform: translateY(44px) scale(0.96);
+  --reveal-dur: 860ms;
+}
+[data-anim-template="couture"] .reveal[data-dir="left"] {
+  transform: translateY(40px) translateX(-36px) scale(0.96);
+}
+[data-anim-template="couture"] .reveal[data-dir="right"] {
+  transform: translateY(40px) translateX(36px) scale(0.96);
+}
+
+/* None — no entrance motion */
+[data-anim-template="none"] .reveal {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+/* ---- Layer 2: hero choreography ---- */
+/* Children of .hero-stagger and the .hero-img play a one-shot entrance on
+   mount, staggered by source order. Look varies per template. */
+@keyframes lux-hero-rise {
+  from {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lux-hero-lift {
+  from {
+    opacity: 0;
+    transform: translateY(32px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lux-hero-img-in {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-anim-template="editorial"] .hero-stagger > *,
+[data-anim-template="boutique"] .hero-stagger > *,
+[data-anim-template="couture"] .hero-stagger > * {
+  opacity: 0;
+  animation: lux-hero-rise 760ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+[data-anim-template="couture"] .hero-stagger > * {
+  animation-name: lux-hero-lift;
+  animation-duration: 880ms;
+}
+/* Stagger by source order (no per-element JS needed) */
+.hero-stagger > *:nth-child(1) {
+  --i: 0;
+}
+.hero-stagger > *:nth-child(2) {
+  --i: 1;
+}
+.hero-stagger > *:nth-child(3) {
+  --i: 2;
+}
+.hero-stagger > *:nth-child(4) {
+  --i: 3;
+}
+.hero-stagger > *:nth-child(5) {
+  --i: 4;
+}
+
+/* Hero image entrance (scale-in for boutique/couture, gentle fade otherwise) */
+[data-anim-template="editorial"] .hero-img {
+  opacity: 0;
+  animation: lux-hero-rise 820ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 220ms;
+}
+[data-anim-template="boutique"] .hero-img,
+[data-anim-template="couture"] .hero-img {
+  opacity: 0;
+  animation: lux-hero-img-in 1000ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 240ms;
+}
+
+/* ---- Layer 3: page transitions ---- */
+@keyframes lux-page-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes lux-page-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes lux-page-slide {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+[data-anim-template="editorial"] .page-enter {
+  animation: lux-page-fade 520ms ease-out both;
+}
+[data-anim-template="boutique"] .page-enter {
+  animation: lux-page-fade-up 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+[data-anim-template="couture"] .page-enter {
+  animation: lux-page-slide 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ---- Layer 4: hover micro-interactions ---- */
+.lux-hover-card {
+  transition:
+    transform 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 360ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lux-zoom img {
+  transition: transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.lux-hover-cta {
+  transition:
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) {
+  /* Editorial — restrained lift, no zoom */
+  [data-anim-template="editorial"] .lux-hover-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 40px -20px oklch(0.45 0.13 295 / 0.28);
+  }
+  /* Boutique — elevation + gentle image zoom */
+  [data-anim-template="boutique"] .lux-hover-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 24px 50px -22px oklch(0.45 0.13 295 / 0.32);
+  }
+  [data-anim-template="boutique"] .lux-zoom:hover img {
+    transform: scale(1.06);
+  }
+  /* Couture — pronounced lift + stronger zoom */
+  [data-anim-template="couture"] .lux-hover-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 30px 60px -22px oklch(0.45 0.13 295 / 0.38);
+  }
+  [data-anim-template="couture"] .lux-zoom:hover img {
+    transform: scale(1.09);
+  }
+}
+
+/* ---- Reduced motion / none: neutralize every layer ---- */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .hero-stagger > *,
+  .hero-img,
+  .page-enter {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+    transition: none !important;
+    animation: none !important;
+  }
+  .lux-hover-card,
+  .lux-zoom img,
+  .lux-hover-cta {
+    transition: none !important;
+  }
+}
+
+/* =====================================================================
+   Cinematic motion helpers (Motion + Lenis)
+   ===================================================================== */
+
+/* Masked text reveal — words rise from behind this clip */
+.reveal-line {
+  overflow: hidden;
+  /* a hair of vertical padding so descenders (g, y) aren't clipped */
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+/* Lenis smooth-scroll (per docs) — prevent native smooth-scroll fighting it */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-smooth [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-line {
+    overflow: visible;
+  }
+}
+
+/* =====================================================================
+   Animated hero backdrops (Content > Background animation)
+   Pure CSS, soft radial gradients (no blur filter), sits behind hero
+   content (z-[1]). Frozen under prefers-reduced-motion.
+   ===================================================================== */
+.bg-anim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* Aurora — large soft blooms that visibly drift, scale and pulse */
+.bg-anim-aurora::before,
+.bg-anim-aurora::after {
+  content: "";
+  position: absolute;
+  width: 78vw;
+  height: 78vw;
+  border-radius: 9999px;
+  will-change: transform, opacity;
+}
+.bg-anim-aurora::before {
+  left: -12%;
+  top: -28%;
+  background: radial-gradient(circle, oklch(0.7 0.16 300 / 0.95), transparent 60%);
+  animation: bg-aurora-a 14s ease-in-out infinite alternate;
+}
+.bg-anim-aurora::after {
+  right: -16%;
+  top: -12%;
+  background: radial-gradient(circle, oklch(0.76 0.15 20 / 0.9), transparent 60%);
+  animation: bg-aurora-b 17s ease-in-out infinite alternate;
+}
+@keyframes bg-aurora-a {
+  from {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: translate(38%, 32%) scale(1.35);
+    opacity: 1;
+  }
+}
+@keyframes bg-aurora-b {
+  from {
+    transform: translate(0, 0) scale(1.2);
+    opacity: 0.6;
+  }
+  to {
+    transform: translate(-32%, 28%) scale(0.9);
+    opacity: 0.95;
+  }
+}
+
+/* Floating orbs — soft spheres rising and drifting */
+.bg-anim-orbs::before,
+.bg-anim-orbs::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  will-change: transform;
+}
+.bg-anim-orbs::before {
+  width: 380px;
+  height: 380px;
+  left: 5%;
+  bottom: -180px;
+  background: radial-gradient(circle at 35% 30%, oklch(0.72 0.15 300 / 0.85), transparent 64%);
+  animation: bg-orb-a 14s ease-in-out infinite;
+}
+.bg-anim-orbs::after {
+  width: 270px;
+  height: 270px;
+  right: 9%;
+  bottom: -150px;
+  background: radial-gradient(circle at 35% 30%, oklch(0.78 0.14 20 / 0.8), transparent 64%);
+  animation: bg-orb-b 11s ease-in-out infinite 1.5s;
+}
+@keyframes bg-orb-a {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(40px, -160px) scale(1.12);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+@keyframes bg-orb-b {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(-50px, -130px) scale(0.9);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+/* Gradient mesh — a big colour field that slowly rotates and scales */
+.bg-anim-mesh::before {
+  content: "";
+  position: absolute;
+  left: -40%;
+  top: -40%;
+  width: 180%;
+  height: 180%;
+  background:
+    radial-gradient(circle at 25% 30%, oklch(0.7 0.16 300 / 0.85), transparent 45%),
+    radial-gradient(circle at 75% 35%, oklch(0.76 0.15 20 / 0.8), transparent 45%),
+    radial-gradient(circle at 50% 80%, oklch(0.8 0.15 85 / 0.7), transparent 45%);
+  will-change: transform;
+  animation: bg-mesh-spin 24s linear infinite;
+}
+@keyframes bg-mesh-spin {
+  from {
+    transform: rotate(0deg) scale(1.1);
+  }
+  to {
+    transform: rotate(360deg) scale(1.1);
+  }
+}
+
+/* Silk shimmer — bright diagonal sheen sweeping continuously */
+.bg-anim-shimmer {
+  background-image: linear-gradient(
+    115deg,
+    transparent 40%,
+    oklch(0.85 0.1 300 / 0.55) 48%,
+    oklch(1 0 0 / 0.85) 50%,
+    oklch(0.85 0.1 300 / 0.55) 52%,
+    transparent 60%
+  );
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+  animation: bg-shimmer 5.5s linear infinite;
+}
+@keyframes bg-shimmer {
+  from {
+    background-position: 180% 0;
+  }
+  to {
+    background-position: -80% 0;
+  }
+}
+
+/* Particle variants (petals / bubbles / twinkle / confetti) — each `.bit`
+   is positioned & timed via inline style from the component; the look and
+   motion come from the parent variant class below. */
+.bg-anim .bit {
+  position: absolute;
+  width: var(--s, 12px);
+  height: var(--s, 12px);
+}
+
+/* Falling petals */
+.bg-anim-petals .bit {
+  background: oklch(0.78 0.14 20 / 0.9);
+  border-radius: 0 100% 0 100%;
+  box-shadow: 0 2px 6px oklch(0.5 0.1 20 / 0.18);
+  animation-name: bg-bit-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.bg-anim-petals .bit:nth-child(even) {
+  background: oklch(0.72 0.15 300 / 0.88);
+}
+
+/* Rising bubbles */
+.bg-anim-bubbles .bit {
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 30%, oklch(0.74 0.14 300 / 0.7), transparent 72%);
+  animation-name: bg-bit-rise;
+  animation-timing-function: ease-in;
+  animation-iteration-count: infinite;
+}
+.bg-anim-bubbles .bit:nth-child(even) {
+  background: radial-gradient(circle at 35% 30%, oklch(0.8 0.13 20 / 0.65), transparent 72%);
+}
+
+/* Twinkle — soft lights fading in & out in place */
+.bg-anim-twinkle .bit {
+  border-radius: 9999px;
+  background: oklch(0.85 0.13 85 / 0.95);
+  box-shadow: 0 0 10px oklch(0.85 0.13 85 / 0.7);
+  animation-name: bg-bit-twinkle;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+}
+.bg-anim-twinkle .bit:nth-child(even) {
+  background: oklch(0.74 0.14 300 / 0.95);
+  box-shadow: 0 0 10px oklch(0.74 0.14 300 / 0.6);
+}
+
+/* Confetti — small colourful pieces fluttering down */
+.bg-anim-confetti .bit {
+  border-radius: 2px;
+  background: oklch(0.72 0.16 300 / 0.9);
+  animation-name: bg-bit-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.bg-anim-confetti .bit:nth-child(3n) {
+  background: oklch(0.8 0.14 20 / 0.9);
+}
+.bg-anim-confetti .bit:nth-child(3n + 1) {
+  background: oklch(0.82 0.15 85 / 0.9);
+}
+
+@keyframes bg-bit-rise {
+  0% {
+    transform: translateY(40px) scale(0.85);
+    opacity: 0;
+  }
+  18% {
+    opacity: 0.9;
+  }
+  82% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-280px) scale(1.05);
+    opacity: 0;
+  }
+}
+@keyframes bg-bit-fall {
+  0% {
+    transform: translateY(-40px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.9;
+  }
+  88% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(340px) translateX(36px) rotate(320deg);
+    opacity: 0;
+  }
+}
+@keyframes bg-bit-twinkle {
+  0%,
+  100% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 0.95;
+  }
+}
+
+/* Soft waves — gentle colour bands drifting side to side */
+.bg-anim-waves::before,
+.bg-anim-waves::after {
+  content: "";
+  position: absolute;
+  inset: -25% -30%;
+  will-change: transform;
+}
+.bg-anim-waves::before {
+  background: linear-gradient(
+    100deg,
+    transparent 20%,
+    oklch(0.74 0.14 300 / 0.55) 45%,
+    oklch(0.8 0.13 20 / 0.5) 62%,
+    transparent 82%
+  );
+  transform: rotate(-7deg);
+  animation: bg-wave-a 13s ease-in-out infinite alternate;
+}
+.bg-anim-waves::after {
+  background: linear-gradient(
+    80deg,
+    transparent 25%,
+    oklch(0.8 0.15 85 / 0.4) 55%,
+    transparent 80%
+  );
+  transform: rotate(6deg);
+  animation: bg-wave-b 17s ease-in-out infinite alternate;
+}
+@keyframes bg-wave-a {
+  from {
+    transform: translateX(-9%) rotate(-7deg);
+  }
+  to {
+    transform: translateX(9%) rotate(-3deg);
+  }
+}
+@keyframes bg-wave-b {
+  from {
+    transform: translateX(8%) rotate(6deg);
+  }
+  to {
+    transform: translateX(-8%) rotate(3deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-anim,
+  .bg-anim::before,
+  .bg-anim::after,
+  .bg-anim .bit {
+    animation: none !important;
+  }
+  .bg-anim .bit {
+    display: none;
+  }
 }

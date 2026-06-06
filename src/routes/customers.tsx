@@ -37,6 +37,7 @@ import { useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ViewCustomerModal } from "@/components/view-customer-modal";
 import { SendMessageModal } from "@/components/send-message-modal";
+import { whatsappService } from "@/lib/whatsapp-service";
 import { CustomerDeleteConfirmationModal } from "@/components/customer-delete-confirmation-modal";
 import { AddCustomerModal } from "@/components/add-customer-modal";
 import { formatPkr } from "@/lib/format-currency";
@@ -536,12 +537,12 @@ function CustomersContent({ search }: { search: string }) {
                               <DropdownMenuItem
                                 className="cursor-pointer"
                                 onClick={() => {
-                                  const phone = c.phone as string;
-                                  const message = encodeURIComponent(
-                                    `Hello ${c.customer_name}, this is from Little Luxuries regarding your account.`,
-                                  );
+                                  const message = whatsappService.formatAccountMessage({
+                                    customerName: c.customer_name,
+                                    tier: c.membership_tier,
+                                  });
                                   window.open(
-                                    `https://api.whatsapp.com/send?phone=${phone.replace(/[^0-9]/g, "")}&text=${message}`,
+                                    whatsappService.getWhatsAppLink(c.phone as string, message),
                                     "_blank",
                                   );
                                 }}

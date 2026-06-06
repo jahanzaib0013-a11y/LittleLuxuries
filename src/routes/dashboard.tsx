@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 // Dialogs\\\\\\\
 
-
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import {
   Plus,
@@ -47,7 +46,11 @@ import logo from "@/assets/logo.png";
 import { useState, useEffect, useCallback } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { sheetModalClass, modalFooterClass, modalScrollPaneClass } from "@/components/product-modal-layout";
+import {
+  sheetModalClass,
+  modalFooterClass,
+  modalScrollPaneClass,
+} from "@/components/product-modal-layout";
 import { ModalCloseBar } from "@/components/modal-close-bar";
 import {
   AlertDialog,
@@ -141,34 +144,30 @@ function DashboardContent() {
   const [selectedOrder, setSelectedOrder] = useState<OrderWithItems | null>(null);
   const [isTimelineOpen, setIsTimelineOpen] = useState(false);
   const [isItemsModalOpen, setIsItemsModalOpen] = useState(false);
-  
+
   const chartData = period === "Weekly" ? dailySales : monthlySales;
   const max = Math.max(...chartData.map((d) => d.value));
 
   const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
     try {
-      await orderService.updateOrderStatus(orderId, status);
-
-      // AUTOMATION: Automatically send confirmation email for key status changes
       const orderToNotify = recentOrders.find((o) => o.id === orderId);
-      if (orderToNotify && ["packed", "shipped", "delivered"].includes(status)) {
+      await orderService.updateOrderStatus(orderId, status);
+      // Send the status email from the component (runs as a real server RPC).
+      if (orderToNotify && status !== orderToNotify.status) {
         try {
-          await sendOrderStatusEmail({
+          await (sendOrderStatusEmail as any)({
             data: {
               orderNumber: orderToNotify.order_number,
               customerEmail: orderToNotify.customer_email,
               customerName: `${orderToNotify.customer_first_name} ${orderToNotify.customer_last_name}`,
-              status: status as "packed" | "shipped" | "delivered",
+              status,
               trackingNumber: orderToNotify.tracking_number,
             },
           });
-          toast.success(`Automated email sent for ${status} status`);
-        } catch (emailErr) {
-          console.error("Failed to send automated email:", emailErr);
-          // Don't toast error here to avoid confusing the user if the status update itself succeeded
+        } catch (e) {
+          console.error("status email failed:", e);
         }
       }
-
       await refetch();
       toast.success(`Order status updated to ${status}`);
     } catch (e) {
@@ -180,37 +179,28 @@ function DashboardContent() {
   const handleUpdatePayment = async (orderId: string, paymentStatus: PaymentStatus) => {
     try {
       const orderToNotify = recentOrders.find((o) => o.id === orderId);
-      const shouldMoveToPending = paymentStatus === "pending" && orderToNotify?.status === "delivered";
+      const shouldMoveToPending =
+        paymentStatus === "pending" && orderToNotify?.status === "delivered";
 
       await orderService.updatePaymentStatus(orderId, paymentStatus, {
         orderStatus: shouldMoveToPending ? "pending_payment" : undefined,
       });
 
-      // AUTOMATION: Automatically send email for "paid" status
-      if (orderToNotify && paymentStatus === "completed") {
+      // Completing payment advances the order to payment_confirmed (unless it's
+      // mid-fulfilment/terminal). Send that COD "payment received" email here.
+      const skip = ["packed", "shipped", "payment_confirmed", "cancelled", "refunded"];
+      if (orderToNotify && paymentStatus === "completed" && !skip.includes(orderToNotify.status)) {
         try {
-          await sendOrderStatusEmail({
+          await (sendOrderStatusEmail as any)({
             data: {
               orderNumber: orderToNotify.order_number,
               customerEmail: orderToNotify.customer_email,
               customerName: `${orderToNotify.customer_first_name} ${orderToNotify.customer_last_name}`,
-              status: "paid", // We can keep "paid" for the email template if it expects it
+              status: "payment_confirmed",
             },
           });
-          toast.success("Payment verification email sent automatically");
-
-          // AUTOMATION: If payment is paid, automatically move order to 'payment_confirmed' status
-          // only if it's currently in 'order_placed', 'order_confirmed', or 'pending_payment'
-          if (
-            ["order_placed", "order_confirmed", "pending_payment"].includes(
-              orderToNotify.status,
-            )
-          ) {
-            await orderService.updateOrderStatus(orderId, "payment_confirmed");
-            toast.info("Order status automatically moved to 'Payment Confirmed'");
-          }
-        } catch (emailErr) {
-          console.error("Failed to send payment email:", emailErr);
+        } catch (e) {
+          console.error("payment email failed:", e);
         }
       }
 
@@ -229,13 +219,17 @@ function DashboardContent() {
       return;
     }
 
-    // 1. Generate the professional message using the centralized service
+    // 1. Generate the professional, tier-aware message using the service
     const message = whatsappService.formatConfirmationMessage({
       customerName: order.customer_first_name,
       orderNumber: order.order_number,
-      items: order.order_items?.map((item) => ({ name: item.product_name })) || [],
-      trackingUrl: `${window.location.origin}/track/${order.order_number}`,
-      trackingNumber: order.tracking_number,
+      items:
+        order.order_items?.map((item) => ({
+          name: item.product_name,
+          quantity: item.quantity,
+        })) || [],
+      total: order.total_amount,
+      tier: (order as { customer_tier?: string }).customer_tier,
     });
 
     // 2. Open WhatsApp IMMEDIATELY using the service link generator
@@ -415,7 +409,9 @@ function DashboardContent() {
           return (
             <div key={s.label} className="rounded-2xl bg-card p-4 shadow-(--shadow-card) sm:p-6">
               <div className="flex items-start justify-between gap-2">
-                <div className={`h-11 w-11 shrink-0 rounded-xl grid place-items-center sm:h-12 sm:w-12 ${toneBg[s.tone]}`}>
+                <div
+                  className={`h-11 w-11 shrink-0 rounded-xl grid place-items-center sm:h-12 sm:w-12 ${toneBg[s.tone]}`}
+                >
                   <Icon className="h-5 w-5" />
                 </div>
                 <span
@@ -460,23 +456,23 @@ function DashboardContent() {
           </div>
 
           <div className="hide-scrollbar mt-6 -mx-1 overflow-x-auto px-1 sm:mx-0 sm:px-0 sm:overflow-visible">
-          <div
+            <div
               className={`grid h-44 min-w-[280px] items-end gap-1 sm:h-56 sm:gap-2 ${period === "Weekly" ? "grid-cols-7" : "grid-cols-4 md:grid-cols-6"}`}
-          >
-            {chartData.map((d) => (
-              <div
-                key={d.day}
-                  className="flex min-w-0 flex-col items-center gap-1.5 h-full justify-end sm:gap-2"
-              >
+            >
+              {chartData.map((d) => (
                 <div
+                  key={d.day}
+                  className="flex min-w-0 flex-col items-center gap-1.5 h-full justify-end sm:gap-2"
+                >
+                  <div
                     className={`w-full min-h-[4px] rounded-t-lg transition-all duration-500 ${d.value === max ? "bg-primary" : "bg-primary/15"}`}
                     style={{ height: `${max > 0 ? (d.value / max) * 100 : 0}%` }}
-                />
+                  />
                   <span className="w-full truncate text-center text-[9px] text-muted-foreground sm:text-[10px]">
-                  {d.day}
-                </span>
-              </div>
-            ))}
+                    {d.day}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -488,37 +484,37 @@ function DashboardContent() {
             <div className="mt-6 space-y-4">
               {isLoading
                 ? Array.from({ length: 3 }).map((_, i) => (
-                 <div key={`ts-skel-${i}`} className="flex items-center gap-3">
-                   <Skeleton className="h-12 w-12 rounded-xl" />
-                   <div className="flex-1">
-                     <Skeleton className="h-4 w-32 mb-1" />
-                     <Skeleton className="h-3 w-20" />
-                   </div>
-                   <div className="text-right">
-                     <Skeleton className="h-4 w-10 mb-1 ml-auto" />
-                     <Skeleton className="h-3 w-8 ml-auto" />
-                   </div>
-                 </div>
-               ))
+                    <div key={`ts-skel-${i}`} className="flex items-center gap-3">
+                      <Skeleton className="h-12 w-12 rounded-xl" />
+                      <div className="flex-1">
+                        <Skeleton className="h-4 w-32 mb-1" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                      <div className="text-right">
+                        <Skeleton className="h-4 w-10 mb-1 ml-auto" />
+                        <Skeleton className="h-3 w-8 ml-auto" />
+                      </div>
+                    </div>
+                  ))
                 : realTopSellers.map((p, i) => (
-              <div key={p.name} className="flex items-center gap-3">
+                    <div key={p.name} className="flex items-center gap-3">
                       <div
                         className={`h-12 w-12 rounded-xl grid place-items-center ${i === 0 ? "bg-primary-soft" : i === 1 ? "bg-blush/40" : "bg-gold/20"}`}
                       >
-                  <img src={logo} alt="" className="h-7 w-7 object-contain" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-foreground truncate">{p.name}</div>
-                  <div className="text-xs text-muted-foreground truncate">{p.collection}</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-primary font-semibold">{p.sales}</div>
+                        <img src={logo} alt="" className="h-7 w-7 object-contain" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-foreground truncate">{p.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">{p.collection}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-primary font-semibold">{p.sales}</div>
                         <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                           Sales
                         </div>
-                </div>
-              </div>
-            ))}
+                      </div>
+                    </div>
+                  ))}
             </div>
           </div>
           <Button
@@ -736,14 +732,15 @@ function DashboardContent() {
                                 )}
                               </>
                             )}
-                            {o.status === "payment_confirmed" && o.payment_status !== "completed" && (
-                              <DropdownMenuItem
-                                onClick={() => handleUpdatePayment(o.id, "completed")}
-                                className="cursor-pointer text-blue-600 font-medium"
-                              >
-                                Mark payment completed
-                              </DropdownMenuItem>
-                            )}
+                            {o.status === "payment_confirmed" &&
+                              o.payment_status !== "completed" && (
+                                <DropdownMenuItem
+                                  onClick={() => handleUpdatePayment(o.id, "completed")}
+                                  className="cursor-pointer text-blue-600 font-medium"
+                                >
+                                  Mark payment completed
+                                </DropdownMenuItem>
+                              )}
                             {o.status === "pending_payment" && o.payment_status !== "completed" && (
                               <DropdownMenuItem
                                 onClick={() => handleUpdatePayment(o.id, "completed")}
@@ -797,7 +794,7 @@ function DashboardContent() {
               </tbody>
             </table>
           </div>
-          
+
           <div className="mt-2 flex flex-col gap-3 border-t border-border/50 px-2 py-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm text-muted-foreground">
               {recentOrders.length > 0
@@ -805,7 +802,7 @@ function DashboardContent() {
                 : "No orders"}
             </div>
             <div className="flex items-center justify-center gap-1 sm:justify-end">
-              <button 
+              <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
                 className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted disabled:opacity-50 transition"
@@ -815,7 +812,7 @@ function DashboardContent() {
               <button className="h-9 w-9 rounded-full bg-primary text-primary-foreground text-sm font-medium">
                 {page}
               </button>
-              <button 
+              <button
                 onClick={() => setPage((p) => p + 1)}
                 disabled={page * ordersPerPage >= stats.total_orders}
                 className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted disabled:opacity-50 transition"
@@ -828,7 +825,7 @@ function DashboardContent() {
 
         {/* VIP Pulse Feed */}
         <div className="min-w-0">
-        <VIPPulseFeed />
+          <VIPPulseFeed />
         </div>
       </div>
 

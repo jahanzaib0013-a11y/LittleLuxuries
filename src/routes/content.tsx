@@ -67,6 +67,8 @@ import {
   publishContentPreview,
   saveContentAsync,
   CATEGORY_LAYOUTS,
+  ANIMATION_TEMPLATES,
+  BACKGROUND_ANIMATIONS,
   SITE_CONTENT_LIMITS,
   SiteContent,
   withinCharLimit,
@@ -77,12 +79,7 @@ import {
   defaultPromoPlacements,
 } from "@/lib/content-data";
 import { PromoBannerStrip } from "@/components/promo-banner-strip";
-import {
-  CONTENT_ICONS,
-  getContentIcon,
-  getPromiseIcon,
-  isStarIcon,
-} from "@/lib/content-icons";
+import { CONTENT_ICONS, getContentIcon, getPromiseIcon, isStarIcon } from "@/lib/content-icons";
 import { toast } from "sonner";
 import { CategorySection } from "@/components/category-section";
 import { useCategories } from "@/hooks/use-categories";
@@ -341,9 +338,10 @@ function ContentPage() {
           Homepage Editor
         </h1>
         <p className="mt-2 text-sm text-muted-foreground max-w-2xl">
-          Curate the boutique experience. <strong className="font-medium text-foreground">Storefront</strong>{" "}
-          (/storefront) previews edits live. The public homepage (/) and cloud copy update only when
-          you press Save Changes.
+          Curate the boutique experience.{" "}
+          <strong className="font-medium text-foreground">Storefront</strong> (/storefront) previews
+          edits live. The public homepage (/) and cloud copy update only when you press Save
+          Changes.
         </p>
       </div>
 
@@ -397,30 +395,33 @@ function ContentPage() {
                       Explore Our Story
                     </button>
                   </div>
-                  {content.heroBanner.showSocialProof && (() => {
-                    const SocialProofIcon = getContentIcon(content.heroBanner.socialProofIconName);
-                    const starStyle = isStarIcon(content.heroBanner.socialProofIconName);
-                    return (
-                      <div className="mt-12 flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setIconSelector({ target: "socialProof" })}
-                          className="flex rounded-lg p-1 -m-1 hover:bg-primary/10 transition-colors cursor-pointer"
-                          title="Click to change icons"
-                        >
-                          {[...Array(5)].map((_, i) => (
-                            <SocialProofIcon
-                              key={i}
-                              className={`size-3.5 ${starStyle ? "fill-gold text-gold" : "text-primary"}`}
-                            />
-                          ))}
-                        </button>
-                        <p className="text-xs text-muted-foreground">
-                          {content.heroBanner.socialProofText}
-                        </p>
-                      </div>
-                    );
-                  })()}
+                  {content.heroBanner.showSocialProof &&
+                    (() => {
+                      const SocialProofIcon = getContentIcon(
+                        content.heroBanner.socialProofIconName,
+                      );
+                      const starStyle = isStarIcon(content.heroBanner.socialProofIconName);
+                      return (
+                        <div className="mt-12 flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setIconSelector({ target: "socialProof" })}
+                            className="flex rounded-lg p-1 -m-1 hover:bg-primary/10 transition-colors cursor-pointer"
+                            title="Click to change icons"
+                          >
+                            {[...Array(5)].map((_, i) => (
+                              <SocialProofIcon
+                                key={i}
+                                className={`size-3.5 ${starStyle ? "fill-gold text-gold" : "text-primary"}`}
+                              />
+                            ))}
+                          </button>
+                          <p className="text-xs text-muted-foreground">
+                            {content.heroBanner.socialProofText}
+                          </p>
+                        </div>
+                      );
+                    })()}
                 </div>
                 <div className="relative">
                   <div className="absolute -inset-6 rounded-[2.5rem] bg-linear-to-br from-lilac/40 via-blush/30 to-gold/20 blur-2xl" />
@@ -478,7 +479,8 @@ function ContentPage() {
                             value={content.heroBanner.badgeTitle}
                             maxLength={SITE_CONTENT_LIMITS.badgeTitle}
                             onChange={(e) => {
-                              if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeTitle)) return;
+                              if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeTitle))
+                                return;
                               updateContent({
                                 heroBanner: { ...content.heroBanner, badgeTitle: e.target.value },
                               });
@@ -492,7 +494,10 @@ function ContentPage() {
                             value={content.heroBanner.badgeSubtitle}
                             maxLength={SITE_CONTENT_LIMITS.badgeSubtitle}
                             onChange={(e) => {
-                              if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeSubtitle)) return;
+                              if (
+                                !withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeSubtitle)
+                              )
+                                return;
                               updateContent({
                                 heroBanner: {
                                   ...content.heroBanner,
@@ -542,7 +547,10 @@ function ContentPage() {
                   className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                   placeholder="New Collection 2026"
                 />
-                <CharCount value={content.heroBanner.seasonTag} max={SITE_CONTENT_LIMITS.seasonTag} />
+                <CharCount
+                  value={content.heroBanner.seasonTag}
+                  max={SITE_CONTENT_LIMITS.seasonTag}
+                />
               </div>
               <div>
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -577,7 +585,10 @@ function ContentPage() {
                   }}
                   className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                 />
-                <CharCount value={content.heroBanner.description} max={SITE_CONTENT_LIMITS.description} />
+                <CharCount
+                  value={content.heroBanner.description}
+                  max={SITE_CONTENT_LIMITS.description}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -595,7 +606,10 @@ function ContentPage() {
                     }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                   />
-                  <CharCount value={content.heroBanner.badgeTitle} max={SITE_CONTENT_LIMITS.badgeTitle} />
+                  <CharCount
+                    value={content.heroBanner.badgeTitle}
+                    max={SITE_CONTENT_LIMITS.badgeTitle}
+                  />
                 </div>
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -605,7 +619,8 @@ function ContentPage() {
                     value={content.heroBanner.badgeSubtitle}
                     maxLength={SITE_CONTENT_LIMITS.badgeSubtitle}
                     onChange={(e) => {
-                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeSubtitle)) return;
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.badgeSubtitle))
+                        return;
                       updateContent({
                         heroBanner: { ...content.heroBanner, badgeSubtitle: e.target.value },
                       });
@@ -634,7 +649,10 @@ function ContentPage() {
                     }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                   />
-                  <CharCount value={content.heroBanner.buttonLabel} max={SITE_CONTENT_LIMITS.buttonLabel} />
+                  <CharCount
+                    value={content.heroBanner.buttonLabel}
+                    max={SITE_CONTENT_LIMITS.buttonLabel}
+                  />
                 </div>
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -652,7 +670,10 @@ function ContentPage() {
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                     placeholder="/shop or https://..."
                   />
-                  <CharCount value={content.heroBanner.buttonLink} max={SITE_CONTENT_LIMITS.buttonLink} />
+                  <CharCount
+                    value={content.heroBanner.buttonLink}
+                    max={SITE_CONTENT_LIMITS.buttonLink}
+                  />
                 </div>
               </div>
               <div className="rounded-xl border border-border/20 p-4 mt-2">
@@ -682,9 +703,7 @@ function ContentPage() {
                       content.heroBanner.showSocialProof ? "bg-gold" : "bg-muted-foreground/30"
                     }`}
                     aria-label={
-                      content.heroBanner.showSocialProof
-                        ? "Hide social proof"
-                        : "Show social proof"
+                      content.heroBanner.showSocialProof ? "Hide social proof" : "Show social proof"
                     }
                   >
                     <div
@@ -726,29 +745,29 @@ function ContentPage() {
                       </button>
                     </div>
                     <div>
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                      Social proof text
-                    </Label>
-                    <Input
-                      value={content.heroBanner.socialProofText}
-                      maxLength={SITE_CONTENT_LIMITS.socialProofText}
-                      onChange={(e) => {
-                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.socialProofText))
-                          return;
-                        updateContent({
-                          heroBanner: {
-                            ...content.heroBanner,
-                            socialProofText: e.target.value,
-                          },
-                        });
-                      }}
-                      className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
-                      placeholder="Loved by 12,000+ families worldwide"
-                    />
-                    <CharCount
-                      value={content.heroBanner.socialProofText}
-                      max={SITE_CONTENT_LIMITS.socialProofText}
-                    />
+                      <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                        Social proof text
+                      </Label>
+                      <Input
+                        value={content.heroBanner.socialProofText}
+                        maxLength={SITE_CONTENT_LIMITS.socialProofText}
+                        onChange={(e) => {
+                          if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.socialProofText))
+                            return;
+                          updateContent({
+                            heroBanner: {
+                              ...content.heroBanner,
+                              socialProofText: e.target.value,
+                            },
+                          });
+                        }}
+                        className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                        placeholder="Loved by 12,000+ families worldwide"
+                      />
+                      <CharCount
+                        value={content.heroBanner.socialProofText}
+                        max={SITE_CONTENT_LIMITS.socialProofText}
+                      />
                     </div>
                   </div>
                 )}
@@ -827,7 +846,9 @@ function ContentPage() {
                     return (
                       <div key={index} className="text-center">
                         <button
-                          onClick={() => setIconSelector({ target: "promise", promiseIndex: index })}
+                          onClick={() =>
+                            setIconSelector({ target: "promise", promiseIndex: index })
+                          }
                           className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 mb-4 hover:bg-primary/20 transition-colors cursor-pointer group"
                           title="Click to change icon"
                         >
@@ -869,7 +890,8 @@ function ContentPage() {
                           value={promise.title}
                           maxLength={SITE_CONTENT_LIMITS.promiseTitle}
                           onChange={(e) => {
-                            if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promiseTitle)) return;
+                            if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promiseTitle))
+                              return;
                             const newPromises = [...content.announcementBar.promises];
                             newPromises[index] = { ...promise, title: e.target.value };
                             updateContent({
@@ -891,7 +913,12 @@ function ContentPage() {
                           value={promise.description}
                           maxLength={SITE_CONTENT_LIMITS.promiseDescription}
                           onChange={(e) => {
-                            if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promiseDescription))
+                            if (
+                              !withinCharLimit(
+                                e.target.value,
+                                SITE_CONTENT_LIMITS.promiseDescription,
+                              )
+                            )
                               return;
                             const newPromises = [...content.announcementBar.promises];
                             newPromises[index] = { ...promise, description: e.target.value };
@@ -942,8 +969,8 @@ function ContentPage() {
                           ? content.heroBanner.socialProofIconName === name
                           : iconSelector.target === "promo"
                             ? content.promoBanner.iconName === name
-                            : content.announcementBar.promises[iconSelector.promiseIndex]?.iconName ===
-                              name;
+                            : content.announcementBar.promises[iconSelector.promiseIndex]
+                                ?.iconName === name;
                       return (
                         <button
                           key={name}
@@ -1014,7 +1041,9 @@ function ContentPage() {
                     content.promoBanner.isActive ? "bg-gold" : "bg-muted-foreground/30"
                   }`}
                   aria-label={
-                    content.promoBanner.isActive ? "Hide promo banner on site" : "Show promo banner on site"
+                    content.promoBanner.isActive
+                      ? "Hide promo banner on site"
+                      : "Show promo banner on site"
                   }
                 >
                   <div
@@ -1067,12 +1096,11 @@ function ContentPage() {
                   </label>
                 ))}
               </div>
-              {content.promoBanner.isActive &&
-                !Object.values(promoPlacements).some(Boolean) && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
-                    Turn on at least one location or the banner will not appear on the storefront.
-                  </p>
-                )}
+              {content.promoBanner.isActive && !Object.values(promoPlacements).some(Boolean) && (
+                <p className="text-xs text-amber-700 dark:text-amber-400" role="status">
+                  Turn on at least one location or the banner will not appear on the storefront.
+                </p>
+              )}
             </div>
 
             <div className="mt-6 space-y-4">
@@ -1126,7 +1154,9 @@ function ContentPage() {
                     <button
                       key={t}
                       type="button"
-                      onClick={() => updatePromoBanner({ backgroundTheme: t }, { immediatePreview: true })}
+                      onClick={() =>
+                        updatePromoBanner({ backgroundTheme: t }, { immediatePreview: true })
+                      }
                       className={`rounded-full px-4 py-2 text-sm capitalize transition-colors ${
                         content.promoBanner.backgroundTheme === t
                           ? "bg-primary text-primary-foreground"
@@ -1148,7 +1178,9 @@ function ContentPage() {
                     <button
                       key={align}
                       type="button"
-                      onClick={() => updatePromoBanner({ textAlign: align }, { immediatePreview: true })}
+                      onClick={() =>
+                        updatePromoBanner({ textAlign: align }, { immediatePreview: true })
+                      }
                       className={`rounded-full px-4 py-2 text-sm capitalize transition-colors ${
                         content.promoBanner.textAlign === align
                           ? "bg-primary text-primary-foreground"
@@ -1162,7 +1194,9 @@ function ContentPage() {
               </div>
 
               <div>
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Icon</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Icon
+                </Label>
                 <button
                   type="button"
                   onClick={() => setIconSelector({ target: "promo" })}
@@ -1187,12 +1221,16 @@ function ContentPage() {
                     value={content.promoBanner.eyebrow}
                     maxLength={SITE_CONTENT_LIMITS.promoEyebrow}
                     onChange={(e) => {
-                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoEyebrow)) return;
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoEyebrow))
+                        return;
                       updatePromoBanner({ eyebrow: e.target.value });
                     }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                   />
-                  <CharCount value={content.promoBanner.eyebrow} max={SITE_CONTENT_LIMITS.promoEyebrow} />
+                  <CharCount
+                    value={content.promoBanner.eyebrow}
+                    max={SITE_CONTENT_LIMITS.promoEyebrow}
+                  />
                 </div>
                 <div>
                   <Label className="text-xs uppercase tracking-wider text-muted-foreground">
@@ -1202,12 +1240,16 @@ function ContentPage() {
                     value={content.promoBanner.headline}
                     maxLength={SITE_CONTENT_LIMITS.promoHeadline}
                     onChange={(e) => {
-                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoHeadline)) return;
+                      if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoHeadline))
+                        return;
                       updatePromoBanner({ headline: e.target.value });
                     }}
                     className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                   />
-                  <CharCount value={content.promoBanner.headline} max={SITE_CONTENT_LIMITS.promoHeadline} />
+                  <CharCount
+                    value={content.promoBanner.headline}
+                    max={SITE_CONTENT_LIMITS.promoHeadline}
+                  />
                 </div>
               </div>
 
@@ -1219,7 +1261,8 @@ function ContentPage() {
                   value={content.promoBanner.description}
                   maxLength={SITE_CONTENT_LIMITS.promoDescription}
                   onChange={(e) => {
-                    if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoDescription)) return;
+                    if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.promoDescription))
+                      return;
                     updatePromoBanner({ description: e.target.value });
                   }}
                   className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
@@ -1234,7 +1277,9 @@ function ContentPage() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="text-sm font-medium text-foreground">Promo code</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">Shown as a pill on the banner</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Shown as a pill on the banner
+                    </p>
                   </div>
                   <button
                     type="button"
@@ -1265,7 +1310,10 @@ function ContentPage() {
                   className="h-12 bg-muted/40 border-0 rounded-xl font-mono uppercase"
                   placeholder="LUXE10"
                 />
-                <CharCount value={content.promoBanner.promoCode} max={SITE_CONTENT_LIMITS.promoCode} />
+                <CharCount
+                  value={content.promoBanner.promoCode}
+                  max={SITE_CONTENT_LIMITS.promoCode}
+                />
               </div>
 
               <div className="rounded-xl border border-border/20 p-4 space-y-4">
@@ -1299,7 +1347,8 @@ function ContentPage() {
                       value={content.promoBanner.buttonLabel}
                       maxLength={SITE_CONTENT_LIMITS.buttonLabel}
                       onChange={(e) => {
-                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLabel)) return;
+                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLabel))
+                          return;
                         updatePromoBanner({ buttonLabel: e.target.value });
                       }}
                       className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
@@ -1313,7 +1362,8 @@ function ContentPage() {
                       value={content.promoBanner.buttonLink}
                       maxLength={SITE_CONTENT_LIMITS.buttonLink}
                       onChange={(e) => {
-                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLink)) return;
+                        if (!withinCharLimit(e.target.value, SITE_CONTENT_LIMITS.buttonLink))
+                          return;
                         updatePromoBanner({ buttonLink: e.target.value });
                       }}
                       className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
@@ -1334,9 +1384,7 @@ function ContentPage() {
                   <Input
                     type="datetime-local"
                     value={
-                      content.promoBanner.endsAt
-                        ? content.promoBanner.endsAt.slice(0, 16)
-                        : ""
+                      content.promoBanner.endsAt ? content.promoBanner.endsAt.slice(0, 16) : ""
                     }
                     onChange={(e) => {
                       const val = e.target.value;
@@ -1352,7 +1400,9 @@ function ContentPage() {
                       type="button"
                       variant="outline"
                       className="rounded-full"
-                      onClick={() => updatePromoBanner({ endsAt: null }, { immediatePreview: true })}
+                      onClick={() =>
+                        updatePromoBanner({ endsAt: null }, { immediatePreview: true })
+                      }
                     >
                       Clear
                     </Button>
@@ -1361,7 +1411,6 @@ function ContentPage() {
               </div>
             </div>
           </div>
-
         </div>
 
         {/* Right rail */}
@@ -1376,8 +1425,9 @@ function ContentPage() {
                 <CategorySection
                   layout={content.layout}
                   categories={categories
-                    .filter((category, index, self) =>
-                      index === self.findIndex((c) => c.name === category.name)
+                    .filter(
+                      (category, index, self) =>
+                        index === self.findIndex((c) => c.name === category.name),
                     )
                     .slice(0, 5)}
                   compact
@@ -1465,6 +1515,239 @@ function ContentPage() {
                 className="rounded-full px-4 bg-primary hover:bg-primary/90"
               >
                 {saving ? "Saving..." : "Save Layout"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
+            <div className="text-sm font-medium text-foreground">Animation template</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              A coordinated motion style — page transitions, hero choreography, scroll reveals, and
+              hover interactions — applied across the storefront.
+            </p>
+            <div className="mt-4 space-y-2">
+              {ANIMATION_TEMPLATES.map(({ id, label, description, layers }) => {
+                const active = isClient && content.animationTemplate === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() =>
+                      updateContent({ animationTemplate: id }, { immediatePreview: true })
+                    }
+                    className={`w-full flex items-start gap-3 p-3 rounded-xl transition-colors text-left ${
+                      active ? "bg-primary/10 border border-primary/20" : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <Sparkles
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`}
+                    />
+                    <div className="flex-1">
+                      <span
+                        className={`text-sm ${active ? "text-primary font-medium" : "text-foreground"}`}
+                      >
+                        {label}
+                      </span>
+                      <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+                      {layers.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1">
+                          {layers.map((layer) => (
+                            <span
+                              key={layer}
+                              className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground"
+                            >
+                              {layer}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {active && <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 pt-4 border-t border-border/20 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Current:{" "}
+                <span className="text-primary font-medium">
+                  {isClient
+                    ? (ANIMATION_TEMPLATES.find((a) => a.id === content.animationTemplate)?.label ??
+                      "Cinematic (recommended)")
+                    : "Loading…"}
+                </span>
+              </p>
+              <Button
+                size="sm"
+                onClick={saveAllChanges}
+                disabled={saving}
+                className="rounded-full px-4 bg-primary hover:bg-primary/90"
+              >
+                {saving ? "Saving..." : "Save Template"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
+            <div className="text-sm font-medium text-foreground">Background animation</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              An animated decorative backdrop behind the hero.
+            </p>
+            <div className="mt-4 space-y-2">
+              {BACKGROUND_ANIMATIONS.map(({ id, label, description }) => {
+                const active = isClient && content.backgroundAnimation === id;
+                return (
+                  <button
+                    key={id}
+                    onClick={() =>
+                      updateContent({ backgroundAnimation: id }, { immediatePreview: true })
+                    }
+                    className={`flex w-full items-start gap-3 rounded-xl p-3 text-left transition-colors ${
+                      active ? "border border-primary/20 bg-primary/10" : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <Sparkles
+                      className={`mt-0.5 h-4 w-4 shrink-0 ${active ? "text-primary" : "text-muted-foreground"}`}
+                    />
+                    <div className="flex-1">
+                      <span
+                        className={`text-sm ${active ? "font-medium text-primary" : "text-foreground"}`}
+                      >
+                        {label}
+                      </span>
+                      <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+                    </div>
+                    {active && <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" />}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex items-center justify-between border-t border-border/20 pt-4">
+              <p className="text-xs text-muted-foreground">
+                Current:{" "}
+                <span className="font-medium text-primary">
+                  {isClient
+                    ? (BACKGROUND_ANIMATIONS.find((a) => a.id === content.backgroundAnimation)
+                        ?.label ?? "Floating orbs")
+                    : "Loading…"}
+                </span>
+              </p>
+              <Button
+                size="sm"
+                onClick={saveAllChanges}
+                disabled={saving}
+                className="rounded-full bg-primary px-4 hover:bg-primary/90"
+              >
+                {saving ? "Saving..." : "Save Background"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-card p-6 shadow-(--shadow-card)">
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-foreground">Craft story section</div>
+              <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={content.craftStory?.isActive ?? true}
+                  onChange={(e) =>
+                    updateContent(
+                      { craftStory: { ...content.craftStory, isActive: e.target.checked } },
+                      { immediatePreview: true },
+                    )
+                  }
+                />
+                Show on landing
+              </label>
+            </div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              The editorial “why we're different” block on the homepage.
+            </p>
+
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">Eyebrow</label>
+                <input
+                  value={content.craftStory?.eyebrow ?? ""}
+                  onChange={(e) =>
+                    updateContent(
+                      { craftStory: { ...content.craftStory, eyebrow: e.target.value } },
+                      { immediatePreview: true },
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground">
+                  Headline (use a new line to split)
+                </label>
+                <textarea
+                  value={content.craftStory?.headline ?? ""}
+                  onChange={(e) =>
+                    updateContent(
+                      { craftStory: { ...content.craftStory, headline: e.target.value } },
+                      { immediatePreview: true },
+                    )
+                  }
+                  rows={2}
+                  className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+              </div>
+
+              {(content.craftStory?.chapters ?? []).map((chapter, idx) => (
+                <div key={idx} className="rounded-xl border border-border/60 p-3">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-primary">
+                    Chapter {idx + 1}
+                  </span>
+                  <input
+                    value={chapter.title}
+                    placeholder="Title"
+                    onChange={(e) =>
+                      updateContent(
+                        {
+                          craftStory: {
+                            ...content.craftStory,
+                            chapters: content.craftStory.chapters.map((c, i) =>
+                              i === idx ? { ...c, title: e.target.value } : c,
+                            ),
+                          },
+                        },
+                        { immediatePreview: true },
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                  />
+                  <textarea
+                    value={chapter.body}
+                    placeholder="Description"
+                    rows={2}
+                    onChange={(e) =>
+                      updateContent(
+                        {
+                          craftStory: {
+                            ...content.craftStory,
+                            chapters: content.craftStory.chapters.map((c, i) =>
+                              i === idx ? { ...c, body: e.target.value } : c,
+                            ),
+                          },
+                        },
+                        { immediatePreview: true },
+                      )
+                    }
+                    className="mt-2 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex justify-end border-t border-border/20 pt-4">
+              <Button
+                size="sm"
+                onClick={saveAllChanges}
+                disabled={saving}
+                className="rounded-full bg-primary px-4 hover:bg-primary/90"
+              >
+                {saving ? "Saving..." : "Save Story"}
               </Button>
             </div>
           </div>

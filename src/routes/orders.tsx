@@ -59,7 +59,11 @@ import autoTable from "jspdf-autotable";
 import { ExportMenu } from "@/components/export-menu";
 import { HorizontalScrollArea } from "@/components/horizontal-scroll-area";
 import { cn } from "@/lib/utils";
-import { sheetModalClass, modalFooterClass, modalScrollPaneClass } from "@/components/product-modal-layout";
+import {
+  sheetModalClass,
+  modalFooterClass,
+  modalScrollPaneClass,
+} from "@/components/product-modal-layout";
 import { ModalCloseBar } from "@/components/modal-close-bar";
 
 const REVENUE_TARGET_PKR = 800_000;
@@ -112,6 +116,7 @@ function OrdersContent() {
     pending_fulfillment: 0,
     avg_monthly_earning: 0,
     revenue_mtd: 0,
+    total_revenue: 0,
     order_placed: 0,
     order_confirmed: 0,
     payment_confirmed: 0,
@@ -127,12 +132,12 @@ function OrdersContent() {
     setError(null);
     try {
       const statusFilter = tab === "All Orders" ? undefined : tab;
-      
+
       const fromDate = new Date();
       if (dateFilter === "Last 7 Days") fromDate.setDate(fromDate.getDate() - 7);
       else if (dateFilter === "Last 30 Days") fromDate.setDate(fromDate.getDate() - 30);
       else if (dateFilter === "This Year") fromDate.setMonth(0, 1);
-      
+
       const dateRange =
         dateFilter !== "All Time"
           ? { from: fromDate.toISOString(), to: new Date().toISOString() }
@@ -153,9 +158,18 @@ function OrdersContent() {
       if (!statsData.error) {
         setStats({
           total_orders: statsData.total_orders,
-          pending_fulfillment: statsData.pending_payment + statsData.payment_confirmed + statsData.packed,
-          avg_monthly_earning: statsData.revenue_mtd, // Fallback to MTD for now, can be refined later
+          // Orders still needing work to reach completion. payment_confirmed is
+          // the terminal/done state for COD, so it's NOT pending.
+          pending_fulfillment:
+            statsData.order_placed +
+            statsData.order_confirmed +
+            statsData.pending_payment +
+            statsData.packed +
+            statsData.shipped +
+            statsData.delivered,
+          avg_monthly_earning: statsData.avg_monthly_earning,
           revenue_mtd: statsData.revenue_mtd,
+          total_revenue: statsData.total_revenue,
           order_placed: statsData.order_placed,
           order_confirmed: statsData.order_confirmed || 0,
           payment_confirmed: statsData.payment_confirmed || 0,
@@ -186,13 +200,17 @@ function OrdersContent() {
       return;
     }
 
-    // 1. Generate the professional message using the centralized service
+    // 1. Generate the professional, tier-aware message using the service
     const message = whatsappService.formatConfirmationMessage({
       customerName: order.customer_first_name,
       orderNumber: order.order_number,
-      items: order.order_items?.map((item) => ({ name: item.product_name })) || [],
-      trackingUrl: `${window.location.origin}/track/${order.order_number}`,
-      trackingNumber: order.tracking_number,
+      items:
+        order.order_items?.map((item) => ({
+          name: item.product_name,
+          quantity: item.quantity,
+        })) || [],
+      total: order.total_amount,
+      tier: (order as { customer_tier?: string }).customer_tier,
     });
 
     // 2. Open WhatsApp IMMEDIATELY using the service link generator
@@ -217,27 +235,24 @@ function OrdersContent() {
 
   const handleUpdateStatus = async (orderId: string, status: OrderStatus) => {
     try {
-      await orderService.updateOrderStatus(orderId, status);
-
-      // AUTOMATION: Automatically send confirmation email for key status changes
       const orderToNotify = orders.find((o) => o.id === orderId);
-      if (orderToNotify && ["packed", "shipped", "delivered"].includes(status)) {
+      await orderService.updateOrderStatus(orderId, status);
+      // Send the status email from the component (runs as a real server RPC).
+      if (orderToNotify && status !== orderToNotify.status) {
         try {
-          await sendOrderStatusEmail({
+          await (sendOrderStatusEmail as any)({
             data: {
               orderNumber: orderToNotify.order_number,
               customerEmail: orderToNotify.customer_email,
               customerName: `${orderToNotify.customer_first_name} ${orderToNotify.customer_last_name}`,
-              status: status as "packed" | "shipped" | "delivered",
+              status,
               trackingNumber: orderToNotify.tracking_number,
             },
           });
-          toast.success(`Automated email sent for ${status} status`);
-        } catch (emailErr) {
-          console.error("Failed to send automated email:", emailErr);
+        } catch (e) {
+          console.error("status email failed:", e);
         }
       }
-
       fetchOrders();
       toast.success(`Order status updated to ${status}`);
     } catch (e) {
@@ -249,32 +264,32 @@ function OrdersContent() {
   const handleUpdatePayment = async (orderId: string, paymentStatus: any) => {
     try {
       const orderToNotify = orders.find((o) => o.id === orderId);
-      const shouldMoveToPending = paymentStatus === "pending" && orderToNotify?.status === "delivered";
+      const shouldMoveToPending =
+        paymentStatus === "pending" && orderToNotify?.status === "delivered";
 
       await orderService.updatePaymentStatus(orderId, paymentStatus, {
         orderStatus: shouldMoveToPending ? "pending_payment" : undefined,
       });
 
-      // AUTOMATION: Automatically send email for "paid"/"completed" status
-      if (orderToNotify && (paymentStatus === "paid" || paymentStatus === "completed")) {
+      // Completing payment advances to payment_confirmed (unless mid-fulfilment/
+      // terminal). Send the COD "payment received" email here.
+      const skip = ["packed", "shipped", "payment_confirmed", "cancelled", "refunded"];
+      if (
+        orderToNotify &&
+        (paymentStatus === "paid" || paymentStatus === "completed") &&
+        !skip.includes(orderToNotify.status)
+      ) {
         try {
-          await sendOrderStatusEmail({
+          await (sendOrderStatusEmail as any)({
             data: {
               orderNumber: orderToNotify.order_number,
               customerEmail: orderToNotify.customer_email,
               customerName: `${orderToNotify.customer_first_name} ${orderToNotify.customer_last_name}`,
-              status: "paid", // Normalize to "paid" for the email template
+              status: "payment_confirmed",
             },
           });
-          toast.success("Payment verification email sent automatically");
-
-          // AUTOMATION: If payment is paid, automatically move order to 'payment_confirmed' status
-          if (["order_placed", "order_confirmed", "pending_payment", "delivered"].includes(orderToNotify.status)) {
-            await orderService.updateOrderStatus(orderId, "payment_confirmed");
-            toast.info("Order status automatically moved to 'Payment Confirmed'");
-          }
-        } catch (emailErr) {
-          console.error("Failed to send payment email:", emailErr);
+        } catch (e) {
+          console.error("payment email failed:", e);
         }
       }
 
@@ -415,15 +430,15 @@ function OrdersContent() {
       {/* High-Level KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
         {[
-          { 
-            label: "Total Orders", 
-            value: stats.total_orders.toLocaleString(), 
-            note: dateFilter === "All Time" ? "Lifetime volume" : `In ${dateFilter.toLowerCase()}`, 
+          {
+            label: "Total Orders",
+            value: stats.total_orders.toLocaleString(),
+            note: dateFilter === "All Time" ? "Lifetime volume" : `In ${dateFilter.toLowerCase()}`,
             noteColor: "text-muted-foreground",
           },
-          { 
-            label: "Pending Fulfillment", 
-            value: stats.pending_fulfillment.toString(), 
+          {
+            label: "Pending Fulfillment",
+            value: stats.pending_fulfillment.toString(),
             note:
               stats.pending_fulfillment === 0
                 ? "✅ All caught up"
@@ -439,10 +454,10 @@ function OrdersContent() {
             note: "📈 Trending +12% from last month",
             noteColor: "text-emerald-600",
           },
-          { 
-            label: "Revenue (MTD)", 
-            value: formatPkr(stats.revenue_mtd),
-            note: `🎯 ${Math.min(100, Math.round((stats.revenue_mtd / REVENUE_TARGET_PKR) * 100))}% of ${formatPkr(REVENUE_TARGET_PKR)} target · collected when marked paid`,
+          {
+            label: "Revenue (Collected)",
+            value: formatPkr(stats.total_revenue),
+            note: `🎯 ${Math.min(100, Math.round((stats.total_revenue / REVENUE_TARGET_PKR) * 100))}% of ${formatPkr(REVENUE_TARGET_PKR)} target · all-time, collected when marked paid`,
             noteColor: "text-emerald-600",
           },
         ].map((s) => (
@@ -467,7 +482,11 @@ function OrdersContent() {
           { label: "Packed", value: stats.packed, color: "text-indigo-600" },
           { label: "Shipped", value: stats.shipped, color: "text-primary" },
           { label: "Delivered", value: stats.delivered, color: "text-emerald-600" },
-          { label: "Pending Payment", value: stats.pending_payment, color: "text-(--color-gold-foreground)" },
+          {
+            label: "Pending Payment",
+            value: stats.pending_payment,
+            color: "text-(--color-gold-foreground)",
+          },
           { label: "Payment Confirmed", value: stats.payment_confirmed, color: "text-indigo-600" },
           { label: "Cancelled", value: stats.cancelled, color: "text-destructive" },
         ].map((s) => (
@@ -488,11 +507,18 @@ function OrdersContent() {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition shadow-sm">
-                <Filter className="h-4 w-4" /> {tab === "All Orders" ? "All Orders" : formatStatusLabel(tab)} <ChevronDown className="h-3 w-3" />
+                <Filter className="h-4 w-4" />{" "}
+                {tab === "All Orders" ? "All Orders" : formatStatusLabel(tab)}{" "}
+                <ChevronDown className="h-3 w-3" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="w-56 rounded-xl shadow-(--shadow-card) p-2">
-              <DropdownMenuLabel className="font-serif px-2 py-1.5 text-xs uppercase tracking-wider text-muted-foreground">Order Status</DropdownMenuLabel>
+            <DropdownMenuContent
+              align="start"
+              className="w-56 rounded-xl shadow-(--shadow-card) p-2"
+            >
+              <DropdownMenuLabel className="font-serif px-2 py-1.5 text-xs uppercase tracking-wider text-muted-foreground">
+                Order Status
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               {tabs.map((t) => {
                 const count =
@@ -651,10 +677,7 @@ function OrdersContent() {
             <tbody>
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
-                  <tr
-                    key={`skeleton-${i}`}
-                    className="border-b border-border/40 last:border-0"
-                  >
+                  <tr key={`skeleton-${i}`} className="border-b border-border/40 last:border-0">
                     <td className="px-4 py-4 align-middle">
                       <Skeleton className="h-5 w-24" />
                     </td>
@@ -789,12 +812,12 @@ function OrdersContent() {
                         </div>
                         <div className="ml-3 min-w-0 flex flex-col">
                           <span className="truncate text-xs font-medium text-foreground max-w-[160px]">
-                          {o.order_items?.[0]?.product_name || "Custom Request"}
-                        </span>
+                            {o.order_items?.[0]?.product_name || "Custom Request"}
+                          </span>
                           {o.order_items && o.order_items.length > 1 ? (
                             <span className="mt-0.5 text-[10px] font-bold uppercase tracking-widest text-primary">
                               + {o.order_items.length - 1} more
-                          </span>
+                            </span>
                           ) : null}
                         </div>
                       </div>
@@ -813,8 +836,11 @@ function OrdersContent() {
                       </span>
                     </td>
                     <td className="px-3 py-4 align-middle text-xs font-mono text-muted-foreground">
-                      <span className="line-clamp-1 max-w-[120px]" title={o.tracking_number || undefined}>
-                      {o.tracking_number || "—"}
+                      <span
+                        className="line-clamp-1 max-w-[120px]"
+                        title={o.tracking_number || undefined}
+                      >
+                        {o.tracking_number || "—"}
                       </span>
                     </td>
                     <td className="px-3 py-4 align-middle whitespace-nowrap">
@@ -854,8 +880,7 @@ function OrdersContent() {
                                 "delivered",
                                 "cancelled",
                                 "refunded",
-                              ].includes(o.status) ||
-                              o.payment_status === "completed"
+                              ].includes(o.status) || o.payment_status === "completed"
                             }
                           >
                             Mark order as confirmed
@@ -904,14 +929,14 @@ function OrdersContent() {
                           >
                             Mark as packed
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleUpdateStatus(o.id, "shipped")}
                             className="cursor-pointer"
                             disabled={!canMarkOrderShipped(o.status)}
                           >
                             Mark as shipped
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             onClick={() => handleUpdateStatus(o.id, "delivered")}
                             className={`cursor-pointer ${o.status === "delivered" ? "text-emerald-600" : ""}`}
                             disabled={!canMarkOrderDelivered(o.status)}
@@ -1094,11 +1119,7 @@ function OrderStatus({ status }: { status: string }) {
     refunded: "bg-gray-100 text-gray-700",
   };
   return (
-    <span
-      className={`px-3 py-1 rounded-full text-xs font-medium ${
-        styles[status] || "bg-muted"
-      }`}
-    >
+    <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status] || "bg-muted"}`}>
       {formatStatusLabel(status)}
     </span>
   );

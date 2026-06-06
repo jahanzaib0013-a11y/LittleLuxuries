@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
+import { useStoreSettingsContext } from "@/context/StoreSettingsContext";
 import { Leaf, Heart, Sparkles } from "lucide-react";
 import hero from "@/assets/hero-baby.jpg";
 import logo from "@/assets/logo.png";
@@ -13,11 +14,16 @@ export const Route = createFileRoute("/about")({
         content:
           "Crafting heirloom-quality baby garments since 2018, with care for both babies and the planet. Learn about our sustainable practices and artisan partnerships.",
       },
-      { name: "keywords", content: "Little Luxuries story, baby clothing brand Pakistan, sustainable baby clothes, organic baby garments, artisan baby clothing" },
+      {
+        name: "keywords",
+        content:
+          "Little Luxuries story, baby clothing brand Pakistan, sustainable baby clothes, organic baby garments, artisan baby clothing",
+      },
       { property: "og:title", content: "Our Story — Little Luxuries Pakistan" },
       {
         property: "og:description",
-        content: "Heirloom baby garments hand-crafted with love since 2018. Learn about our sustainable practices.",
+        content:
+          "Heirloom baby garments hand-crafted with love since 2018. Learn about our sustainable practices.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://littleluxuries.pk/about" },
@@ -33,6 +39,8 @@ export const Route = createFileRoute("/about")({
 });
 
 function About() {
+  const { settings } = useStoreSettingsContext();
+  const founderName = settings?.founder_name?.trim() || "Eleanor Vance";
   return (
     <Layout>
       <section className="bg-secondary/30 py-20">
@@ -51,7 +59,11 @@ function About() {
       <section className="mx-auto max-w-6xl px-4 sm:px-6 py-12 sm:py-20">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <div className="aspect-4/5 overflow-hidden rounded-3xl shadow-(--shadow-soft)">
-            <img src={hero} alt="Baby wearing organic cotton clothing from Little Luxuries" className="h-full w-full object-cover" />
+            <img
+              src={hero}
+              alt="Baby wearing organic cotton clothing from Little Luxuries"
+              className="h-full w-full object-cover"
+            />
           </div>
           <div>
             <span className="label-eyebrow">Founded 2018</span>
@@ -106,7 +118,7 @@ function About() {
           "We are not making clothes. We are wrapping a beginning."
         </blockquote>
         <p className="mt-4 text-sm uppercase tracking-wider text-muted-foreground">
-          — Eleanor Vance, Founder
+          — {founderName}, Founder
         </p>
       </section>
     </Layout>

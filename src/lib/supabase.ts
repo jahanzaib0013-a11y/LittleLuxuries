@@ -38,6 +38,9 @@ export interface Database {
           };
           layout: string;
           promo_banner: Record<string, unknown>;
+          animation_style?: string;
+          background_animation?: string;
+          craft_story?: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };
@@ -59,6 +62,7 @@ export interface Database {
           description: string;
           sizes: string[];
           colors?: import("@/lib/product-colors").ProductColor[];
+          size_chart?: import("@/lib/size-chart").SizeChart;
           secondary_images?: string[];
           sustainability?: string;
           care_instructions?: string;

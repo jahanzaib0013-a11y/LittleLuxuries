@@ -1,7 +1,11 @@
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ModalCloseBar } from "@/components/modal-close-bar";
-import { sheetModalClass, modalScrollPaneClass, modalFooterClass } from "@/components/product-modal-layout";
+import {
+  sheetModalClass,
+  modalScrollPaneClass,
+  modalFooterClass,
+} from "@/components/product-modal-layout";
 import { useState, useEffect } from "react";
 import { whatsappService } from "@/lib/whatsapp-service";
 
@@ -17,28 +21,6 @@ interface CommunicationLevelModalProps {
   customerTier?: CustomerTier;
 }
 
-const getTierBasedMessage = (
-  customerName: string,
-  orderNumber: string,
-  status: string,
-  tier: string = "Standard",
-): string => {
-  const baseMessage = `Dear ${customerName},\n\nYour order #${orderNumber} status has been updated to "${status}".`;
-
-  // Normalize tier name to handle variations like "Silver Member" vs "Silver"
-  const normalizedTier = tier.toLowerCase().replace(" member", "").trim();
-
-  const tierMessages: Record<string, string> = {
-    standard: `${baseMessage}\n\nThank you for your patience and understanding.\n\nBest regards,\nLittle Luxuries Team`,
-    bronze: `${baseMessage}\n\nWe appreciate your continued support and are committed to providing you with excellent service.\n\nWarm regards,\nLittle Luxuries Team`,
-    silver: `${baseMessage}\n\nAs a valued Silver tier customer, we prioritize your satisfaction and are here to assist you with any needs.\n\nSincerely,\nLittle Luxuries Team`,
-    gold: `${baseMessage}\n\nAs a distinguished Gold tier customer, we are dedicated to providing you with premium service and exclusive attention to your needs.\n\nWith highest regards,\nLittle Luxuries Team`,
-    platinum: `${baseMessage}\n\nAs our esteemed Platinum tier customer, you receive our highest level of personalized service and priority support. We are committed to exceeding your expectations.\n\nWith deepest appreciation,\nLittle Luxuries Team`,
-  };
-
-  return tierMessages[normalizedTier] || tierMessages.standard;
-};
-
 export function CommunicationLevelModal({
   isOpen,
   onOpenChange,
@@ -53,13 +35,14 @@ export function CommunicationLevelModal({
   // Set tier-based message when modal opens
   useEffect(() => {
     if (isOpen) {
-      const tierMessage = getTierBasedMessage(
-        customerName,
-        orderNumber,
-        status,
-        customerTier,
+      setMessage(
+        whatsappService.formatStatusUpdateMessage({
+          customerName,
+          orderNumber,
+          status,
+          tier: customerTier,
+        }),
       );
-      setMessage(tierMessage);
     }
   }, [isOpen, orderNumber, status, customerName, customerTier]);
 
@@ -90,9 +73,7 @@ export function CommunicationLevelModal({
         <div className={modalScrollPaneClass}>
           <div className="space-y-4 px-3 py-4 sm:px-6">
             <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">
-                Message
-              </label>
+              <label className="text-sm font-medium text-foreground mb-2 block">Message</label>
               <textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
@@ -103,11 +84,7 @@ export function CommunicationLevelModal({
           </div>
         </div>
         <div className={modalFooterClass}>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            className="rounded-full"
-          >
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-full">
             Cancel
           </Button>
           <Button onClick={handleSendMessage} className="rounded-full">

@@ -11,6 +11,8 @@ import { formatPkr } from "@/lib/format-currency";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProductColorSwatches } from "@/components/product-color-swatches";
+import { ProductSizeChart } from "@/components/product-size-chart";
+import { parseSizeChart } from "@/lib/size-chart";
 import {
   getDefaultColor,
   getGalleryImagesForColor,
@@ -177,6 +179,8 @@ function ProductPage() {
     [selectedColor],
   );
 
+  const sizeChart = useMemo(() => parseSizeChart(product.size_chart), [product]);
+
   return (
     <Layout>
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 sm:py-12">
@@ -232,9 +236,16 @@ function ProductPage() {
             ) : null}
 
             <div className="border-y border-border py-8">
-              <p className="text-sm font-medium uppercase tracking-wider text-foreground mb-4">
-                Select Size
-              </p>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p className="text-sm font-medium uppercase tracking-wider text-foreground">
+                  Select Size
+                </p>
+                <ProductSizeChart
+                  chart={sizeChart}
+                  selectedSize={size}
+                  category={product.category}
+                />
+              </div>
               <div className="flex flex-wrap gap-3">
                 {product.sizes.map((s: string) => (
                   <button

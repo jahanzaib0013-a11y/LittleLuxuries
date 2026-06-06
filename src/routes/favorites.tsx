@@ -18,7 +18,10 @@ export const Route = createFileRoute("/favorites")({
         content:
           "Save your favorite baby clothing and accessories. Create a wishlist of organic cotton onesies, sleepwear, swaddles, and more.",
       },
-      { name: "keywords", content: "baby wishlist, favorites, baby clothes wishlist, save baby products" },
+      {
+        name: "keywords",
+        content: "baby wishlist, favorites, baby clothes wishlist, save baby products",
+      },
       { property: "og:title", content: "My Favorites — Little Luxuries" },
       {
         property: "og:description",
@@ -71,19 +74,24 @@ function FavoritesPage() {
             ))}
           </div>
         ) : favoritedProducts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="size-20 rounded-full bg-secondary/30 grid place-items-center mb-6">
-              <Heart className="size-8 text-muted-foreground opacity-20" />
+          <div className="flex flex-col items-center justify-center py-28 text-center">
+            <div className="grid size-20 place-items-center rounded-full bg-primary-soft/60 shadow-(--shadow-card)">
+              <Heart className="size-8 text-primary/40" />
             </div>
-            <h2 className="font-serif text-2xl mb-2">Your wishlist is empty</h2>
-            <p className="text-muted-foreground mb-8">
-              Items you favorite will appear here for easy access.
+            <div className="divider-ornament mx-auto mt-7 w-40">
+              <span className="diamond" />
+            </div>
+            <h2 className="mt-6 font-serif text-3xl italic text-foreground">
+              Your wishlist awaits
+            </h2>
+            <p className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-muted-foreground">
+              Tap the heart on any piece you love and it will be kept here, ready when you are.
             </p>
             <Link
               to="/shop"
-              className="rounded-full bg-primary px-8 py-3 text-sm font-semibold uppercase tracking-wider text-primary-foreground transition-all hover:opacity-90"
+              className="mt-8 inline-flex items-center justify-center rounded-full bg-primary px-8 py-3 text-sm font-medium text-primary-foreground shadow-(--shadow-soft) transition-all hover:-translate-y-0.5 hover:shadow-(--shadow-hover)"
             >
-              Discover Products
+              Discover the collection
             </Link>
           </div>
         ) : (

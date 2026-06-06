@@ -12,7 +12,9 @@ import {
   defaultPromoBanner,
   defaultPromoPlacements,
   normalizePromoPlacements,
+  defaultCraftStory,
 } from "./content-data";
+import type { CraftStoryContent } from "./content-data";
 
 const FALLBACK_HERO: HeroBanner = {
   headline: "Gentle luxuries\nfor your little one.",
@@ -29,9 +31,18 @@ const FALLBACK_HERO: HeroBanner = {
 };
 
 const FALLBACK_PROMISES: AnnouncementBar["promises"] = [
-  { title: "Ethically Made", description: "Responsibly sourced and sustainably produced with love for the planet." },
-  { title: "Heirloom Quality", description: "Standards of craftsmanship designed to last through generations." },
-  { title: "Soft on Skin", description: "Hypoallergenic and ultra-soft fabrics for the most sensitive skin." },
+  {
+    title: "Ethically Made",
+    description: "Responsibly sourced and sustainably produced with love for the planet.",
+  },
+  {
+    title: "Heirloom Quality",
+    description: "Standards of craftsmanship designed to last through generations.",
+  },
+  {
+    title: "Soft on Skin",
+    description: "Hypoallergenic and ultra-soft fabrics for the most sensitive skin.",
+  },
 ];
 
 function mapHeroFromDb(raw: unknown): HeroBanner {
@@ -88,9 +99,7 @@ function mapPlacementsFromDb(raw: unknown): PromoBannerPlacements {
   if (!hasPlacements) return defaultPromoPlacements;
   return normalizePromoPlacements({
     top: p.top !== false,
-    stickyBottom: Boolean(
-      p.stickyBottom ?? p.sticky_bottom ?? p.belowHero ?? p.below_hero,
-    ),
+    stickyBottom: Boolean(p.stickyBottom ?? p.sticky_bottom ?? p.belowHero ?? p.below_hero),
     aboveBrandPromises: Boolean(p.aboveBrandPromises ?? p.above_brand_promises),
     belowBrandPromises: Boolean(p.belowBrandPromises ?? p.below_brand_promises),
   });
@@ -130,17 +139,85 @@ function mapPromoBannerFromDb(raw: unknown): PromoBanner {
   };
 }
 
+const ANIMATION_TEMPLATE_IDS: SiteContent["animationTemplate"][] = [
+  "none",
+  "editorial",
+  "boutique",
+  "couture",
+];
+
+const BACKGROUND_ANIMATION_IDS: SiteContent["backgroundAnimation"][] = [
+  "none",
+  "aurora",
+  "orbs",
+  "mesh",
+  "shimmer",
+  "petals",
+  "bubbles",
+  "twinkle",
+  "confetti",
+  "waves",
+];
+
+/** Map legacy single-layer preset values onto the new coordinated templates. */
+const LEGACY_ANIMATION_MAP: Record<string, SiteContent["animationTemplate"]> = {
+  none: "none",
+  // The old single-layer presets all felt too subtle; upgrade existing installs
+  // to the full cinematic template so the new motion is visible out of the box.
+  fade: "couture",
+  rise: "couture",
+  luxe: "couture",
+  slide: "boutique",
+};
+
+function mapCraftStoryFromDb(raw: unknown): CraftStoryContent {
+  const cs = (raw ?? {}) as Record<string, unknown>;
+  const hasData = raw !== null && typeof raw === "object" && Object.keys(cs).length > 0;
+  if (!hasData) return defaultCraftStory;
+  const chapters = Array.isArray(cs.chapters)
+    ? (cs.chapters as { title?: unknown; body?: unknown }[]).map((c, i) => ({
+        title: String(c?.title ?? defaultCraftStory.chapters[i]?.title ?? ""),
+        body: String(c?.body ?? defaultCraftStory.chapters[i]?.body ?? ""),
+      }))
+    : defaultCraftStory.chapters;
+  return {
+    isActive: cs.isActive !== false,
+    eyebrow: String(cs.eyebrow ?? defaultCraftStory.eyebrow),
+    headline: String(cs.headline ?? defaultCraftStory.headline),
+    imageUrl: typeof cs.imageUrl === "string" ? cs.imageUrl : undefined,
+    chapters: chapters.length > 0 ? chapters : defaultCraftStory.chapters,
+  };
+}
+
 function mapRowToSiteContent(row: {
   hero_banner: unknown;
   announcement_bar: unknown;
   promo_banner?: unknown;
   layout: string;
+  animation_style?: unknown;
+  background_animation?: unknown;
+  craft_story?: unknown;
 }): SiteContent {
+  const raw = typeof row.animation_style === "string" ? row.animation_style : "";
+  const template = ANIMATION_TEMPLATE_IDS.includes(raw as SiteContent["animationTemplate"])
+    ? (raw as SiteContent["animationTemplate"])
+    : (LEGACY_ANIMATION_MAP[raw] ?? "couture");
+  // Aurora & Mesh were retired — fold any stored value onto the kept "orbs".
+  const rawBg =
+    row.background_animation === "aurora" || row.background_animation === "mesh"
+      ? "orbs"
+      : row.background_animation;
+  const bg = BACKGROUND_ANIMATION_IDS.includes(rawBg as SiteContent["backgroundAnimation"])
+    ? (rawBg as SiteContent["backgroundAnimation"])
+    : "orbs";
   return {
     heroBanner: mapHeroFromDb(row.hero_banner),
     announcementBar: mapAnnouncementFromDb(row.announcement_bar),
     promoBanner: mapPromoBannerFromDb(row.promo_banner),
     layout: row.layout || "Editorial Grid",
+    animationTemplate: template,
+    backgroundAnimation: bg,
+    craftStory: mapCraftStoryFromDb(row.craft_story),
   };
 }
 
@@ -192,7 +269,11 @@ export const contentService = {
   },
 
   async getSiteContent(): Promise<SiteContent | null> {
-    const { data, error } = await supabase.from("content").select("*").eq("id", "default").maybeSingle();
+    const { data, error } = await supabase
+      .from("content")
+      .select("*")
+      .eq("id", "default")
+      .maybeSingle();
 
     if (error) {
       console.error("Error fetching site content:", error);
@@ -204,19 +285,40 @@ export const contentService = {
   },
 
   async saveSiteContent(content: SiteContent): Promise<{ success: boolean; error?: string }> {
-    const { error } = await supabase.from("content").upsert(
-      {
-        id: "default",
-        hero_banner: content.heroBanner as unknown as Database["public"]["Tables"]["content"]["Row"]["hero_banner"],
-        announcement_bar: {
-          is_active: content.announcementBar.isActive,
-          promises: content.announcementBar.promises,
-        },
-        layout: content.layout,
-        promo_banner: content.promoBanner as unknown as Record<string, unknown>,
+    const base = {
+      id: "default",
+      hero_banner:
+        content.heroBanner as unknown as Database["public"]["Tables"]["content"]["Row"]["hero_banner"],
+      announcement_bar: {
+        is_active: content.announcementBar.isActive,
+        promises: content.announcementBar.promises,
       },
-      { onConflict: "id" },
-    );
+      layout: content.layout,
+      promo_banner: content.promoBanner as unknown as Record<string, unknown>,
+    };
+
+    // Optional columns added by later migrations (006 animation_style,
+    // 007 craft_story). If a column is missing we retry without the offending
+    // one(s) so content saving never breaks before the migration is run.
+    const optional: Record<string, unknown> = {
+      animation_style: content.animationTemplate,
+      background_animation: content.backgroundAnimation,
+      craft_story: content.craftStory as unknown as Record<string, unknown>,
+    };
+
+    let error: { message: string } | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      ({ error } = await supabase
+        .from("content")
+        .upsert({ ...base, ...optional }, { onConflict: "id" }));
+      if (!error) break;
+      const dropped = Object.keys(optional).find((col) =>
+        new RegExp(col, "i").test(error!.message),
+      );
+      if (!dropped) break;
+      console.warn(`content.${dropped} column missing — run migrations. Saving without it.`);
+      delete optional[dropped];
+    }
 
     if (error) {
       console.error("Error saving site content:", error);

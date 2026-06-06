@@ -51,10 +51,8 @@ export function normalizePromoPlacements(
   return {
     top: raw.top ?? defaultPromoPlacements.top,
     stickyBottom: raw.stickyBottom ?? raw.belowHero ?? defaultPromoPlacements.stickyBottom,
-    aboveBrandPromises:
-      raw.aboveBrandPromises ?? defaultPromoPlacements.aboveBrandPromises,
-    belowBrandPromises:
-      raw.belowBrandPromises ?? defaultPromoPlacements.belowBrandPromises,
+    aboveBrandPromises: raw.aboveBrandPromises ?? defaultPromoPlacements.aboveBrandPromises,
+    belowBrandPromises: raw.belowBrandPromises ?? defaultPromoPlacements.belowBrandPromises,
   };
 }
 
@@ -94,12 +92,73 @@ export const defaultPromoBanner: PromoBanner = {
   endsAt: null,
 };
 
+/**
+ * Premium motion templates. Each is a cohesive *bundle* that coordinates
+ * four animation layers at once — page transitions, hero choreography,
+ * scroll reveals, and hover micro-interactions — rather than a single effect.
+ */
+export type AnimationTemplate = "none" | "editorial" | "boutique" | "couture";
+
+/** Decorative animated backdrop rendered behind the hero. */
+export type BackgroundAnimation =
+  | "none"
+  | "aurora"
+  | "orbs"
+  | "mesh"
+  | "shimmer"
+  | "petals"
+  | "bubbles"
+  | "twinkle"
+  | "confetti"
+  | "waves";
+
+export interface CraftChapter {
+  title: string;
+  body: string;
+}
+
+/** Editorial "craft story" showcase on the landing page. */
+export interface CraftStoryContent {
+  isActive: boolean;
+  eyebrow: string;
+  /** Supports a single `\n` to split into a two-line heading. */
+  headline: string;
+  imageUrl?: string;
+  chapters: CraftChapter[];
+}
+
 export interface SiteContent {
   heroBanner: HeroBanner;
   announcementBar: AnnouncementBar;
   promoBanner: PromoBanner;
   layout: string;
+  /** Coordinated motion template applied to the public storefront. */
+  animationTemplate: AnimationTemplate;
+  /** Animated decorative backdrop behind the hero. */
+  backgroundAnimation: BackgroundAnimation;
+  /** Landing-page brand/craft story section. */
+  craftStory: CraftStoryContent;
 }
+
+export const defaultCraftStory: CraftStoryContent = {
+  isActive: true,
+  eyebrow: "The Little Luxuries way",
+  headline: "Crafted slowly,\nto be loved for years.",
+  chapters: [
+    {
+      title: "Ethically sourced",
+      body: "Every fibre is traced to responsible growers and dyed with low-impact, skin-kind pigments — luxury that's gentle on your baby and the planet.",
+    },
+    {
+      title: "Hand-finished",
+      body: "Seams are flat-locked and finished by hand in small artisan batches, so nothing rubs, pulls, or irritates the most delicate skin.",
+    },
+    {
+      title: "Made to be kept",
+      body: "Heirloom construction and timeless cuts mean each piece is built to be passed down — softening beautifully, wash after wash.",
+    },
+  ],
+};
 
 export const defaultContent: SiteContent = {
   heroBanner: {
@@ -134,10 +193,101 @@ export const defaultContent: SiteContent = {
   },
   promoBanner: defaultPromoBanner,
   layout: "Editorial Grid",
+  animationTemplate: "couture",
+  backgroundAnimation: "orbs",
+  craftStory: defaultCraftStory,
 };
 
-export const CATEGORY_LAYOUTS = ["Editorial Grid", "Minimal Carousel", "Full Width Stacks"] as const;
+/** Background-animation options surfaced in the Content editor. */
+export const BACKGROUND_ANIMATIONS: {
+  id: BackgroundAnimation;
+  label: string;
+  description: string;
+}[] = [
+  { id: "none", label: "None", description: "Plain gradient backdrop — no motion." },
+  {
+    id: "orbs",
+    label: "Floating orbs",
+    description: "Soft lilac & blush spheres float and drift — airy and dreamy.",
+  },
+  {
+    id: "bubbles",
+    label: "Rising bubbles",
+    description: "Many small soft spheres rise gently — light and effervescent.",
+  },
+  {
+    id: "twinkle",
+    label: "Twinkle",
+    description: "Soft lights fade in and out across the hero — quietly magical.",
+  },
+  {
+    id: "confetti",
+    label: "Confetti",
+    description: "Tiny colourful pieces flutter down — celebratory and warm.",
+  },
+  {
+    id: "shimmer",
+    label: "Silk shimmer",
+    description: "A diagonal sheen sweeps across, like light on silk.",
+  },
+  {
+    id: "waves",
+    label: "Soft waves",
+    description: "Gentle colour bands drift side to side behind the hero.",
+  },
+  {
+    id: "petals",
+    label: "Falling petals",
+    description: "Delicate petals drift down — playful and warm.",
+  },
+];
+
+export const CATEGORY_LAYOUTS = [
+  "Editorial Grid",
+  "Minimal Carousel",
+  "Full Width Stacks",
+] as const;
 export type CategoryLayout = (typeof CATEGORY_LAYOUTS)[number];
+
+/**
+ * Premium motion templates surfaced in the Content editor. Each bundles a
+ * coordinated set of layers (page transition + hero choreography + scroll
+ * reveals + hover micro-interactions) into one cohesive feel.
+ */
+export const ANIMATION_TEMPLATES: {
+  id: AnimationTemplate;
+  label: string;
+  description: string;
+  layers: string[];
+}[] = [
+  {
+    id: "none",
+    label: "Off — Static",
+    description: "No motion anywhere. Fastest and most minimal.",
+    layers: [],
+  },
+  {
+    id: "editorial",
+    label: "Subtle",
+    description:
+      "Gentle and restrained. Smooth scroll, soft text reveals, light parallax — premium but understated.",
+    layers: ["Smooth scroll", "Text reveals", "Parallax"],
+  },
+  {
+    id: "boutique",
+    label: "Medium",
+    description:
+      "Tactile and lively. Adds 3D tilt on product cards, magnetic buttons, and stronger parallax.",
+    layers: ["Smooth scroll", "Text reveals", "Parallax", "3D tilt", "Magnetic"],
+  },
+  {
+    id: "couture",
+    label: "Cinematic (recommended)",
+    description:
+      "Our boldest, most dramatic feel — big masked headline reveals, deep parallax, pronounced 3D tilt and magnetic CTAs, counting stats.",
+    layers: ["Smooth scroll", "Masked reveals", "Deep parallax", "3D tilt", "Magnetic", "Count-up"],
+  },
+];
 
 const CONTENT_PUBLISHED_KEY = "little-luxuries-content-published";
 const CONTENT_PREVIEW_KEY = "little-luxuries-content-preview";
@@ -200,6 +350,14 @@ export function mergeSiteContent(base: SiteContent, partial: Partial<SiteContent
             : base.promoBanner.placements,
         }
       : base.promoBanner,
+    craftStory: partial.craftStory
+      ? {
+          ...(base.craftStory ?? defaultCraftStory),
+          ...partial.craftStory,
+          chapters:
+            partial.craftStory.chapters ?? base.craftStory?.chapters ?? defaultCraftStory.chapters,
+        }
+      : (base.craftStory ?? defaultCraftStory),
   };
 }
 
@@ -295,7 +453,7 @@ export function saveContent(content: Partial<SiteContent>): void {
 export async function loadPublishedContentAsync(): Promise<SiteContent> {
   try {
     const fromDb = await contentService.getSiteContent();
-    console.log('[loadPublishedContentAsync] From DB:', fromDb);
+    console.log("[loadPublishedContentAsync] From DB:", fromDb);
     if (fromDb) {
       publishPublishedContent(fromDb);
       return fromDb;
@@ -304,7 +462,7 @@ export async function loadPublishedContentAsync(): Promise<SiteContent> {
     console.warn("Supabase content load failed, using local cache:", error);
   }
   const fromLocal = loadPublishedContent();
-  console.log('[loadPublishedContentAsync] From localStorage:', fromLocal);
+  console.log("[loadPublishedContentAsync] From localStorage:", fromLocal);
   return fromLocal;
 }
 
@@ -313,21 +471,21 @@ export async function loadContentAsync(): Promise<SiteContent> {
   return loadPublishedContentAsync();
 }
 
-export async function saveContentAsync(content: SiteContent): Promise<{ success: boolean; error?: string }> {
+export async function saveContentAsync(
+  content: SiteContent,
+): Promise<{ success: boolean; error?: string }> {
   try {
     const merged = mergeSiteContent(loadPublishedContent(), content);
-    console.log('[saveContentAsync] Saving to DB, layout:', merged.layout);
+    console.log("[saveContentAsync] Saving to DB, layout:", merged.layout);
     publishPublishedContent(merged);
     publishContentPreview(merged);
 
     const dbResult = await contentService.saveSiteContent(merged);
-    console.log('[saveContentAsync] DB save result:', dbResult);
+    console.log("[saveContentAsync] DB save result:", dbResult);
     if (!dbResult.success) {
       return {
         success: true,
-        error:
-          dbResult.error ??
-          "Saved locally. Cloud sync failed — check Supabase connection.",
+        error: dbResult.error ?? "Saved locally. Cloud sync failed — check Supabase connection.",
       };
     }
     return { success: true };
