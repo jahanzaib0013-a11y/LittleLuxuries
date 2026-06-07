@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useDbList } from "@/hooks/use-db-list";
 
 export type BadgeDef = { id: string; name: string };
 
@@ -11,47 +11,13 @@ const defaultBadgeOptions: BadgeDef[] = [
   { id: "b6", name: "Out of Stock" },
 ];
 
+/** Global badge list — persisted in Supabase (`site_lists` id="badges"). */
 export function useBadges() {
-  const [badges, setBadgesState] = useState<BadgeDef[]>(defaultBadgeOptions);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("site_badges");
-    if (saved) {
-      try {
-        setBadgesState(JSON.parse(saved));
-      } catch (e) {
-        console.error("Failed to parse badges", e);
-      }
-    }
-
-    const handleStorageChange = () => {
-      const updated = localStorage.getItem("site_badges");
-      if (updated) {
-        try {
-          setBadgesState(JSON.parse(updated));
-        } catch (e) {
-          console.error("Failed to parse storage update", e);
-        }
-      }
-    };
-
-    window.addEventListener("badges-updated", handleStorageChange);
-    window.addEventListener("storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("badges-updated", handleStorageChange);
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
-
-  const setBadges = (newBadges: BadgeDef[] | ((prev: BadgeDef[]) => BadgeDef[])) => {
-    setBadgesState((prev) => {
-      const updated = typeof newBadges === "function" ? newBadges(prev) : newBadges;
-      localStorage.setItem("site_badges", JSON.stringify(updated));
-      window.dispatchEvent(new Event("badges-updated"));
-      return updated;
-    });
-  };
-
+  const { items: badges, setItems: setBadges } = useDbList<BadgeDef>(
+    "badges",
+    defaultBadgeOptions,
+    "badges-updated",
+    "site_badges",
+  );
   return { badges, setBadges, defaultBadgeOptions };
 }

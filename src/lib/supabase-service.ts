@@ -328,6 +328,52 @@ export const contentService = {
   },
 };
 
+/**
+ * Global editable lists (sizes / categories / badges / size-chart templates),
+ * stored one JSON row per list in `site_lists`. All methods are resilient:
+ * if the table is missing (migration 009 not run) or offline, reads return
+ * null and writes return { success:false } without throwing, so callers fall
+ * back to localStorage / defaults.
+ */
+export const siteListsService = {
+  async getList<T>(id: string): Promise<T[] | null> {
+    try {
+      const { data, error } = await supabase
+        .from("site_lists")
+        .select("data")
+        .eq("id", id)
+        .maybeSingle();
+      if (error || !data) return null;
+      return Array.isArray(data.data) ? (data.data as T[]) : null;
+    } catch {
+      return null;
+    }
+  },
+
+  async saveList<T>(id: string, data: T[]): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { error } = await supabase
+        .from("site_lists")
+        .upsert({ id, data: data as unknown }, { onConflict: "id" });
+      if (error) return { success: false, error: error.message };
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: e instanceof Error ? e.message : "save failed" };
+    }
+  },
+};
+
+export const subscribeToSiteList = (id: string, callback: () => void) => {
+  return supabase
+    .channel(`site-lists-${id}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "site_lists", filter: `id=eq.${id}` },
+      () => callback(),
+    )
+    .subscribe();
+};
+
 // Products management
 export const productService = {
   // Get all products

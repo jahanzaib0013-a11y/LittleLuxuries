@@ -1,49 +1,23 @@
-import { useEffect, useState } from "react";
+import { useDbList } from "@/hooks/use-db-list";
 import {
   BUILTIN_SIZE_CHART_TEMPLATES,
   type SizeChart,
   type SizeChartTemplate,
 } from "@/lib/size-chart";
 
-const STORAGE_KEY = "size_chart_templates";
-const UPDATED_EVENT = "size-chart-templates-updated";
-
-function loadCustom(): SizeChartTemplate[] {
-  if (typeof localStorage === "undefined") return [];
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if (!saved) return [];
-  try {
-    const parsed = JSON.parse(saved);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error("Failed to parse size chart templates", e);
-    return [];
-  }
-}
-
-function persist(custom: SizeChartTemplate[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(custom));
-  window.dispatchEvent(new Event(UPDATED_EVENT));
-}
-
 /**
  * Reusable size-chart templates: the built-in starting points plus any the
- * admin saves. Saved templates live in localStorage and sync across open
- * forms (mirrors the pattern used by `useSizes`).
+ * admin saves. Custom templates are persisted in Supabase (`site_lists`
+ * id="size_chart_templates") with a localStorage cache, so they're shared
+ * across devices and survive browser resets.
  */
 export function useSizeChartTemplates() {
-  const [custom, setCustom] = useState<SizeChartTemplate[]>([]);
-
-  useEffect(() => {
-    setCustom(loadCustom());
-    const handleChange = () => setCustom(loadCustom());
-    window.addEventListener(UPDATED_EVENT, handleChange);
-    window.addEventListener("storage", handleChange);
-    return () => {
-      window.removeEventListener(UPDATED_EVENT, handleChange);
-      window.removeEventListener("storage", handleChange);
-    };
-  }, []);
+  const { items: custom, setItems } = useDbList<SizeChartTemplate>(
+    "size_chart_templates",
+    [],
+    "size-chart-templates-updated",
+    "size_chart_templates",
+  );
 
   const saveTemplate = (name: string, chart: SizeChart): SizeChartTemplate => {
     const template: SizeChartTemplate = {
@@ -58,16 +32,12 @@ export function useSizeChartTemplates() {
         measureImageUrl: chart.measureImageUrl,
       },
     };
-    const next = [...loadCustom(), template];
-    persist(next);
-    setCustom(next);
+    setItems((prev) => [...prev, template]);
     return template;
   };
 
   const removeTemplate = (id: string) => {
-    const next = loadCustom().filter((t) => t.id !== id);
-    persist(next);
-    setCustom(next);
+    setItems((prev) => prev.filter((t) => t.id !== id));
   };
 
   return {

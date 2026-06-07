@@ -50,6 +50,15 @@ export interface Database {
         >;
         Update: Partial<Database["public"]["Tables"]["content"]["Insert"]>;
       };
+      site_lists: {
+        Row: {
+          id: string;
+          data: unknown;
+          updated_at: string;
+        };
+        Insert: { id: string; data: unknown };
+        Update: Partial<{ id: string; data: unknown }>;
+      };
       products: {
         Row: {
           id: string;
