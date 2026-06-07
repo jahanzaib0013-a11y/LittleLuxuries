@@ -1,10 +1,10 @@
 import { useRef } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import type { CategoryDef } from "@/hooks/use-categories";
+import { defaultCategoryImage, type CategoryDef } from "@/hooks/use-categories";
 import type { CategoryLayout } from "@/lib/content-data";
 import hero from "@/assets/hero-baby.jpg";
-import { cn } from "@/lib/utils";
+import { cn, isUsableImageUrl, imgErrorFallback } from "@/lib/utils";
 
 type CategorySectionProps = {
   layout: string;
@@ -33,12 +33,17 @@ function CategoryCard({
       )}
     >
       <img
-        src={category.image || hero}
+        src={
+          isUsableImageUrl(category.image)
+            ? category.image!
+            : (defaultCategoryImage(category.name) ?? hero)
+        }
         alt={category.name}
         loading="lazy"
         width={1024}
         height={1024}
         draggable={false}
+        onError={imgErrorFallback(hero)}
         className={cn(
           "h-full w-full max-w-full object-cover transition-transform duration-700 md:group-hover:scale-105",
           imageClassName,
@@ -62,7 +67,9 @@ function EditorialGrid({ categories, compact }: { categories: CategoryDef[]; com
           category={c}
           className={cn(
             "aspect-4/5 w-full min-w-0 max-w-full",
-            compact ? "w-28 shrink-0 rounded-xl" : "sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-1rem)]",
+            compact
+              ? "w-28 shrink-0 rounded-xl"
+              : "sm:w-[calc(50%-0.5rem)] md:w-[calc(33.333%-1rem)]",
           )}
           titleClassName={compact ? "text-sm" : undefined}
         />
@@ -71,7 +78,13 @@ function EditorialGrid({ categories, compact }: { categories: CategoryDef[]; com
   );
 }
 
-function MinimalCarousel({ categories, compact }: { categories: CategoryDef[]; compact?: boolean }) {
+function MinimalCarousel({
+  categories,
+  compact,
+}: {
+  categories: CategoryDef[];
+  compact?: boolean;
+}) {
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const scroll = (direction: "left" | "right") => {
@@ -103,9 +116,7 @@ function MinimalCarousel({ categories, compact }: { categories: CategoryDef[]; c
             category={c}
             className={cn(
               "aspect-4/5 shrink-0",
-              compact
-                ? "w-28 rounded-xl"
-                : "w-[min(16rem,calc(100vw-2.5rem))] sm:w-72 md:w-80",
+              compact ? "w-28 rounded-xl" : "w-[min(16rem,calc(100vw-2.5rem))] sm:w-72 md:w-80",
             )}
             titleClassName={compact ? "text-sm" : undefined}
           />
@@ -135,7 +146,13 @@ function MinimalCarousel({ categories, compact }: { categories: CategoryDef[]; c
   );
 }
 
-function FullWidthStacks({ categories, compact }: { categories: CategoryDef[]; compact?: boolean }) {
+function FullWidthStacks({
+  categories,
+  compact,
+}: {
+  categories: CategoryDef[];
+  compact?: boolean;
+}) {
   const items = compact ? categories.slice(0, 2) : categories;
 
   return (

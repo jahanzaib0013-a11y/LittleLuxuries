@@ -13,7 +13,7 @@ export type Product = {
   price: number;
   image_url: string | null;
   image: string; // For backward compatibility with sample data
-  category: "Onesies" | "Sleepwear" | "Knitwear" | "Accessories" | "Gift Sets";
+  category: string;
   variant: string;
   badge?: "New" | "Bestseller" | "Low stock" | "Out of Stock";
   description: string;

@@ -9,6 +9,8 @@ import { useFavorites } from "@/hooks/use-favorites";
 import { CartSidebar } from "@/components/cart-sidebar";
 import { storeUTMParameters } from "@/lib/utils";
 import { useStoreSettingsContext } from "@/context/StoreSettingsContext";
+import { useCategories } from "@/hooks/use-categories";
+import { usePublishedProducts } from "@/lib/product-queries";
 import { subscribeToNewsletter } from "@/lib/email.server";
 import { validateEmail } from "@/lib/form-validation";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,7 @@ const stickyPromoPad = "pb-28 sm:pb-32";
 const navItems = [
   { to: "/", label: "Home" },
   { to: "/shop", label: "Shop" },
+  { to: "/blog", label: "Journal" },
   { to: "/about", label: "About" },
   { to: "/contact", label: "Contact" },
 ] as const;
@@ -144,8 +147,15 @@ export function Header() {
 
 export function Footer({ className }: { className?: string }) {
   const { settings } = useStoreSettingsContext();
+  const { categories } = useCategories();
+  const { data: footerProducts = [] } = usePublishedProducts();
   const storeName = settings?.store_name || "Little Luxuries";
   const currentYear = new Date().getFullYear();
+  const categoryProductNames = new Set(footerProducts.map((p) => p.category));
+  const shopCategories = categories
+    .filter((c, i, self) => i === self.findIndex((x) => x.name === c.name))
+    .filter((c) => categoryProductNames.has(c.name))
+    .slice(0, 4);
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [emailError, setEmailError] = useState<string | undefined>();
@@ -200,21 +210,37 @@ export function Footer({ className }: { className?: string }) {
             </a>
           </div>
         </div>
-        <FooterCol
-          title="Shop"
-          links={[
-            { label: "New Arrivals", to: "/shop" },
-            { label: "Onesies", to: "/shop" },
-            { label: "Sleepwear", to: "/shop" },
-            { label: "Gift Sets", to: "/shop" },
-          ]}
-        />
+        <div>
+          <h4 className="label-eyebrow mb-4">Shop</h4>
+          <ul className="space-y-2.5">
+            <li>
+              <Link
+                to="/shop"
+                search={{ badge: "New" }}
+                className="text-sm text-muted-foreground transition-colors hover:text-primary"
+              >
+                New Arrivals
+              </Link>
+            </li>
+            {shopCategories.map((c) => (
+              <li key={c.id}>
+                <Link
+                  to="/shop"
+                  search={{ category: c.name }}
+                  className="text-sm text-muted-foreground transition-colors hover:text-primary"
+                >
+                  {c.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
         <FooterCol
           title="Care"
           links={[
+            { label: "Journal", to: "/blog" },
             { label: "Contact", to: "/contact" },
             { label: "Shipping", to: "/contact" },
-            { label: "Returns", to: "/contact" },
             { label: "Our Story", to: "/about" },
           ]}
         />

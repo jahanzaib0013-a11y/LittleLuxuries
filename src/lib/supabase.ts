@@ -59,6 +59,26 @@ export interface Database {
         Insert: { id: string; data: unknown };
         Update: Partial<{ id: string; data: unknown }>;
       };
+      blogs: {
+        Row: {
+          id: string;
+          title: string;
+          slug: string;
+          excerpt: string;
+          body: string;
+          cover_image_url: string | null;
+          video_url: string | null;
+          status: string;
+          published_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Omit<
+          Database["public"]["Tables"]["blogs"]["Row"],
+          "id" | "created_at" | "updated_at"
+        > & { id?: string };
+        Update: Partial<Database["public"]["Tables"]["blogs"]["Insert"]>;
+      };
       products: {
         Row: {
           id: string;

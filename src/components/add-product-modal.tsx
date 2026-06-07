@@ -93,7 +93,12 @@ interface ProductFormData {
   gender: string;
 }
 
-export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess }: AddProductModalProps) {
+export function AddProductModal({
+  open,
+  onOpenChange,
+  onProductAdded,
+  onSuccess,
+}: AddProductModalProps) {
   const invalidateProducts = useInvalidateProducts();
   const [formData, setFormData] = useState<ProductFormData>({
     name: "",
@@ -177,24 +182,11 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
     return Array.from(byName.values());
   }, [categories, adminProducts]);
 
-  useEffect(() => {
-    const existing = new Set(categories.map((cat) => cat.name.trim().toLowerCase()));
-    const missing = adminProducts
-      .map((product) => product.category?.trim() || "")
-      .filter((name): name is string => Boolean(name))
-      .filter((name) => !existing.has(name.toLowerCase()));
-
-    if (missing.length === 0) return;
-
-    setCategories((prev) => [
-      ...prev,
-      ...missing.map((name) => ({
-        id: `db-${name.toLowerCase().replace(/\s+/g, "-")}`,
-        name,
-        image: null,
-      })),
-    ]);
-  }, [adminProducts, categories, setCategories]);
+  // NOTE: we intentionally do NOT auto-persist product categories into the
+  // curated list. Doing so polluted the list and re-added categories right
+  // after they were deleted. Product categories still surface in the form
+  // dropdown via `unifiedCategories` (read-only) and remain filterable on the
+  // shop (derived from products at read time).
 
   const handleCategoryUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -213,12 +205,12 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
       setIsUploadingCategory(true);
       try {
         const imageUrl = await imageService.uploadImage(file);
-        console.log('[Category Upload] Supabase URL:', imageUrl);
+        console.log("[Category Upload] Supabase URL:", imageUrl);
         if (isEditing) setEditCategoryImage(imageUrl);
         else setNewCategoryImage(imageUrl);
         toast.success("Category image uploaded");
       } catch (error) {
-        console.error('[Category Upload] Error:', error);
+        console.error("[Category Upload] Error:", error);
         toast.error("Failed to upload category image");
         if (isEditing) setEditCategoryImage(null);
         else setNewCategoryImage(null);
@@ -275,11 +267,35 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
     lastDragTargetId.current = null;
   };
 
-  const saveManageCategories = () => {
+  const saveManageCategories = async () => {
     if (draftCategories) {
+      // Detect renames (same id, changed name) so we can move existing products
+      // onto the new name — otherwise they'd be orphaned on the old value.
+      const prevById = new Map(categories.map((c) => [c.id, c.name]));
+      const renames = draftCategories
+        .map((c) => ({ from: prevById.get(c.id), to: c.name }))
+        .filter((r): r is { from: string; to: string } => !!r.from && r.from !== r.to);
+
       setCategories(draftCategories);
       setHasCategoryChanges(false);
-      toast.success("Category order saved");
+
+      if (renames.length > 0) {
+        let updated = 0;
+        for (const { from, to } of renames) {
+          const affected = adminProducts.filter((p) => p.category === from);
+          for (const p of affected) {
+            const ok = await productService.updateProduct(p.id, { category: to });
+            if (ok) updated += 1;
+          }
+        }
+        toast.success(
+          updated > 0
+            ? `Categories saved — moved ${updated} product${updated === 1 ? "" : "s"}.`
+            : "Categories saved.",
+        );
+      } else {
+        toast.success("Categories saved.");
+      }
     }
     closeManageCategories();
   };
@@ -301,7 +317,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name || !formData.price || !formData.category) {
       toast.error("Please fill in all required fields");
       return;
@@ -346,14 +362,14 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
       };
 
       const result = await productService.createProduct(productData);
-      
+
       if (result) {
         await invalidateProducts();
         toast.success("Product saved as draft. Publish it when you're ready.");
         onOpenChange(false);
         onSuccess?.(result);
         onProductAdded?.();
-        
+
         setFormData({
           name: "",
           price: "",
@@ -386,7 +402,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
 
   return (
     <>
-    <Dialog open={open} onOpenChange={handleClose}>
+      <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className={productModalContentClass}>
           <ProductModalShell
             onClose={handleClose}
@@ -405,20 +421,20 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
                 </DialogTitle>
                 <p className="text-xs text-muted-foreground sm:text-sm">
                   Colors first, then details. Saves as draft.
-                        </p>
-                    </div>
+                </p>
+              </div>
             }
             footer={
               <div className={productModalFooterClass}>
                 <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                <Button 
-                  type="button"
+                  <Button
+                    type="button"
                     variant="ghost"
                     onClick={handleClose}
                     className="min-h-11 w-full rounded-full text-base font-semibold sm:min-h-12 sm:w-auto sm:px-8"
                   >
                     Cancel
-                </Button>
+                  </Button>
                   <Button
                     type="submit"
                     form="add-luxury-product"
@@ -428,447 +444,443 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
                     {isSubmitting ? "Saving…" : "Save product"}
                   </Button>
                 </div>
-                    </div>
+              </div>
             }
           >
-              <form id="add-luxury-product" onSubmit={handleSubmit} className="space-y-8 pb-4 sm:space-y-10 lg:space-y-12">
-                {/* 1. Core Identity */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-                  <div className="space-y-3">
-                      <Label className={productModalLabelClass}>Product Title</Label>
-                    <Input 
-                      value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                      placeholder="e.g., Silk-Trimmed Organic Onesie"
-                      className={cn(productModalInputClass, "font-medium")}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-3">
-                      <Label className={productModalLabelClass}>Price (PKR)</Label>
-                    <Input 
-                      type="number"
-                      value={formData.price}
-                        onChange={(e) => handleInputChange("price", e.target.value)}
-                      placeholder="0.00"
-                      className={cn(productModalInputClass, "font-medium")}
-                      required
-                    />
-                  </div>
+            <form
+              id="add-luxury-product"
+              onSubmit={handleSubmit}
+              className="space-y-8 pb-4 sm:space-y-10 lg:space-y-12"
+            >
+              {/* 1. Core Identity */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                <div className="space-y-3">
+                  <Label className={productModalLabelClass}>Product Title</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    placeholder="e.g., Silk-Trimmed Organic Onesie"
+                    className={cn(productModalInputClass, "font-medium")}
+                    required
+                  />
                 </div>
+                <div className="space-y-3">
+                  <Label className={productModalLabelClass}>Price (PKR)</Label>
+                  <Input
+                    type="number"
+                    value={formData.price}
+                    onChange={(e) => handleInputChange("price", e.target.value)}
+                    placeholder="0.00"
+                    className={cn(productModalInputClass, "font-medium")}
+                    required
+                  />
+                </div>
+              </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-                  <div className="space-y-3">
-                      <Label className={productModalLabelClass}>
-                        Gender / Classification
-                      </Label>
-                      <Select
-                        value={formData.gender}
-                        onValueChange={(v) => handleInputChange("gender", v)}
-                      >
-                        <SelectTrigger className={productModalSelectClass}>
-                          <SelectValue placeholder="Select Gender" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-2xl border-none shadow-2xl">
-                          <SelectItem value="unisex" className="rounded-xl py-3">
-                            Unisex
-                          </SelectItem>
-                          <SelectItem value="boy" className="rounded-xl py-3">
-                            Boy
-                          </SelectItem>
-                          <SelectItem value="girl" className="rounded-xl py-3">
-                            Girl
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-3">
-                      <Label className={productModalLabelClass}>
-                        Available Units
-                      </Label>
-                      <Input
-                        type="number"
-                        value={formData.units}
-                        onChange={(e) => handleInputChange("units", e.target.value)}
-                        placeholder="0"
-                        min="0"
-                        className={cn(productModalInputClass, "font-medium")}
-                      />
-                    </div>
-                  </div>
-                  <p className="text-[10px] text-muted-foreground italic -mt-6">
-                    Track inventory units. Products with fewer than 5 units will be marked as "Low
-                    stock".
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                <div className="space-y-3">
+                  <Label className={productModalLabelClass}>Gender / Classification</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(v) => handleInputChange("gender", v)}
+                  >
+                    <SelectTrigger className={productModalSelectClass}>
+                      <SelectValue placeholder="Select Gender" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-2xl border-none shadow-2xl">
+                      <SelectItem value="unisex" className="rounded-xl py-3">
+                        Unisex
+                      </SelectItem>
+                      <SelectItem value="boy" className="rounded-xl py-3">
+                        Boy
+                      </SelectItem>
+                      <SelectItem value="girl" className="rounded-xl py-3">
+                        Girl
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-3">
+                  <Label className={productModalLabelClass}>Available Units</Label>
+                  <Input
+                    type="number"
+                    value={formData.units}
+                    onChange={(e) => handleInputChange("units", e.target.value)}
+                    placeholder="0"
+                    min="0"
+                    className={cn(productModalInputClass, "font-medium")}
+                  />
+                </div>
+              </div>
+              <p className="text-[10px] text-muted-foreground italic -mt-6">
+                Track inventory units. Products with fewer than 5 units will be marked as "Low
+                stock".
+              </p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
-                    <div className="space-y-3">
-                      <Label className={productModalLabelClass}>
-                        Category
-                      </Label>
-                      <div className="space-y-2">
-                        <Select
-                          value={formData.category}
-                          onValueChange={(v) => handleInputChange("category", v)}
-                        >
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+                <div className="space-y-3">
+                  <Label className={productModalLabelClass}>Category</Label>
+                  <div className="space-y-2">
+                    <Select
+                      value={formData.category}
+                      onValueChange={(v) => handleInputChange("category", v)}
+                    >
                       <SelectTrigger className={productModalSelectClass}>
                         <SelectValue placeholder="Select Category" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-none shadow-2xl">
-                            {unifiedCategories.map((c) => (
-                              <SelectItem key={c.id} value={c.name} className="rounded-xl py-3">
-                                {c.name}
-                              </SelectItem>
-                            ))}
+                        {unifiedCategories.map((c) => (
+                          <SelectItem key={c.id} value={c.name} className="rounded-xl py-3">
+                            {c.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl border border-border/50 bg-muted/20 p-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setIsAddingCategory(true)}
-                            className={managementActionClass}
-                          >
-                            <span className="sm:hidden">+ Add category</span>
-                            <span className="hidden sm:inline">+ Add new category</span>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={openManageCategories}
-                            className={managementActionClass}
-                          >
-                            Manage categories
-                          </Button>
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl border border-border/50 bg-muted/20 p-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsAddingCategory(true)}
+                        className={managementActionClass}
+                      >
+                        <span className="sm:hidden">+ Add category</span>
+                        <span className="hidden sm:inline">+ Add new category</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={openManageCategories}
+                        className={managementActionClass}
+                      >
+                        Manage categories
+                      </Button>
+                    </div>
                   </div>
-                  <div className="space-y-3">
-                      <Label className={productModalLabelClass}>
-                        Status Indicator
-                      </Label>
-                      <div className="space-y-2">
-                        <Select
-                          value={formData.badge}
-                          onValueChange={(v) => handleInputChange("badge", v)}
-                        >
+                </div>
+                <div className="space-y-3">
+                  <Label className={productModalLabelClass}>Status Indicator</Label>
+                  <div className="space-y-2">
+                    <Select
+                      value={formData.badge}
+                      onValueChange={(v) => handleInputChange("badge", v)}
+                    >
                       <SelectTrigger className={productModalSelectClass}>
                         <SelectValue placeholder="No Badge" />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl border-none shadow-2xl">
-                            <SelectItem value="none" className="rounded-xl py-3 italic">
-                              Standard Listing
-                            </SelectItem>
-                            {badgeOptions.map((b) => (
-                              <SelectItem
-                                key={b.id}
-                                value={b.name}
-                                className="rounded-xl py-3 font-bold text-primary"
-                              >
-                                {b.name}
-                              </SelectItem>
-                            ))}
+                        <SelectItem value="none" className="rounded-xl py-3 italic">
+                          Standard Listing
+                        </SelectItem>
+                        {badgeOptions.map((b) => (
+                          <SelectItem
+                            key={b.id}
+                            value={b.name}
+                            className="rounded-xl py-3 font-bold text-primary"
+                          >
+                            {b.name}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl border border-border/50 bg-muted/20 p-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setIsAddingBadge(true)}
-                            className={managementActionClass}
-                          >
-                            <span className="sm:hidden">+ Add badge</span>
-                            <span className="hidden sm:inline">+ Add new badge</span>
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => setIsManagingBadges(true)}
-                            className={managementActionClass}
-                          >
-                            Manage badges
-                          </Button>
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 rounded-2xl border border-border/50 bg-muted/20 p-2">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsAddingBadge(true)}
+                        className={managementActionClass}
+                      >
+                        <span className="sm:hidden">+ Add badge</span>
+                        <span className="hidden sm:inline">+ Add new badge</span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setIsManagingBadges(true)}
+                        className={managementActionClass}
+                      >
+                        Manage badges
+                      </Button>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                {/* 2. Brand Narrative */}
-                <div className="space-y-6 rounded-2xl border border-border/30 bg-muted/10 p-4 sm:rounded-[32px] sm:p-8">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-3">
-                      <Sparkles className="h-4 w-4" />
-                      Premium Content
-                    </h4>
-                    <Button 
-                      type="button"
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => {
+              {/* 2. Brand Narrative */}
+              <div className="space-y-6 rounded-2xl border border-border/30 bg-muted/10 p-4 sm:rounded-[32px] sm:p-8">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold uppercase tracking-[0.3em] text-primary flex items-center gap-3">
+                    <Sparkles className="h-4 w-4" />
+                    Premium Content
+                  </h4>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      handleInputChange(
+                        "description",
+                        generateLuxuryNarrative(formData.name || "this piece", formData.category),
+                      );
+                      handleInputChange("sustainability", generateSustainabilityPromise());
+                      handleInputChange("care_instructions", generateCareInstructions());
+                      toast.success("Luxury narrative synchronized");
+                    }}
+                    className="h-8 text-[10px] font-bold text-primary px-3 bg-white hover:bg-primary-soft shadow-sm border border-primary/10 rounded-full"
+                  >
+                    <Sparkles className="h-3 w-3 mr-1.5" /> Full AI Suite
+                  </Button>
+                </div>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
+                        Story & Description
+                      </Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
                           handleInputChange(
                             "description",
                             generateLuxuryNarrative(
                               formData.name || "this piece",
                               formData.category,
                             ),
-                          );
-                          handleInputChange("sustainability", generateSustainabilityPromise());
-                          handleInputChange("care_instructions", generateCareInstructions());
-                          toast.success("Luxury narrative synchronized");
-                      }}
-                      className="h-8 text-[10px] font-bold text-primary px-3 bg-white hover:bg-primary-soft shadow-sm border border-primary/10 rounded-full"
-                    >
-                      <Sparkles className="h-3 w-3 mr-1.5" /> Full AI Suite
-                    </Button>
+                          )
+                        }
+                        className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
+                      >
+                        <Wand2 className="h-2.5 w-2.5 mr-1" /> Re-Compose
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={formData.description}
+                      onChange={(e) => handleInputChange("description", e.target.value)}
+                      placeholder="Craft the narrative for this exquisite piece..."
+                      className={productModalTextareaClass}
+                    />
                   </div>
-                  <div className="space-y-4">
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                          <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
-                            Story & Description
-                          </Label>
-                        <Button 
+                        <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
+                          Sustainability Promise
+                        </Label>
+                        <Button
                           type="button"
-                          variant="ghost" 
-                          size="sm" 
-                            onClick={() =>
-                              handleInputChange(
-                                "description",
-                                generateLuxuryNarrative(
-                                  formData.name || "this piece",
-                                  formData.category,
-                                ),
-                              )
-                            }
-                          className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleInputChange("sustainability", generateSustainabilityPromise())
+                          }
+                          className="h-6 text-[9px] font-bold text-emerald-600 px-2 hover:bg-emerald-50"
                         >
-                          <Wand2 className="h-2.5 w-2.5 mr-1" /> Re-Compose
+                          <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
                         </Button>
                       </div>
-                      <Textarea 
-                        value={formData.description}
-                          onChange={(e) => handleInputChange("description", e.target.value)}
-                        placeholder="Craft the narrative for this exquisite piece..."
-                        className={productModalTextareaClass}
+                      <Textarea
+                        value={formData.sustainability}
+                        onChange={(e) => handleInputChange("sustainability", e.target.value)}
+                        placeholder="e.g., GOTS certified organic materials..."
+                        className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
                       />
                     </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
-                              Sustainability Promise
-                            </Label>
-                          <Button 
-                            type="button"
-                            variant="ghost" 
-                            size="sm" 
-                              onClick={() =>
-                                handleInputChange("sustainability", generateSustainabilityPromise())
-                              }
-                            className="h-6 text-[9px] font-bold text-emerald-600 px-2 hover:bg-emerald-50"
-                          >
-                            <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
-                          </Button>
-                        </div>
-                        <Textarea 
-                          value={formData.sustainability}
-                            onChange={(e) => handleInputChange("sustainability", e.target.value)}
-                          placeholder="e.g., GOTS certified organic materials..."
-                          className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
-                        />
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
+                          Care Instructions
+                        </Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            handleInputChange("care_instructions", generateCareInstructions())
+                          }
+                          className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
+                        >
+                          <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
+                        </Button>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <Label className="text-[11px] font-bold uppercase tracking-widest opacity-60">
-                              Care Instructions
-                            </Label>
-                          <Button 
-                            type="button"
-                            variant="ghost" 
-                            size="sm" 
-                              onClick={() =>
-                                handleInputChange("care_instructions", generateCareInstructions())
-                              }
-                            className="h-6 text-[9px] font-bold text-primary px-2 hover:bg-primary-soft/50"
-                          >
-                            <Wand2 className="h-2.5 w-2.5 mr-1" /> Draft
-                          </Button>
-                        </div>
-                        <Textarea 
-                          value={formData.care_instructions}
-                            onChange={(e) => handleInputChange("care_instructions", e.target.value)}
-                          placeholder="e.g., Hand wash with organic detergent..."
-                          className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
-                        />
-                      </div>
+                      <Textarea
+                        value={formData.care_instructions}
+                        onChange={(e) => handleInputChange("care_instructions", e.target.value)}
+                        placeholder="e.g., Hand wash with organic detergent..."
+                        className="rounded-xl bg-white border-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none text-sm"
+                      />
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* 3. Logistics */}
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                      <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                        Sizing Matrix
-                      </h4>
-                      <span className="text-[10px] font-bold text-primary bg-primary-soft px-3 py-1 rounded-full uppercase">
-                        Global Standards
-                      </span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 -mt-2 rounded-2xl border border-border/50 bg-muted/20 p-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setIsAddingSize(true)}
-                      className={managementActionClass}
-                    >
-                      <span className="sm:hidden">+ Add size</span>
-                      <span className="hidden sm:inline">+ Add new size</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      onClick={() => setIsManagingSizes(true)}
-                      className={managementActionClass}
-                    >
-                      Manage sizes
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                      {sizeOptions.map((size) => {
-                        const active = formData.sizes.includes(size);
-                      return (
-                        <button 
-                          key={size.id}
-                          type="button"
-                          onClick={() => handleSizeToggle(size.name)}
-                          className={cn(
-                            "rounded-full border-2 px-4 py-2.5 text-sm font-bold transition-all duration-300 sm:px-6 sm:py-3",
-                            active 
-                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105" 
-                                : "bg-white text-muted-foreground border-muted/20 hover:border-primary/30",
-                          )}
-                        >
-                          {size.name}
-                        </button>
-                        );
-                    })}
-                  </div>
+              {/* 3. Logistics */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                    Sizing Matrix
+                  </h4>
+                  <span className="text-[10px] font-bold text-primary bg-primary-soft px-3 py-1 rounded-full uppercase">
+                    Global Standards
+                  </span>
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2 -mt-2 rounded-2xl border border-border/50 bg-muted/20 p-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsAddingSize(true)}
+                    className={managementActionClass}
+                  >
+                    <span className="sm:hidden">+ Add size</span>
+                    <span className="hidden sm:inline">+ Add new size</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setIsManagingSizes(true)}
+                    className={managementActionClass}
+                  >
+                    Manage sizes
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {sizeOptions.map((size) => {
+                    const active = formData.sizes.includes(size);
+                    return (
+                      <button
+                        key={size.id}
+                        type="button"
+                        onClick={() => handleSizeToggle(size.name)}
+                        className={cn(
+                          "rounded-full border-2 px-4 py-2.5 text-sm font-bold transition-all duration-300 sm:px-6 sm:py-3",
+                          active
+                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20 scale-105"
+                            : "bg-white text-muted-foreground border-muted/20 hover:border-primary/30",
+                        )}
+                      >
+                        {size.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
-                {/* 4. Size Chart */}
-                <div className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
-                      Size Chart
-                    </h4>
-                    <span className="text-[10px] font-bold text-primary bg-primary-soft px-3 py-1 rounded-full uppercase">
-                      Optional
-                    </span>
-                  </div>
-                  <ProductSizeChartEditor
-                    value={formData.sizeChart}
-                    onChange={(sizeChart) => setFormData((prev) => ({ ...prev, sizeChart }))}
-                    productSizes={formData.sizes}
-                    category={formData.category}
-                    isUploading={isUploading}
-                    onUploadingChange={setIsUploading}
-                  />
+              {/* 4. Size Chart */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                    Size Chart
+                  </h4>
+                  <span className="text-[10px] font-bold text-primary bg-primary-soft px-3 py-1 rounded-full uppercase">
+                    Optional
+                  </span>
                 </div>
-              </form>
+                <ProductSizeChartEditor
+                  value={formData.sizeChart}
+                  onChange={(sizeChart) => setFormData((prev) => ({ ...prev, sizeChart }))}
+                  productSizes={formData.sizes}
+                  category={formData.category}
+                  isUploading={isUploading}
+                  onUploadingChange={setIsUploading}
+                />
+              </div>
+            </form>
           </ProductModalShell>
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Category Modal */}
       <Dialog open={isAddingCategory} onOpenChange={setIsAddingCategory}>
         <DialogContent className={nestedModalContentClass}>
           <div className={nestedModalInnerClass}>
-          <DialogHeader>
-            <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">
-              Add New Category
-            </DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Create a new category for your products.
-            </p>
-          </DialogHeader>
-          <div className="space-y-6 mt-4">
-            <div className="space-y-3">
-              <Label className={productModalLabelClass}>
-                Category Name
-              </Label>
-              <Input
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="e.g. Blankets"
-                className={productModalInputClass}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-3">
-              <Label className={productModalLabelClass}>
-                Category Image
-              </Label>
-              <div
-                onClick={() => categoryImageRef.current?.click()}
-                className="relative aspect-video rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/40 bg-muted/10 flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all"
-              >
-                {newCategoryImage ? (
-                  <img
-                    src={newCategoryImage}
-                    alt="Category"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <>
-                    <ImageIcon className="h-8 w-8 mb-2 text-primary/40" />
-                    <span className="text-[10px] font-bold text-primary/40 uppercase">
-                      Upload Image
-                    </span>
-                  </>
-                )}
+            <DialogHeader>
+              <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">
+                Add New Category
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Create a new category for your products.
+              </p>
+            </DialogHeader>
+            <div className="space-y-6 mt-4">
+              <div className="space-y-3">
+                <Label className={productModalLabelClass}>Category Name</Label>
+                <Input
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
+                  placeholder="e.g. Blankets"
+                  className={productModalInputClass}
+                  autoFocus
+                />
               </div>
-              <input
-                ref={categoryImageRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleCategoryUpload}
-              />
+              <div className="space-y-3">
+                <Label className={productModalLabelClass}>Category Image</Label>
+                <div
+                  onClick={() => categoryImageRef.current?.click()}
+                  className="relative aspect-video rounded-2xl border-2 border-dashed border-primary/20 hover:border-primary/40 bg-muted/10 flex flex-col items-center justify-center cursor-pointer overflow-hidden transition-all"
+                >
+                  {newCategoryImage ? (
+                    <img
+                      src={newCategoryImage}
+                      alt="Category"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <>
+                      <ImageIcon className="h-8 w-8 mb-2 text-primary/40" />
+                      <span className="text-[10px] font-bold text-primary/40 uppercase">
+                        Upload Image
+                      </span>
+                    </>
+                  )}
+                </div>
+                <input
+                  ref={categoryImageRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleCategoryUpload}
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter className="mt-8">
-            <Button
-              variant="ghost"
-              onClick={() => setIsAddingCategory(false)}
-              className="rounded-full px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (newCategory.trim()) {
-                  const newCat: CategoryDef = {
-                    id: Math.random().toString(36).substring(2, 9),
-                    name: newCategory.trim(),
-                    image: newCategoryImage && !newCategoryImage.startsWith('blob:') ? newCategoryImage : null,
-                  };
-                  console.log('[Add Category] Saving category:', newCat);
-                  setCategories((prev) => [...prev, newCat]);
-                  handleInputChange("category", newCat.name);
-                  toast.success(`Category "${newCat.name}" created`);
-                }
-                setNewCategory("");
-                setNewCategoryImage(null);
-                setIsAddingCategory(false);
-              }}
-              disabled={isUploadingCategory || !newCategory.trim()}
-              className="rounded-full px-8 bg-primary hover:bg-primary/90"
-            >
-              Add Category
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="mt-8">
+              <Button
+                variant="ghost"
+                onClick={() => setIsAddingCategory(false)}
+                className="rounded-full px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (newCategory.trim()) {
+                    const newCat: CategoryDef = {
+                      id:
+                        typeof crypto !== "undefined" && crypto.randomUUID
+                          ? crypto.randomUUID()
+                          : `cat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+                      name: newCategory.trim(),
+                      image:
+                        newCategoryImage && !newCategoryImage.startsWith("blob:")
+                          ? newCategoryImage
+                          : null,
+                    };
+                    setCategories((prev) => [...prev, newCat]);
+                    // Keep the Manage Categories draft in sync if it's open.
+                    setDraftCategories((prev) => (prev ? [...prev, newCat] : prev));
+                    handleInputChange("category", newCat.name);
+                    toast.success(`Category "${newCat.name}" created`);
+                  }
+                  setNewCategory("");
+                  setNewCategoryImage(null);
+                  setIsAddingCategory(false);
+                }}
+                disabled={isUploadingCategory || !newCategory.trim()}
+                className="rounded-full px-8 bg-primary hover:bg-primary/90"
+              >
+                Add Category
+              </Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -881,262 +893,296 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
           else closeManageCategories();
         }}
       >
-        <DialogContent className={cn(nestedModalContentClass, "max-w-xl flex max-h-[min(92dvh,100%)] flex-col overflow-hidden")}>
+        <DialogContent
+          className={cn(
+            nestedModalContentClass,
+            "max-w-xl flex max-h-[min(92dvh,100%)] flex-col overflow-hidden",
+          )}
+        >
           <div className="flex min-h-0 flex-1 flex-col overflow-hidden p-4 sm:p-6 lg:p-8">
-          <DialogHeader>
-            <DialogTitle className="font-serif text-xl sm:text-2xl text-primary mb-2">
-              Manage Categories
-            </DialogTitle>
-            <p className="text-sm text-muted-foreground">
-              Edit existing categories and their featured images.
-            </p>
-            <p className="text-xs text-primary/70 font-medium">
-              Drag categories by the grip icon to reorder homepage priority (top 5 are shown).
-              Keep dragging through the list to move across multiple positions.
-            </p>
-            <div className="mt-2 flex gap-2 overflow-x-auto hide-scrollbar pb-1">
-              {displayedCategories.slice(0, 5).map((cat, idx) => (
-                <span
-                  key={`top-${cat.id}`}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-bold text-primary"
-                >
-                  {idx + 1}. {cat.name}
-                </span>
-              ))}
-            </div>
-          </DialogHeader>
-          <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4 max-h-[62vh] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
-            {displayedCategories.map((c, index) => (
-              <div
-                key={c.id}
-                className={cn(
-                  "relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-3.5 rounded-2xl border border-border/50 bg-muted/10 transition-all duration-150",
-                  draggingCategoryId === c.id &&
-                    "opacity-70 border-primary/50 bg-primary-soft/10 scale-[0.99] shadow-inner",
-                  dragOverCategoryId === c.id &&
-                    "border-primary bg-primary-soft/20 ring-2 ring-primary/20",
-                  index < 5 && "border-primary/30 bg-primary-soft/5",
-                )}
-                draggable={editingCategoryId !== c.id}
-                onDragStart={(e) => {
-                  e.dataTransfer.effectAllowed = "move";
-                  e.dataTransfer.setData("text/plain", c.id);
-                  setDraggingCategoryId(c.id);
-                  setDragOverCategoryId(null);
-                  lastDragTargetId.current = null;
-                }}
-                onDragEnd={() => {
-                  setDraggingCategoryId(null);
-                  setDragOverCategoryId(null);
-                  lastDragTargetId.current = null;
-                }}
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  if (draggingCategoryId && draggingCategoryId !== c.id) {
-                    setDragOverCategoryId(c.id);
-                  }
-                }}
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (draggingCategoryId && draggingCategoryId !== c.id) {
-                    setDragOverCategoryId(c.id);
-                    if (lastDragTargetId.current !== c.id) {
-                      moveCategory(draggingCategoryId, c.id);
-                      lastDragTargetId.current = c.id;
-                    }
-                  }
-                }}
-                onDragLeave={() => {
-                  if (dragOverCategoryId === c.id) {
+            <DialogHeader>
+              <DialogTitle className="font-serif text-xl sm:text-2xl text-primary mb-2">
+                Manage Categories
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">
+                Edit existing categories and their featured images.
+              </p>
+              <p className="text-xs text-primary/70 font-medium">
+                Drag categories by the grip icon to reorder homepage priority (top 5 are shown).
+                Keep dragging through the list to move across multiple positions.
+              </p>
+              <div className="mt-2 flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                {displayedCategories.slice(0, 5).map((cat, idx) => (
+                  <span
+                    key={`top-${cat.id}`}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-[10px] font-bold text-primary"
+                  >
+                    {idx + 1}. {cat.name}
+                  </span>
+                ))}
+              </div>
+            </DialogHeader>
+            <div className="space-y-3 sm:space-y-4 mt-3 sm:mt-4 max-h-[62vh] overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
+              {displayedCategories.map((c, index) => (
+                <div
+                  key={c.id}
+                  className={cn(
+                    "relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-3.5 rounded-2xl border border-border/50 bg-muted/10 transition-all duration-150",
+                    draggingCategoryId === c.id &&
+                      "opacity-70 border-primary/50 bg-primary-soft/10 scale-[0.99] shadow-inner",
+                    dragOverCategoryId === c.id &&
+                      "border-primary bg-primary-soft/20 ring-2 ring-primary/20",
+                    index < 5 && "border-primary/30 bg-primary-soft/5",
+                  )}
+                  draggable={editingCategoryId !== c.id}
+                  onDragStart={(e) => {
+                    e.dataTransfer.effectAllowed = "move";
+                    e.dataTransfer.setData("text/plain", c.id);
+                    setDraggingCategoryId(c.id);
                     setDragOverCategoryId(null);
-                  }
-                }}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  if (draggingCategoryId && draggingCategoryId !== c.id) {
-                    moveCategory(draggingCategoryId, c.id);
-                  }
-                  setDraggingCategoryId(null);
-                  setDragOverCategoryId(null);
-                  lastDragTargetId.current = null;
-                }}
-              >
-                {dragOverCategoryId === c.id && (
-                  <div className="absolute left-3 right-3 top-0 h-0.5 bg-primary rounded-full" />
-                )}
-                {editingCategoryId === c.id ? (
-                  <div className="flex-1 flex items-center gap-3">
-                    <div
-                      onClick={() => editCategoryImageRef.current?.click()}
-                      className="h-12 w-12 rounded-xl bg-muted/30 border border-dashed border-primary/30 flex items-center justify-center overflow-hidden cursor-pointer shrink-0 group relative"
-                    >
-                      {editCategoryImage ? (
-                        <img
-                          src={editCategoryImage}
-                          alt=""
-                          className="w-full h-full object-cover group-hover:opacity-50 transition-opacity"
-                        />
-                      ) : (
-                        <ImageIcon className="h-4 w-4 text-primary/40" />
-                      )}
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
-                        <Upload className="h-4 w-4 text-primary" />
-                      </div>
-                    </div>
-                    <Input
-                      value={editCategoryName}
-                      onChange={(e) => setEditCategoryName(e.target.value)}
-                      className="h-10 rounded-xl bg-white flex-1"
-                      autoFocus
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => {
-                        setDraftCategories((prev) =>
-                          prev?.map((cat) =>
-                            cat.id === c.id
-                              ? { ...cat, name: editCategoryName, image: editCategoryImage && !editCategoryImage.startsWith('blob:') ? editCategoryImage : cat.image }
-                              : cat,
-                          ) ?? prev,
-                        );
-                        console.log('[Edit Category] Updated category:', c.id, editCategoryName, editCategoryImage);
-                        setHasCategoryChanges(true);
-                        if (formData.category === c.name)
-                          handleInputChange("category", editCategoryName);
-                        setEditingCategoryId(null);
-                        toast.success("Category updated");
-                      }}
-                      className="rounded-xl px-4 bg-primary text-white"
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setEditingCategoryId(null)}
-                      className="rounded-xl px-2 text-muted-foreground"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary-soft px-1.5 text-[10px] font-bold text-primary">
-                        {index + 1}
-                      </span>
+                    lastDragTargetId.current = null;
+                  }}
+                  onDragEnd={() => {
+                    setDraggingCategoryId(null);
+                    setDragOverCategoryId(null);
+                    lastDragTargetId.current = null;
+                  }}
+                  onDragEnter={(e) => {
+                    e.preventDefault();
+                    if (draggingCategoryId && draggingCategoryId !== c.id) {
+                      setDragOverCategoryId(c.id);
+                    }
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (draggingCategoryId && draggingCategoryId !== c.id) {
+                      setDragOverCategoryId(c.id);
+                      if (lastDragTargetId.current !== c.id) {
+                        moveCategory(draggingCategoryId, c.id);
+                        lastDragTargetId.current = c.id;
+                      }
+                    }
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverCategoryId === c.id) {
+                      setDragOverCategoryId(null);
+                    }
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (draggingCategoryId && draggingCategoryId !== c.id) {
+                      moveCategory(draggingCategoryId, c.id);
+                    }
+                    setDraggingCategoryId(null);
+                    setDragOverCategoryId(null);
+                    lastDragTargetId.current = null;
+                  }}
+                >
+                  {dragOverCategoryId === c.id && (
+                    <div className="absolute left-3 right-3 top-0 h-0.5 bg-primary rounded-full" />
+                  )}
+                  {editingCategoryId === c.id ? (
+                    <div className="flex-1 flex items-center gap-3">
                       <div
-                        className={cn(
-                          "h-10 w-10 rounded-xl border border-border/40 bg-white/70 flex items-center justify-center cursor-grab active:cursor-grabbing",
-                          draggingCategoryId === c.id && "bg-primary-soft border-primary/40",
-                        )}
-                        title="Drag to reorder"
+                        onClick={() => editCategoryImageRef.current?.click()}
+                        className="h-12 w-12 rounded-xl bg-muted/30 border border-dashed border-primary/30 flex items-center justify-center overflow-hidden cursor-pointer shrink-0 group relative"
                       >
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                      <div className="h-12 w-12 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center overflow-hidden shrink-0">
-                        {c.image ? (
-                          <img src={c.image} alt="" className="w-full h-full object-cover" />
+                        {editCategoryImage ? (
+                          <img
+                            src={editCategoryImage}
+                            alt=""
+                            className="w-full h-full object-cover group-hover:opacity-50 transition-opacity"
+                          />
                         ) : (
-                          <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                          <ImageIcon className="h-4 w-4 text-primary/40" />
                         )}
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 pointer-events-none">
+                          <Upload className="h-4 w-4 text-primary" />
+                        </div>
                       </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="font-semibold text-sm text-foreground truncate">{c.name}</span>
-                        {index < 5 ? (
-                          <span className="text-[10px] font-bold uppercase tracking-wide text-primary">
-                            Visible on homepage
+                      <Input
+                        value={editCategoryName}
+                        onChange={(e) => setEditCategoryName(e.target.value)}
+                        className="h-10 rounded-xl bg-white flex-1"
+                        autoFocus
+                      />
+                      <Button
+                        size="sm"
+                        onClick={async () => {
+                          const newName = editCategoryName.trim() || c.name;
+                          const newImage =
+                            editCategoryImage && !editCategoryImage.startsWith("blob:")
+                              ? editCategoryImage
+                              : c.image;
+                          const apply = (cat: CategoryDef) =>
+                            cat.id === c.id ? { ...cat, name: newName, image: newImage } : cat;
+                          // Persist immediately (DB + cache) so an uploaded image
+                          // sticks even if the modal is closed without "Save Changes".
+                          setCategories((prev) =>
+                            prev.some((x) => x.id === c.id)
+                              ? prev.map(apply)
+                              : [...prev, { ...c, name: newName, image: newImage }],
+                          );
+                          setDraftCategories((prev) => prev?.map(apply) ?? prev);
+                          if (formData.category === c.name) handleInputChange("category", newName);
+                          setEditingCategoryId(null);
+                          // Move existing products onto the new name when renamed.
+                          if (newName !== c.name) {
+                            const affected = adminProducts.filter((p) => p.category === c.name);
+                            let moved = 0;
+                            for (const p of affected) {
+                              if (await productService.updateProduct(p.id, { category: newName }))
+                                moved += 1;
+                            }
+                            toast.success(
+                              moved > 0
+                                ? `Category updated — moved ${moved} product${moved === 1 ? "" : "s"}.`
+                                : "Category updated.",
+                            );
+                          } else {
+                            toast.success("Category image updated.");
+                          }
+                        }}
+                        className="rounded-xl px-4 bg-primary text-white"
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setEditingCategoryId(null)}
+                        className="rounded-xl px-2 text-muted-foreground"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-3 min-w-0">
+                        <span className="inline-flex h-6 min-w-6 items-center justify-center rounded-full bg-primary-soft px-1.5 text-[10px] font-bold text-primary">
+                          {index + 1}
+                        </span>
+                        <div
+                          className={cn(
+                            "h-10 w-10 rounded-xl border border-border/40 bg-white/70 flex items-center justify-center cursor-grab active:cursor-grabbing",
+                            draggingCategoryId === c.id && "bg-primary-soft border-primary/40",
+                          )}
+                          title="Drag to reorder"
+                        >
+                          <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="h-12 w-12 rounded-xl bg-muted/30 border border-border/50 flex items-center justify-center overflow-hidden shrink-0">
+                          {c.image ? (
+                            <img src={c.image} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <ImageIcon className="h-4 w-4 text-muted-foreground/40" />
+                          )}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-semibold text-sm text-foreground truncate">
+                            {c.name}
                           </span>
+                          {index < 5 ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wide text-primary">
+                              Visible on homepage
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-muted-foreground">
+                              Hidden from homepage
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
+                        {index < 5 ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              moveCategoryToIndex(c.id, Math.min(5, displayedCategories.length - 1))
+                            }
+                            className="h-auto min-h-8 flex-1 sm:flex-none rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-amber-700 hover:bg-amber-50 whitespace-normal"
+                            title="Remove from homepage top 5"
+                          >
+                            <PinOff className="h-3.5 w-3.5 shrink-0" />
+                            <span className="sm:hidden">Hide</span>
+                            <span className="hidden sm:inline">Hide from home</span>
+                          </Button>
                         ) : (
-                          <span className="text-[10px] text-muted-foreground">Hidden from homepage</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => moveCategoryToIndex(c.id, 0)}
+                            className="h-auto min-h-8 flex-1 sm:flex-none rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-primary hover:bg-primary-soft/50 whitespace-normal"
+                            title="Add to homepage top 5"
+                          >
+                            <Pin className="h-3.5 w-3.5 shrink-0" />
+                            <span className="sm:hidden">Show</span>
+                            <span className="hidden sm:inline">Show on home</span>
+                          </Button>
                         )}
-                    </div>
-                    </div>
-                    <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto">
-                      {index < 5 ? (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => moveCategoryToIndex(c.id, Math.min(5, displayedCategories.length - 1))}
-                          className="h-auto min-h-8 flex-1 sm:flex-none rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-amber-700 hover:bg-amber-50 whitespace-normal"
-                          title="Remove from homepage top 5"
+                          onClick={() => {
+                            setEditingCategoryId(c.id);
+                            setEditCategoryName(c.name);
+                            setEditCategoryImage(c.image);
+                          }}
+                          className="h-8 rounded-lg px-3 text-xs font-medium"
                         >
-                          <PinOff className="h-3.5 w-3.5 shrink-0" />
-                          <span className="sm:hidden">Hide</span>
-                          <span className="hidden sm:inline">Hide from home</span>
+                          Edit
                         </Button>
-                      ) : (
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => moveCategoryToIndex(c.id, 0)}
-                          className="h-auto min-h-8 flex-1 sm:flex-none rounded-lg px-2 sm:px-3 py-1.5 text-[11px] sm:text-xs font-medium text-primary hover:bg-primary-soft/50 whitespace-normal"
-                          title="Add to homepage top 5"
+                          onClick={() => {
+                            // Persist the delete immediately (DB + cache) so it sticks.
+                            setCategories((prev) => prev.filter((cat) => cat.id !== c.id));
+                            setDraftCategories(
+                              (prev) => prev?.filter((cat) => cat.id !== c.id) ?? prev,
+                            );
+                            if (formData.category === c.name) handleInputChange("category", "");
+                            toast.success("Category removed");
+                          }}
+                          className="h-8 w-full sm:w-8 rounded-lg p-0 text-destructive hover:bg-destructive/10"
                         >
-                          <Pin className="h-3.5 w-3.5 shrink-0" />
-                          <span className="sm:hidden">Show</span>
-                          <span className="hidden sm:inline">Show on home</span>
+                          <Trash2 className="h-4 w-4" />
                         </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setEditingCategoryId(c.id);
-                          setEditCategoryName(c.name);
-                          setEditCategoryImage(c.image);
-                        }}
-                        className="h-8 rounded-lg px-3 text-xs font-medium"
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setDraftCategories((prev) => prev?.filter((cat) => cat.id !== c.id) ?? prev);
-                          setHasCategoryChanges(true);
-                          if (formData.category === c.name) handleInputChange("category", "");
-                          toast.success("Category removed");
-                        }}
-                        className="h-8 w-full sm:w-8 rounded-lg p-0 text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </>
-                )}
-              </div>
-            ))}
-            {displayedCategories.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground text-sm">
-                No categories exist yet.
-              </div>
-            )}
-          </div>
-          <input
-            ref={editCategoryImageRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleCategoryUpload(e, true)}
-          />
-          <DialogFooter className="mt-5 shrink-0 gap-2 sm:mt-8 sm:flex-row">
-            <Button
-              variant="ghost"
-              onClick={closeManageCategories}
-              className="h-11 w-full rounded-full sm:w-auto sm:px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={saveManageCategories}
-              disabled={!hasCategoryChanges}
-              className="h-11 w-full rounded-full bg-primary sm:w-auto sm:px-8"
-            >
-              Save Changes
-            </Button>
-          </DialogFooter>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+              {displayedCategories.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground text-sm">
+                  No categories exist yet.
+                </div>
+              )}
+            </div>
+            <input
+              ref={editCategoryImageRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => handleCategoryUpload(e, true)}
+            />
+            <DialogFooter className="mt-5 shrink-0 gap-2 sm:mt-8 sm:flex-row">
+              <Button
+                variant="ghost"
+                onClick={closeManageCategories}
+                className="h-11 w-full rounded-full sm:w-auto sm:px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={saveManageCategories}
+                disabled={!hasCategoryChanges}
+                className="h-11 w-full rounded-full bg-primary sm:w-auto sm:px-8"
+              >
+                Save Changes
+              </Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -1145,53 +1191,51 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
       <Dialog open={isAddingBadge} onOpenChange={setIsAddingBadge}>
         <DialogContent className={nestedModalContentClass}>
           <div className={nestedModalInnerClass}>
-          <DialogHeader>
-            <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">
-              Add New Badge
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 mt-4">
-            <div className="space-y-3">
-              <Label className={productModalLabelClass}>
-                Badge Name
-              </Label>
-              <Input
-                value={newBadge}
-                onChange={(e) => setNewBadge(e.target.value)}
-                placeholder="e.g. Exclusive"
-                className={productModalInputClass}
-                autoFocus
-              />
+            <DialogHeader>
+              <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">
+                Add New Badge
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 mt-4">
+              <div className="space-y-3">
+                <Label className={productModalLabelClass}>Badge Name</Label>
+                <Input
+                  value={newBadge}
+                  onChange={(e) => setNewBadge(e.target.value)}
+                  placeholder="e.g. Exclusive"
+                  className={productModalInputClass}
+                  autoFocus
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter className="mt-8">
-            <Button
-              variant="ghost"
-              onClick={() => setIsAddingBadge(false)}
-              className="rounded-full px-6"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                if (newBadge.trim()) {
-                  const newB: BadgeDef = {
-                    id: Math.random().toString(36).substring(2, 9),
-                    name: newBadge.trim(),
-                  };
-                  setBadgeOptions((prev) => [...prev, newB]);
-                  handleInputChange("badge", newB.name);
-                  toast.success(`Badge "${newB.name}" created`);
-                }
-                setNewBadge("");
-                setIsAddingBadge(false);
-              }}
-              disabled={!newBadge.trim()}
-              className="rounded-full px-8 bg-primary hover:bg-primary/90"
-            >
-              Add Badge
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="mt-8">
+              <Button
+                variant="ghost"
+                onClick={() => setIsAddingBadge(false)}
+                className="rounded-full px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (newBadge.trim()) {
+                    const newB: BadgeDef = {
+                      id: Math.random().toString(36).substring(2, 9),
+                      name: newBadge.trim(),
+                    };
+                    setBadgeOptions((prev) => [...prev, newB]);
+                    handleInputChange("badge", newB.name);
+                    toast.success(`Badge "${newB.name}" created`);
+                  }
+                  setNewBadge("");
+                  setIsAddingBadge(false);
+                }}
+                disabled={!newBadge.trim()}
+                className="rounded-full px-8 bg-primary hover:bg-primary/90"
+              >
+                Add Badge
+              </Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -1200,49 +1244,53 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
       <Dialog open={isAddingSize} onOpenChange={setIsAddingSize}>
         <DialogContent className={nestedModalContentClass}>
           <div className={nestedModalInnerClass}>
-          <DialogHeader>
-            <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">Add New Size</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6 mt-4">
-            <div className="space-y-3">
-              <Label className={productModalLabelClass}>
-                Size Label
-              </Label>
-              <Input
-                value={newSize}
-                onChange={(e) => setNewSize(e.target.value)}
-                placeholder="e.g. 24–36M"
-                className={productModalInputClass}
-                autoFocus
-              />
+            <DialogHeader>
+              <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">
+                Add New Size
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6 mt-4">
+              <div className="space-y-3">
+                <Label className={productModalLabelClass}>Size Label</Label>
+                <Input
+                  value={newSize}
+                  onChange={(e) => setNewSize(e.target.value)}
+                  placeholder="e.g. 24–36M"
+                  className={productModalInputClass}
+                  autoFocus
+                />
+              </div>
             </div>
-          </div>
-          <DialogFooter className="mt-8">
-            <Button variant="ghost" onClick={() => setIsAddingSize(false)} className="rounded-full px-6">
-              Cancel
-            </Button>
-            <Button
-              onClick={() => {
-                const normalized = newSize.trim();
-                if (!normalized) return;
-                if (sizeOptions.some((s) => s.name.toLowerCase() === normalized.toLowerCase())) {
-                  toast.error("Size already exists");
-                  return;
-                }
-                const created: SizeDef = {
-                  id: `size-${Math.random().toString(36).slice(2, 9)}`,
-                  name: normalized,
-                };
-                setSizes((prev) => [...prev, created]);
-                setNewSize("");
-                setIsAddingSize(false);
-                toast.success(`Size "${normalized}" added`);
-              }}
-              className="rounded-full px-8 bg-primary hover:bg-primary/90"
-            >
-              Add Size
-            </Button>
-          </DialogFooter>
+            <DialogFooter className="mt-8">
+              <Button
+                variant="ghost"
+                onClick={() => setIsAddingSize(false)}
+                className="rounded-full px-6"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  const normalized = newSize.trim();
+                  if (!normalized) return;
+                  if (sizeOptions.some((s) => s.name.toLowerCase() === normalized.toLowerCase())) {
+                    toast.error("Size already exists");
+                    return;
+                  }
+                  const created: SizeDef = {
+                    id: `size-${Math.random().toString(36).slice(2, 9)}`,
+                    name: normalized,
+                  };
+                  setSizes((prev) => [...prev, created]);
+                  setNewSize("");
+                  setIsAddingSize(false);
+                  toast.success(`Size "${normalized}" added`);
+                }}
+                className="rounded-full px-8 bg-primary hover:bg-primary/90"
+              >
+                Add Size
+              </Button>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -1251,7 +1299,9 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
       <Dialog open={isManagingSizes} onOpenChange={setIsManagingSizes}>
         <DialogContent className={nestedModalContentClass}>
           <DialogHeader>
-            <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">Manage Sizes</DialogTitle>
+            <DialogTitle className="font-serif text-xl text-primary mb-2 sm:text-2xl">
+              Manage Sizes
+            </DialogTitle>
             <p className="text-sm text-muted-foreground">Create and edit your sizing options.</p>
           </DialogHeader>
           <div className="space-y-3 mt-4 max-h-[60vh] overflow-y-auto pr-2 custom-scrollbar">
@@ -1342,7 +1392,9 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
               </div>
             ))}
             {sizeOptions.length === 0 && (
-              <div className="text-center py-8 text-muted-foreground text-sm">No sizes exist yet.</div>
+              <div className="text-center py-8 text-muted-foreground text-sm">
+                No sizes exist yet.
+              </div>
             )}
           </div>
           <DialogFooter className="mt-8">
