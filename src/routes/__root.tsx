@@ -29,19 +29,86 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Little Luxuries - Premium Baby Clothing & Accessories in Pakistan" },
+      {
+        name: "description",
+        content: "Discover premium organic baby clothing, accessories, and gift sets at Little Luxuries. Handcrafted with love in Pakistan using sustainable materials for your little ones.",
+      },
+      { name: "keywords", content: "baby clothes, organic baby clothing, baby accessories, baby gifts, Pakistan baby store, sustainable baby products, onesies, baby swaddles, baby sleepwear" },
+      { name: "author", content: "Little Luxuries" },
+      { name: "robots", content: "index, follow" },
+      { property: "og:title", content: "Little Luxuries - Premium Baby Clothing & Accessories" },
+      {
+        property: "og:description",
+        content: "Discover premium organic baby clothing, accessories, and gift sets. Handcrafted with love in Pakistan using sustainable materials.",
+      },
       { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary" },
-      { name: "twitter:site", content: "@Lovable" },
+      { property: "og:url", content: "https://littleluxuries.pk" },
+      { property: "og:image", content: "https://littleluxuries.pk/og-image.jpg" },
+      { property: "og:site_name", content: "Little Luxuries" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:site", content: "@LittleLuxuriesPK" },
+      { name: "twitter:title", content: "Little Luxuries - Premium Baby Clothing & Accessories" },
+      {
+        name: "twitter:description",
+        content: "Discover premium organic baby clothing, accessories, and gift sets. Handcrafted with love in Pakistan.",
+      },
+      { name: "twitter:image", content: "https://littleluxuries.pk/og-image.jpg" },
     ],
     links: [
       {
         rel: "stylesheet",
         href: appCss,
+      },
+      {
+        rel: "canonical",
+        href: "https://littleluxuries.pk",
+      },
+      {
+        rel: "icon",
+        type: "image/png",
+        href: "/logo.png",
+      },
+      {
+        rel: "apple-touch-icon",
+        href: "/logo.png",
+      },
+    ],
+    scripts: [
+      {
+        type: "text/javascript",
+        src: "https://www.googletagmanager.com/gtag/js?id=G-5MVN9EFSEB",
+        async: true,
+      },
+      {
+        type: "text/javascript",
+        innerHTML: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-5MVN9EFSEB');
+        `,
+      },
+      {
+        type: "application/ld+json",
+        innerHTML: JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "LocalBusiness",
+          name: "Little Luxuries",
+          description: "Premium organic baby clothing and accessories store in Pakistan",
+          url: "https://littleluxuries.pk",
+          logo: "https://littleluxuries.pk/logo.png",
+          image: "https://littleluxuries.pk/og-image.jpg",
+          address: {
+            "@type": "PostalAddress",
+            addressCountry: "PK",
+          },
+          priceRange: "PKR 500 - PKR 5000",
+          sameAs: [
+            "https://www.instagram.com/littleluxuriespk",
+            "https://www.facebook.com/littleluxuriespk",
+          ],
+        }),
       },
     ],
   }),

@@ -10,6 +10,30 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/favorites")({
+  head: () => ({
+    meta: [
+      { title: "My Favorites — Little Luxuries Pakistan" },
+      {
+        name: "description",
+        content:
+          "Save your favorite baby clothing and accessories. Create a wishlist of organic cotton onesies, sleepwear, swaddles, and more.",
+      },
+      { name: "keywords", content: "baby wishlist, favorites, baby clothes wishlist, save baby products" },
+      { property: "og:title", content: "My Favorites — Little Luxuries" },
+      {
+        property: "og:description",
+        content: "Save your favorite baby clothing and accessories.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://littleluxuries.pk/favorites" },
+    ],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://littleluxuries.pk/favorites",
+      },
+    ],
+  }),
   component: FavoritesPage,
 });
 
@@ -89,6 +113,7 @@ function FavoritesPage() {
                       <img
                         src={p.image}
                         alt={p.name}
+                        loading="lazy"
                         className="h-full w-full object-contain grayscale-[0.5]"
                       />
                     </div>
@@ -108,6 +133,7 @@ function FavoritesPage() {
                         <img
                           src={p.image}
                           alt={p.name}
+                          loading="lazy"
                           className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />

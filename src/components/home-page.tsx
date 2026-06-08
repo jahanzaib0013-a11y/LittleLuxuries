@@ -196,7 +196,7 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
             </div>
             <div className="absolute -bottom-6 -left-6 hidden rounded-2xl border border-border bg-card px-5 py-4 shadow-(--shadow-card) md:block">
               <div className="flex items-center gap-3">
-                <img src={logo} alt="" width={48} height={48} />
+                <img src={logo} alt="Little Luxuries Logo" width={48} height={48} />
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                     {content.heroBanner.badgeTitle}

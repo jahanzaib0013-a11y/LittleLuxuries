@@ -15,11 +15,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 export const Route = createFileRoute("/shop")({
   head: () => ({
     meta: [
-      { title: "Shop — Little Luxuries" },
+      { title: "Shop Premium Baby Clothing & Accessories — Little Luxuries Pakistan" },
       {
         name: "description",
         content:
-          "Browse our curated collection of organic cotton, linen, and merino wool baby garments.",
+          "Browse our curated collection of organic cotton, linen, and merino wool baby garments. Onesies, sleepwear, swaddles, and accessories handcrafted with love in Pakistan.",
+      },
+      { name: "keywords", content: "baby clothes shop, organic baby clothing, baby onesies, baby sleepwear, baby swaddles, baby accessories, Pakistan baby store" },
+      { property: "og:title", content: "Shop Premium Baby Clothing & Accessories — Little Luxuries" },
+      {
+        property: "og:description",
+        content: "Browse our curated collection of organic cotton, linen, and merino wool baby garments.",
+      },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://littleluxuries.pk/shop" },
+    ],
+    links: [
+      {
+        rel: "canonical",
+        href: "https://littleluxuries.pk/shop",
       },
     ],
   }),
@@ -842,7 +856,7 @@ function Shop() {
                             >
                               {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
                               color.image_url ? (
-                                <img src={color.image_url} alt="" className="h-full w-full object-contain" />
+                                <img src={color.image_url} alt="" loading="lazy" className="h-full w-full object-contain" />
                               ) : null}
                             </span>
                           ))}
