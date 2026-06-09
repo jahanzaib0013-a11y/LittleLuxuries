@@ -32,6 +32,7 @@ import {
   BellOff,
   Share2,
   Smartphone,
+  BookOpen,
 } from "lucide-react";
 import logo from "@/assets/logo.png";
 import { adminUser } from "@/lib/admin-data";
@@ -62,6 +63,7 @@ const navItems = [
   { to: "/customers", label: "Customers", icon: Users },
   // { to: "/inbox", label: "Social Inbox", icon: MessageSquare },
   { to: "/coupons", label: "Coupons", icon: Tag },
+  { to: "/blogs", label: "Blogs", icon: BookOpen },
   { to: "/content", label: "Content", icon: FileEdit },
   { to: "/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -140,12 +142,12 @@ function SidebarNav({ pathname, onNavigate }: { pathname: string; onNavigate?: (
               asChild
               className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
             >
-              <Link 
-                to="/login" 
+              <Link
+                to="/login"
                 onClick={(e) => {
                   localStorage.removeItem("isAuthenticated");
                   if (onNavigate) onNavigate();
-                }} 
+                }}
                 className="flex items-center"
               >
                 <LogOut className="h-4 w-4 mr-2" /> Sign Out
@@ -243,7 +245,9 @@ export function AdminLayout({
               />
             </div>
             <div className="ml-auto flex items-center gap-2 sm:gap-3 shrink-0">
-              <div className="hidden min-w-0 xl:flex items-center gap-2 flex-wrap justify-end">{rightSlot}</div>
+              <div className="hidden min-w-0 xl:flex items-center gap-2 flex-wrap justify-end">
+                {rightSlot}
+              </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <button

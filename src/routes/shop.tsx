@@ -2,8 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
 import { Heart, Search, ArrowDownUp, X, SlidersHorizontal, ShoppingBag } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { collections, type Product } from "@/lib/products";
+import { type Product } from "@/lib/products";
 import { useFavorites } from "@/hooks/use-favorites";
+import { useCategories } from "@/hooks/use-categories";
 import { usePublishedProducts } from "@/lib/product-queries";
 import { formatPkr } from "@/lib/format-currency";
 import { useCart } from "@/context/CartContext";
@@ -109,10 +110,26 @@ function Shop() {
     "featured",
   );
   const { data: shopProducts = [], isLoading: loading } = usePublishedProducts();
+  const { categories } = useCategories();
   const badges = useMemo(
     () => Array.from(new Set(shopProducts.map((p) => p.badge).filter(Boolean) as string[])),
     [shopProducts],
   );
+
+  // Browsable categories = admin-defined list + every category actually present
+  // on a product (so nothing is unfilterable), de-duped with admin order first.
+  const categoryOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const name of [...categories.map((c) => c.name), ...shopProducts.map((p) => p.category)]) {
+      const n = (name || "").trim();
+      if (n && !seen.has(n)) {
+        seen.add(n);
+        out.push(n);
+      }
+    }
+    return out;
+  }, [categories, shopProducts]);
 
   const [priceRange, setPriceRange] = useState<{ min: number | null; max: number | null }>({
     min: null,
@@ -392,7 +409,7 @@ function Shop() {
                     Category
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    {(["All", ...collections.map((c) => c.name)] as string[]).map((cat) => {
+                    {(["All", ...categoryOptions] as string[]).map((cat) => {
                       const on =
                         cat === "All" ? selectedCategory === "All" : selectedCategory === cat;
                       return (

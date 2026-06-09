@@ -1,8 +1,32 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { SyntheticEvent } from "react";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+/**
+ * Only treat uploaded/remote/data URLs as usable image sources. Bundled-asset
+ * paths (e.g. "/assets/hero-baby-<hash>.jpg" or "/src/assets/…") sometimes get
+ * persisted into saved content/categories from an old build and then 404; we
+ * ignore those so the component can fall back to its live imported default.
+ */
+export function isUsableImageUrl(url?: string | null): boolean {
+  return !!url && /^(https?:|data:|blob:)/i.test(url);
+}
+
+/**
+ * onError handler that swaps a broken <img> to a fallback once (no loop), e.g.
+ * when a Supabase storage object is missing.
+ */
+export function imgErrorFallback(fallback: string) {
+  return (e: SyntheticEvent<HTMLImageElement>) => {
+    const el = e.currentTarget;
+    if (el.dataset.fb === "1") return;
+    el.dataset.fb = "1";
+    el.src = fallback;
+  };
 }
 
 // UTM Parameter Tracking Utility

@@ -363,15 +363,26 @@ export const siteListsService = {
   },
 };
 
+let siteListChannelSeq = 0;
 export const subscribeToSiteList = (id: string, callback: () => void) => {
-  return supabase
-    .channel(`site-lists-${id}`)
-    .on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "site_lists", filter: `id=eq.${id}` },
-      () => callback(),
-    )
-    .subscribe();
+  // Unique channel name per subscription — multiple components can use the same
+  // list (e.g. categories in the homepage AND the footer); reusing a channel
+  // name makes Supabase throw "cannot add postgres_changes callbacks". Wrapped
+  // so a realtime hiccup can never bubble up and crash the page.
+  try {
+    siteListChannelSeq += 1;
+    return supabase
+      .channel(`site-lists-${id}-${siteListChannelSeq}-${Math.random().toString(36).slice(2, 8)}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "site_lists", filter: `id=eq.${id}` },
+        () => callback(),
+      )
+      .subscribe();
+  } catch (e) {
+    console.warn("site_lists realtime subscribe failed:", e);
+    return null;
+  }
 };
 
 // Products management

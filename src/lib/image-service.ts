@@ -2,12 +2,12 @@ import { supabase } from "./supabase";
 
 export const imageService = {
   // Upload image to Supabase Storage
-  async uploadImage(file: File): Promise<string> {
+  async uploadImage(file: File, folder: string = "products"): Promise<string> {
     try {
       // Generate unique file name
       const fileExt = file.name.split(".").pop();
       const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}.${fileExt}`;
-      const filePath = `products/${fileName}`;
+      const filePath = `${folder}/${fileName}`;
 
       // Upload file to Supabase Storage
       const { data, error } = await supabase.storage.from("product-images").upload(filePath, file, {

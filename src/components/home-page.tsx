@@ -18,6 +18,7 @@ import type { SiteContentSource } from "@/lib/content-data";
 import { isExternalUrl } from "@/lib/content-links";
 import { getContentIcon, getPromiseIcon, isStarIcon } from "@/lib/content-icons";
 import { CategorySection } from "@/components/category-section";
+import { defaultCategoryImage } from "@/hooks/use-categories";
 import { CraftStory } from "@/components/craft-story";
 import { BackgroundAnimation } from "@/components/background-animation";
 import { AnimationTemplateProvider, HeroStagger, Reveal } from "@/components/reveal";
@@ -28,7 +29,7 @@ import { Magnetic } from "@/components/motion/magnetic";
 import { CountUp } from "@/components/motion/count-up";
 import { PromoBannerStrip } from "@/components/promo-banner-strip";
 import type { PromoBanner, PromoBannerPlacements } from "@/lib/content-data";
-import { cn } from "@/lib/utils";
+import { cn, isUsableImageUrl, imgErrorFallback } from "@/lib/utils";
 
 function PromoAt({
   banner,
@@ -90,7 +91,9 @@ type HomePageProps = {
 /** Shared landing page body — used by `/` and `/storefront` preview. */
 export function HomePage({ contentSource = "published" }: HomePageProps) {
   const { content } = useSiteContent({ source: contentSource });
-  const heroImageSrc = content.heroBanner.imageUrl ?? hero;
+  const heroImageSrc = isUsableImageUrl(content.heroBanner.imageUrl)
+    ? content.heroBanner.imageUrl!
+    : hero;
   const { categories } = useCategories();
   const { badges } = useBadges();
   const { toggleFavorite, isFavorite } = useFavorites();
@@ -122,9 +125,22 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
 
   const primaryCtaClass =
     "lux-hover-cta group inline-flex items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-sm font-medium text-primary-foreground shadow-(--shadow-soft) transition-all hover:shadow-lg hover:-translate-y-0.5";
+  // Only surface categories that actually have published products, so a card
+  // never leads to an empty shop. De-dupe by name, cap at 5, and give each a
+  // sensible image: uploaded image → known default-by-name → a product photo
+  // from that category (so cards look right even before images are uploaded).
+  const categoryProductNames = new Set(realProducts.map((p) => p.category));
   const homepageCategories = categories
     .filter((category, index, self) => index === self.findIndex((c) => c.name === category.name))
-    .slice(0, 5);
+    .filter((category) => categoryProductNames.has(category.name))
+    .slice(0, 5)
+    .map((category) => {
+      if (isUsableImageUrl(category.image) || defaultCategoryImage(category.name)) return category;
+      const productImg = realProducts.find(
+        (p) => p.category === category.name && isUsableImageUrl(p.image),
+      )?.image;
+      return productImg ? { ...category, image: productImg } : category;
+    });
 
   const promo = content.promoBanner;
   const stickyPromoActive = useStickyPromoActive(contentSource);
@@ -222,6 +238,7 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                       alt="Baby wrapped in lavender swaddle"
                       width={1280}
                       height={1280}
+                      onError={imgErrorFallback(hero)}
                       className="h-full w-full object-cover"
                     />
                   </div>
@@ -350,6 +367,7 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                                 width={1024}
                                 height={1024}
                                 draggable={false}
+                                onError={imgErrorFallback(hero)}
                                 className="h-full w-full max-w-full object-contain grayscale-[0.5]"
                               />
                             </div>
@@ -385,6 +403,7 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                                   width={1024}
                                   height={1024}
                                   draggable={false}
+                                  onError={imgErrorFallback(hero)}
                                   className="h-full w-full max-w-full object-contain transition-transform duration-700 md:group-hover:scale-105"
                                 />
                               </TiltCard>

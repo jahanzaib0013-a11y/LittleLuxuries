@@ -25,10 +25,14 @@ import { Route as CouponsRouteImport } from './routes/coupons'
 import { Route as ContentRouteImport } from './routes/content'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CheckoutRouteImport } from './routes/checkout'
+import { Route as BlogsRouteImport } from './routes/blogs'
+import { Route as BlogRouteImport } from './routes/blog'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as ProductIdRouteImport } from './routes/product.$id'
+import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ApiResetPasswordRouteImport } from './routes/api/reset-password'
 import { Route as ApiForgotPasswordRouteImport } from './routes/api/forgot-password'
 import { Route as ApiCronRouteImport } from './routes/api/cron'
@@ -114,6 +118,16 @@ const CheckoutRoute = CheckoutRouteImport.update({
   path: '/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogsRoute = BlogsRouteImport.update({
+  id: '/blogs',
+  path: '/blogs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BlogRoute = BlogRouteImport.update({
+  id: '/blog',
+  path: '/blog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -129,10 +143,20 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogRoute,
+} as any)
 const ProductIdRoute = ProductIdRouteImport.update({
   id: '/product/$id',
   path: '/product/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BlogSlugRoute = BlogSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => BlogRoute,
 } as any)
 const ApiResetPasswordRoute = ApiResetPasswordRouteImport.update({
   id: '/api/reset-password',
@@ -159,6 +183,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/analytics': typeof AnalyticsRoute
+  '/blog': typeof BlogRouteWithChildren
+  '/blogs': typeof BlogsRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/content': typeof ContentRoute
@@ -179,12 +205,15 @@ export interface FileRoutesByFullPath {
   '/api/cron': typeof ApiCronRoute
   '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/api/reset-password': typeof ApiResetPasswordRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/blog/': typeof BlogIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/analytics': typeof AnalyticsRoute
+  '/blogs': typeof BlogsRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/content': typeof ContentRoute
@@ -205,13 +234,17 @@ export interface FileRoutesByTo {
   '/api/cron': typeof ApiCronRoute
   '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/api/reset-password': typeof ApiResetPasswordRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/blog': typeof BlogIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
   '/analytics': typeof AnalyticsRoute
+  '/blog': typeof BlogRouteWithChildren
+  '/blogs': typeof BlogsRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/content': typeof ContentRoute
@@ -232,7 +265,9 @@ export interface FileRoutesById {
   '/api/cron': typeof ApiCronRoute
   '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/api/reset-password': typeof ApiResetPasswordRoute
+  '/blog/$slug': typeof BlogSlugRoute
   '/product/$id': typeof ProductIdRoute
+  '/blog/': typeof BlogIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -240,6 +275,8 @@ export interface FileRouteTypes {
     | '/'
     | '/about'
     | '/analytics'
+    | '/blog'
+    | '/blogs'
     | '/checkout'
     | '/contact'
     | '/content'
@@ -260,12 +297,15 @@ export interface FileRouteTypes {
     | '/api/cron'
     | '/api/forgot-password'
     | '/api/reset-password'
+    | '/blog/$slug'
     | '/product/$id'
+    | '/blog/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/about'
     | '/analytics'
+    | '/blogs'
     | '/checkout'
     | '/contact'
     | '/content'
@@ -286,12 +326,16 @@ export interface FileRouteTypes {
     | '/api/cron'
     | '/api/forgot-password'
     | '/api/reset-password'
+    | '/blog/$slug'
     | '/product/$id'
+    | '/blog'
   id:
     | '__root__'
     | '/'
     | '/about'
     | '/analytics'
+    | '/blog'
+    | '/blogs'
     | '/checkout'
     | '/contact'
     | '/content'
@@ -312,13 +356,17 @@ export interface FileRouteTypes {
     | '/api/cron'
     | '/api/forgot-password'
     | '/api/reset-password'
+    | '/blog/$slug'
     | '/product/$id'
+    | '/blog/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
   AnalyticsRoute: typeof AnalyticsRoute
+  BlogRoute: typeof BlogRouteWithChildren
+  BlogsRoute: typeof BlogsRoute
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
   ContentRoute: typeof ContentRoute
@@ -456,6 +504,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blogs': {
+      id: '/blogs'
+      path: '/blogs'
+      fullPath: '/blogs'
+      preLoaderRoute: typeof BlogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/blog': {
+      id: '/blog'
+      path: '/blog'
+      fullPath: '/blog'
+      preLoaderRoute: typeof BlogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/analytics': {
       id: '/analytics'
       path: '/analytics'
@@ -477,12 +539,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof BlogRoute
+    }
     '/product/$id': {
       id: '/product/$id'
       path: '/product/$id'
       fullPath: '/product/$id'
       preLoaderRoute: typeof ProductIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/blog/$slug': {
+      id: '/blog/$slug'
+      path: '/$slug'
+      fullPath: '/blog/$slug'
+      preLoaderRoute: typeof BlogSlugRouteImport
+      parentRoute: typeof BlogRoute
     }
     '/api/reset-password': {
       id: '/api/reset-password'
@@ -515,10 +591,24 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface BlogRouteChildren {
+  BlogSlugRoute: typeof BlogSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
+}
+
+const BlogRouteChildren: BlogRouteChildren = {
+  BlogSlugRoute: BlogSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
+}
+
+const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
   AnalyticsRoute: AnalyticsRoute,
+  BlogRoute: BlogRouteWithChildren,
+  BlogsRoute: BlogsRoute,
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
   ContentRoute: ContentRoute,
