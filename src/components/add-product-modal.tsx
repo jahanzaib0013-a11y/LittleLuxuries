@@ -209,10 +209,12 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
       setIsUploadingCategory(true);
       try {
         const imageUrl = await imageService.uploadImage(file);
+        console.log('[Category Upload] Supabase URL:', imageUrl);
         if (isEditing) setEditCategoryImage(imageUrl);
         else setNewCategoryImage(imageUrl);
         toast.success("Category image uploaded");
       } catch (error) {
+        console.error('[Category Upload] Error:', error);
         toast.error("Failed to upload category image");
         if (isEditing) setEditCategoryImage(null);
         else setNewCategoryImage(null);
@@ -824,8 +826,9 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
                   const newCat: CategoryDef = {
                     id: Math.random().toString(36).substring(2, 9),
                     name: newCategory.trim(),
-                    image: newCategoryImage,
+                    image: newCategoryImage && !newCategoryImage.startsWith('blob:') ? newCategoryImage : null,
                   };
+                  console.log('[Add Category] Saving category:', newCat);
                   setCategories((prev) => [...prev, newCat]);
                   handleInputChange("category", newCat.name);
                   toast.success(`Category "${newCat.name}" created`);
@@ -966,10 +969,11 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
                         setDraftCategories((prev) =>
                           prev?.map((cat) =>
                             cat.id === c.id
-                              ? { ...cat, name: editCategoryName, image: editCategoryImage }
+                              ? { ...cat, name: editCategoryName, image: editCategoryImage && !editCategoryImage.startsWith('blob:') ? editCategoryImage : cat.image }
                               : cat,
                           ) ?? prev,
                         );
+                        console.log('[Edit Category] Updated category:', c.id, editCategoryName, editCategoryImage);
                         setHasCategoryChanges(true);
                         if (formData.category === c.name)
                           handleInputChange("category", editCategoryName);

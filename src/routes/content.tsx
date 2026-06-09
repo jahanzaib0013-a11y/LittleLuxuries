@@ -1451,13 +1451,21 @@ function ContentPage() {
                 </button>
               ))}
             </div>
-            <div className="mt-4 pt-4 border-t border-border/20">
+            <div className="mt-4 pt-4 border-t border-border/20 flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
                 Current:{" "}
                 <span className="text-primary font-medium">
                   {isClient ? content.layout : "Loading…"}
                 </span>
               </p>
+              <Button
+                size="sm"
+                onClick={saveAllChanges}
+                disabled={saving}
+                className="rounded-full px-4 bg-primary hover:bg-primary/90"
+              >
+                {saving ? "Saving..." : "Save Layout"}
+              </Button>
             </div>
           </div>
 
