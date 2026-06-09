@@ -746,7 +746,7 @@ export function AddProductModal({
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {sizeOptions.map((size) => {
-                    const active = formData.sizes.includes(size);
+                    const active = formData.sizes.includes(size.name);
                     return (
                       <button
                         key={size.id}

@@ -2,8 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
 import { HomePage, PromoTopBar } from "@/components/home-page";
 import { useStickyPromoActive } from "@/hooks/use-sticky-promo-active";
+import heroImage from "@/assets/hero-baby.jpg";
 
 export const Route = createFileRoute("/")({
+  // No server loader: the app renders client-side (shell SSR), so awaiting a
+  // Supabase fetch here only delayed TTFB without painting anything sooner.
+  // The hero is the bundled asset, so we statically preload it instead — the
+  // browser starts fetching it from the initial HTML, in parallel with the JS.
   head: () => ({
     meta: [
       { title: "Little Luxuries — Heirloom Baby Garments" },
@@ -18,6 +23,7 @@ export const Route = createFileRoute("/")({
         content: "Hand-crafted, ethically-made baby garments. Gentle luxuries for your little one.",
       },
     ],
+    links: [{ rel: "preload", as: "image", href: heroImage, fetchPriority: "high" }],
   }),
   component: Index,
 });

@@ -1,6 +1,100 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 import appCss from "../styles.css?url";
+import logo from "@/assets/logo.png";
+
+/**
+ * Brand splash shown in the very first HTML the browser receives, so visitors
+ * see the logo on-brand background instantly instead of a blank white screen
+ * while the JS bundle downloads (this app renders its body client-side).
+ *
+ * It is rendered by React in the server HTML (so it paints before hydration),
+ * stays visible through hydration (initial state matches SSR → no mismatch),
+ * then fades out once the app has mounted. Styles are inline and self-contained
+ * so it does not depend on the main stylesheet loading first. The background +
+ * logo match the intro animation, so it hands off seamlessly into whatever
+ * animation is selected in the admin dashboard.
+ */
+function AppSplash() {
+  const [hidden, setHidden] = useState(false);
+  const [removed, setRemoved] = useState(false);
+
+  useEffect(() => {
+    let settled = false;
+    let removeTimer: ReturnType<typeof setTimeout>;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      setHidden(true);
+      removeTimer = setTimeout(() => setRemoved(true), 500);
+    };
+
+    // Reveal only once BOTH the content has loaded and the web fonts are ready,
+    // so any reflow (promo bar, announcement section, font swap) happens behind
+    // the splash and the user sees a finished page — not a jumping one.
+    let contentReady = false;
+    let fontsReady = false;
+    let graceTimer: ReturnType<typeof setTimeout>;
+    const tryFinish = () => {
+      if (contentReady && fontsReady) finish();
+    };
+
+    const onReady = () => {
+      contentReady = true;
+      tryFinish();
+    };
+    window.addEventListener("ll-app-ready", onReady);
+
+    const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
+    Promise.resolve(fonts).then(() => {
+      fontsReady = true;
+      tryFinish();
+      // Most pages (e.g. /shop) don't emit "ll-app-ready"; once fonts are in,
+      // give content a short grace window then reveal regardless.
+      graceTimer = setTimeout(() => {
+        contentReady = true;
+        tryFinish();
+      }, 450);
+    });
+
+    // Safety cap: never hold the splash longer than 1.5s, even if something hangs.
+    const cap = setTimeout(finish, 1500);
+
+    return () => {
+      window.removeEventListener("ll-app-ready", onReady);
+      clearTimeout(cap);
+      clearTimeout(graceTimer);
+      clearTimeout(removeTimer);
+    };
+  }, []);
+
+  if (removed) return null;
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background:
+          "radial-gradient(ellipse at top, oklch(0.94 0.05 305) 0%, oklch(0.985 0.004 300) 70%)",
+        opacity: hidden ? 0 : 1,
+        pointerEvents: "none",
+        transition: "opacity 500ms ease",
+      }}
+    >
+      <div className="ll-splash" aria-label="Little Luxuries">
+        <span className="ll-splash-outline">Little Luxuries</span>
+        <span className="ll-splash-fill">Little Luxuries</span>
+      </div>
+    </div>
+  );
+}
 
 function NotFoundComponent() {
   return (
@@ -58,6 +152,10 @@ export const Route = createRootRoute({
       },
       { name: "author", content: "Little Luxuries" },
       { name: "robots", content: "index, follow" },
+      {
+        name: "google-site-verification",
+        content: "Z2Xeg_3J0_LXL1FCEFcv0y2_XfA6s6jE8C-f6-yGO4k",
+      },
       { property: "og:title", content: "Little Luxuries - Premium Baby Clothing & Accessories" },
       {
         property: "og:description",
@@ -79,6 +177,11 @@ export const Route = createRootRoute({
       { name: "twitter:image", content: "https://littleluxuries.pk/og-image.jpg" },
     ],
     links: [
+      // Preload the splash logo so the brand screen paints instantly.
+      { rel: "preload", as: "image", href: logo, fetchPriority: "high" },
+      // Connect to the font hosts early so web fonts load sooner (less reflow).
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -147,6 +250,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <AppSplash />
         {children}
         <Scripts />
       </body>

@@ -1084,3 +1084,53 @@ html.lenis body {
     display: none;
   }
 }
+
+/* ─── Brand loading splash: hollow wordmark that fills with color ─────────── */
+.ll-splash {
+  position: relative;
+  display: inline-block;
+  font-family: "Noto Serif", Georgia, serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: clamp(2rem, 9vw, 4rem);
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  user-select: none;
+}
+.ll-splash > span {
+  display: block;
+}
+/* The hollow outline (always visible) */
+.ll-splash-outline {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--primary);
+  text-stroke: 1px var(--primary);
+}
+/* The colored fill, swept in left-to-right on a loop */
+.ll-splash-fill {
+  position: absolute;
+  inset: 0;
+  color: var(--primary);
+  -webkit-text-stroke: 1px var(--primary);
+  text-stroke: 1px var(--primary);
+  clip-path: inset(0 100% 0 0);
+  animation: ll-splash-fill 1.8s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+}
+@keyframes ll-splash-fill {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  55% {
+    clip-path: inset(0 0 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ll-splash-fill {
+    animation: none;
+    clip-path: inset(0 0 0 0);
+  }
+}

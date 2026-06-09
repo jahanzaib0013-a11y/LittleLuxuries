@@ -4,7 +4,6 @@
  * communications. All WhatsApp text in the app is built here so tone stays
  * consistent and graded by the customer's loyalty tier.
  */
-import { formatPkr } from "@/lib/format-currency";
 
 export type CustomerTier = "Standard" | "Bronze" | "Silver" | "Gold" | "Platinum";
 
@@ -78,6 +77,18 @@ export function tierSignoff(tier?: string | null): string {
   return TIER_VOICE[normalizeTier(tier)].signoff;
 }
 
+/** The tier-graded appreciation line used in order messages. */
+export function tierNote(tier?: string | null): string {
+  const notes: Record<CustomerTier, string> = {
+    Standard: "Thank you for shopping with us.",
+    Bronze: "We appreciate your continued support.",
+    Silver: "Thank you for being a valued part of our boutique — we're here for anything you need.",
+    Gold: "As a Gold member, your order is handled with our priority care.",
+    Platinum: "As a Platinum member, your order receives our highest, white-glove attention.",
+  };
+  return notes[normalizeTier(tier)];
+}
+
 export const whatsappService = {
   /**
    * Order confirmation prefill — tier-graded greeting, items with quantity,
@@ -86,32 +97,25 @@ export const whatsappService = {
   formatConfirmationMessage(data: {
     customerName: string;
     orderNumber: string;
-    items: Array<{ name: string; quantity?: number }>;
+    items?: Array<{ name: string; quantity?: number }>;
     total?: number;
     tier?: string | null;
   }): string {
-    const { customerName, orderNumber, items, total, tier } = data;
+    const { customerName, orderNumber, tier } = data;
 
-    const header = "🌸 *Little Luxuries* 🌸";
-    const greeting = tierGreeting(customerName, tier);
-    const intro = `We've received your order *#${orderNumber}* — thank you!`;
-
-    const itemsList =
-      items.length > 0
-        ? `\n\n*Your items:*\n${items
-            .map(
-              (item) =>
-                `✨ *${item.quantity && item.quantity > 1 ? `${item.quantity} ×` : "1 ×"}* ${item.name}`,
-            )
-            .join("\n")}`
-        : "";
-
-    const totalLine =
-      typeof total === "number" && !Number.isNaN(total) ? `\n\n*Total:* ${formatPkr(total)}` : "";
-
-    const footer = `\n\n${tierSignoff(tier)}`;
-
-    return `${header}\n\n${greeting}\n${intro}${itemsList}${totalLine}${footer}`;
+    return [
+      tierGreeting(customerName, tier),
+      "",
+      `Your order *#${orderNumber}* has been received.`,
+      "",
+      "✅ Is your order correct and confirmed?",
+      "",
+      "Kindly reply with *YES* to proceed with processing your order.",
+      "",
+      tierNote(tier),
+      "",
+      tierSignoff(tier),
+    ].join("\n");
   },
 
   /**
@@ -124,21 +128,17 @@ export const whatsappService = {
     tier?: string | null;
   }): string {
     const { customerName, orderNumber, status, tier } = data;
-    const t = normalizeTier(tier);
 
+    // "Order Placed" uses the dedicated order-received message (tier-graded).
+    if ((status ?? "").trim().toLowerCase() === "order placed") {
+      return this.formatConfirmationMessage({ customerName, orderNumber, tier });
+    }
+
+    // All other statuses keep the badge-graded (tier) personalization.
     const greeting = tierGreeting(customerName, tier);
     const line = `Your order *#${orderNumber}* is now *${status}*.`;
 
-    const tierNote: Record<CustomerTier, string> = {
-      Standard: "Thank you for shopping with us.",
-      Bronze: "We appreciate your continued support.",
-      Silver:
-        "Thank you for being a valued part of our boutique — we're here for anything you need.",
-      Gold: "As a Gold member, your order is handled with our priority care.",
-      Platinum: "As a Platinum member, your order receives our highest, white-glove attention.",
-    };
-
-    return `${greeting}\n${line}\n\n${tierNote[t]}\n\n${tierSignoff(tier)}`;
+    return `${greeting}\n${line}\n\n${tierNote(tier)}\n\n${tierSignoff(tier)}`;
   },
 
   /**
