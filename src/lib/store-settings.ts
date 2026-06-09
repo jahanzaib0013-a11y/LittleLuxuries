@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 
 export interface StoreSettings {
   store_name: string;
+  founder_name: string;
   business_email: string;
   contact_phone: string;
   timezone: string;
@@ -23,6 +24,7 @@ export interface StoreSettings {
 
 export const defaultStoreSettings: StoreSettings = {
   store_name: "Little Luxuries",
+  founder_name: "Eleanor Vance",
   business_email: "concierge@littleluxuries.com",
   contact_phone: "+1 (555) 892-0192",
   timezone: "Europe/London",

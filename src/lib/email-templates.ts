@@ -2,6 +2,16 @@
 
 export const EMAIL_LOGO_CID = "logo";
 
+/**
+ * Optional hosted logo URL for the email header. Set by the server before
+ * building an email (Resend can't inline CID attachments). When empty, the
+ * header falls back to the "Little Luxuries" text wordmark.
+ */
+let emailLogoUrl = "";
+export function setEmailLogoUrl(url?: string | null) {
+  emailLogoUrl = (url || "").trim();
+}
+
 export function formatEmailTimestamp(date = new Date()) {
   return `${date.toLocaleDateString("en-US", {
     weekday: "long",
@@ -35,7 +45,7 @@ export function wrapLittleLuxuriesEmail(options: LittleLuxuriesEmailOptions): st
         <table width="560" cellpadding="0" cellspacing="0" role="presentation" style="background: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);">
           <tr>
             <td align="center" style="padding: 40px 40px 30px; background: #faf9fc; border-radius: 16px 16px 0 0;">
-              <img src="cid:${EMAIL_LOGO_CID}" alt="Little Luxuries" width="64" height="64" style="margin: 0 auto 16px; border-radius: 50%; display: block; object-fit: cover;" />
+              ${emailLogoUrl ? `<img src="${emailLogoUrl}" alt="Little Luxuries" width="64" height="64" style="margin: 0 auto 16px; border-radius: 50%; display: block; object-fit: cover;" />` : ""}
               <h1 style="margin: 0; font-size: 22px; font-weight: 600; color: #5b21b6; letter-spacing: 0.5px;">Little Luxuries</h1>
               <p style="margin: 6px 0 0; font-size: 12px; color: #7c3aed; letter-spacing: 2px; text-transform: uppercase;">Curated Elegance</p>
             </td>
@@ -132,10 +142,29 @@ export function emailCtaButton(label: string, href: string): string {
   </tr>`;
 }
 
+/** Wrap an admin-composed plain-text message into the branded email shell. */
+export function wrapPlainTextEmail(subject: string, bodyText: string): string {
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const paragraphs = bodyText
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => emailParagraph(escape(p).replace(/\n/g, "<br/>")))
+    .join("");
+  const title = subject.trim() || "A note from Little Luxuries";
+  return wrapLittleLuxuriesEmail({
+    documentTitle: title,
+    eyebrow: "A note for you",
+    headline: title,
+    bodyHtml: paragraphs,
+  });
+}
+
 export function buildAdminPasswordResetLinkEmail(safeResetUrl: string): string {
   const bodyHtml = [
     emailParagraph(
-      "You requested a password reset for the <strong style=\"color: #1f2937;\">Little Luxuries Admin Portal</strong>. Click the button below to choose a new password. This link expires in one hour.",
+      'You requested a password reset for the <strong style="color: #1f2937;">Little Luxuries Admin Portal</strong>. Click the button below to choose a new password. This link expires in one hour.',
     ),
     emailCtaButton("Reset admin password", safeResetUrl),
     emailHighlightPanel(
@@ -223,11 +252,7 @@ export function buildContactFormEmail(input: ContactFormEmailInput): string {
           `<a href="mailto:${escapeHtml(input.email)}" style="color: #7c3aed; text-decoration: none;">${escapeHtml(input.email)}</a>`,
           false,
         ),
-        emailInfoRow(
-          "Subject",
-          escapeHtml(input.subject || "General Inquiry"),
-          true,
-        ),
+        emailInfoRow("Subject", escapeHtml(input.subject || "General Inquiry"), true),
       ].join(""),
     ),
     `<tr>

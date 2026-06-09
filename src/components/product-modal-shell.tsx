@@ -75,7 +75,7 @@ export function ProductModalShell({ colorsPane, header, children, footer, onClos
             "flex min-h-0 min-w-0 flex-col",
             "max-lg:flex-1 max-lg:w-full",
             mobileTab !== "colors" && "max-lg:hidden",
-            "lg:block lg:w-[min(100%,380px)] lg:shrink-0 lg:border-r lg:border-border/50 lg:max-h-none",
+            "lg:flex lg:w-[min(100%,380px)] lg:shrink-0 lg:border-r lg:border-border/50 lg:max-h-none",
           )}
         >
           <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-muted/20 p-3 sm:p-4 lg:p-6 xl:p-8">

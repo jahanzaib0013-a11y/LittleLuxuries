@@ -47,6 +47,8 @@ import { type Database } from "@/lib/supabase";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ProductColorsEditor } from "@/components/product-colors-editor";
+import { ProductSizeChartEditor } from "@/components/product-size-chart-editor";
+import { createEmptySizeChart, type SizeChart } from "@/lib/size-chart";
 import {
   createEmptyColor,
   syncLegacyFieldsFromColors,
@@ -81,6 +83,7 @@ interface ProductFormData {
   description: string;
   sizes: string[];
   colors: ProductColor[];
+  sizeChart: SizeChart;
   image_url: string;
   secondary_images: string[];
   sustainability: string;
@@ -101,6 +104,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
     description: "",
     sizes: [],
     colors: [createEmptyColor(true)],
+    sizeChart: createEmptySizeChart(),
     image_url: "",
     secondary_images: [],
     sustainability: "",
@@ -333,6 +337,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
         image_url: legacy.image_url,
         secondary_images: legacy.secondary_images,
         colors: legacy.colors,
+        size_chart: formData.sizeChart,
         sustainability: formData.sustainability,
         care_instructions: formData.care_instructions,
         units: unitsValue,
@@ -358,6 +363,7 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
           description: "",
           sizes: [],
           colors: [createEmptyColor(true)],
+          sizeChart: createEmptySizeChart(),
           image_url: "",
           secondary_images: [],
           sustainability: "",
@@ -749,6 +755,26 @@ export function AddProductModal({ open, onOpenChange, onProductAdded, onSuccess 
                         );
                     })}
                   </div>
+                </div>
+
+                {/* 4. Size Chart */}
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary/60">
+                      Size Chart
+                    </h4>
+                    <span className="text-[10px] font-bold text-primary bg-primary-soft px-3 py-1 rounded-full uppercase">
+                      Optional
+                    </span>
+                  </div>
+                  <ProductSizeChartEditor
+                    value={formData.sizeChart}
+                    onChange={(sizeChart) => setFormData((prev) => ({ ...prev, sizeChart }))}
+                    productSizes={formData.sizes}
+                    category={formData.category}
+                    isUploading={isUploading}
+                    onUploadingChange={setIsUploading}
+                  />
                 </div>
               </form>
           </ProductModalShell>

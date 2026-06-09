@@ -1,6 +1,6 @@
 import { supabase, Database } from "./supabase";
 import { formatPkr } from "./format-currency";
-import { sendOrderStatusEmail } from "./email.server";
+import { calculateTier } from "./customers";
 
 // Types
 export type Order = Database["public"]["Tables"]["orders"]["Row"];
@@ -12,6 +12,8 @@ export type OrderWithItems = Order & {
     quantity: number;
   }[];
   order_status_history?: { status: string }[];
+  /** Customer loyalty tier, joined in by getOrders(). */
+  customer_tier?: string;
 };
 export type OrderStatusHistoryItem = Database["public"]["Tables"]["order_status_history"]["Row"];
 export type OrderItem = Database["public"]["Tables"]["order_items"]["Row"];
@@ -344,19 +346,10 @@ export const orderService = {
         await syncDefaultShippingAddressForCustomer(customerId, input);
       }
 
-      // AUTOMATION: Automatically send initial order placed confirmation email
-      try {
-        await sendOrderStatusEmail({
-          data: {
-            orderNumber: order.order_number,
-            customerEmail: order.customer_email,
-            customerName: `${order.customer_first_name} ${order.customer_last_name}`,
-            status: "order_placed",
-          },
-        });
-      } catch (emailErr) {
-        console.error("Failed to send initial automated email:", emailErr);
-      }
+      // NOTE: the "order placed" email is sent by the checkout component after
+      // this resolves. Server functions invoked from inside this library do NOT
+      // run as a server RPC (they execute locally in the browser with no env),
+      // so email triggering lives in the component layer.
 
       return { order, error: null };
     } catch (err: any) {
@@ -565,27 +558,31 @@ export const orderService = {
       if (error) throw error;
 
       // Fetch customer tiers for orders that have customer_email
+      // Compute each customer's tier LIVE from their paid orders (same rule as
+      // the Customers page) so the order/WhatsApp tier matches what admins see.
+      // The stored customers.tier column is stale, so we don't rely on it.
+      const tierCache = new Map<string, string>();
+      const tierForEmail = async (email: string): Promise<string> => {
+        const cached = tierCache.get(email);
+        if (cached) return cached;
+        const { data: custOrders } = await supabase
+          .from("orders")
+          .select("status, payment_status")
+          .eq("customer_email", email);
+        const paid = (custOrders || []).filter(
+          (o: { status: string; payment_status: string | null }) =>
+            o.payment_status === "completed" && o.status !== "cancelled" && o.status !== "refunded",
+        ).length;
+        const t = calculateTier(paid);
+        tierCache.set(email, t);
+        return t;
+      };
+
       const ordersWithTier = await Promise.all(
-        (data || []).map(async (order: any) => {
-          console.log("Processing order:", order.order_number, "customer_email:", order.customer_email);
-          if (order.customer_email) {
-            const { data: customer, error: customerError } = await supabase
-              .from("customers")
-              .select("tier")
-              .eq("email", order.customer_email)
-              .single();
-            console.log("Customer data for order", order.order_number, ":", customer, "Error:", customerError);
-            return {
-              ...order,
-              customer_tier: customer?.tier || "Standard",
-            };
-          }
-          console.log("No customer_email for order:", order.order_number, "defaulting to Standard");
-          return {
-            ...order,
-            customer_tier: "Standard",
-          };
-        }),
+        (data || []).map(async (order: any) => ({
+          ...order,
+          customer_tier: order.customer_email ? await tierForEmail(order.customer_email) : "Standard",
+        })),
       );
 
       return { orders: ordersWithTier, count: count || 0, error: null };
@@ -623,7 +620,9 @@ export const orderService = {
       // 1. Get current status for previous_status reference and existing payment status
       const { data: existing } = await supabase
         .from("orders")
-        .select("status, payment_status, total_amount")
+        .select(
+          "status, payment_status, total_amount, order_number, customer_email, customer_first_name, customer_last_name, tracking_number",
+        )
         .eq("id", orderId)
         .single();
       const previousStatus = existing?.status;
@@ -632,11 +631,10 @@ export const orderService = {
 
       const updates: Record<string, unknown> = { status };
 
-      if (
-        status === "payment_confirmed" &&
-        existingPaymentStatus &&
-        existingPaymentStatus !== "completed"
-      ) {
+      // Confirming payment always marks it collected and stamps paid_at — even
+      // if the order had no prior payment_status (otherwise it stays invisible
+      // to revenue). Skip only if it's already completed (keep original paid_at).
+      if (status === "payment_confirmed" && existingPaymentStatus !== "completed") {
         updates.payment_status = "completed";
         updates.paid_at = new Date().toISOString();
       }
@@ -665,10 +663,7 @@ export const orderService = {
               const currentUnits = product.units || 0;
               const newUnits = currentUnits + item.quantity;
 
-              await supabase
-                .from("products")
-                .update({ units: newUnits })
-                .eq("id", item.product_id);
+              await supabase.from("products").update({ units: newUnits }).eq("id", item.product_id);
             }
           }
         }
@@ -689,6 +684,9 @@ export const orderService = {
         notes: historyNotes,
       });
 
+      // NOTE: status emails are sent by the calling component (dashboard/orders),
+      // because server functions invoked from this library do not run as a
+      // server RPC.
       return { success: true, error: null };
     } catch (err: any) {
       console.error("Error updating order status:", err);
@@ -720,30 +718,34 @@ export const orderService = {
     },
   ): Promise<{ success: boolean; error: string | null }> {
     try {
-      const updates: Record<string, unknown> = {
-        payment_status: paymentStatus,
-      };
-
-      if (options?.orderStatus) {
-        updates.status = options.orderStatus;
-      } else if (paymentStatus === "completed") {
-        const { data: existing, error: fetchErr } = await supabase
+      // Decide whether this payment change should also advance the order status.
+      // Routing the status change through updateOrderStatus keeps emails in one
+      // place (no duplicate / contradicting sends).
+      let targetStatus: OrderStatus | undefined = options?.orderStatus;
+      if (!targetStatus && paymentStatus === "completed") {
+        const { data: cur } = await supabase
           .from("orders")
           .select("status")
           .eq("id", orderId)
           .single();
-
-        if (fetchErr) throw fetchErr;
-
-        const current = existing?.status as OrderStatus | undefined;
-        const fulfilmentStatuses: OrderStatus[] = ["packed", "shipped", "delivered"];
-        const preserveStatus = current !== undefined && fulfilmentStatuses.includes(current);
-
-        if (!preserveStatus) {
-          updates.status = "confirmed";
+        const current = cur?.status as OrderStatus | undefined;
+        // Completing payment confirms the order. For COD that's typically after
+        // delivery, so "delivered" SHOULD advance to payment_confirmed. We only
+        // skip mid-fulfilment (packed/shipped) and terminal states.
+        const skip: OrderStatus[] = [
+          "packed",
+          "shipped",
+          "payment_confirmed",
+          "cancelled",
+          "refunded",
+        ];
+        if (current && !skip.includes(current)) {
+          targetStatus = "payment_confirmed";
         }
       }
 
+      // 1. Persist payment-only fields (status, if any, handled below).
+      const updates: Record<string, unknown> = { payment_status: paymentStatus };
       if (options?.external_transaction_id) {
         updates.external_transaction_id = options.external_transaction_id;
       }
@@ -756,27 +758,16 @@ export const orderService = {
         updates.paid_at = options.paid_at;
       }
 
-      // 1. Get current status if we might change it
-      const { data: existing } = await supabase
-        .from("orders")
-        .select("status")
-        .eq("id", orderId)
-        .single();
-      const previousStatus = existing?.status;
-
-      // 2. Update the order
       const { error } = await supabase.from("orders").update(updates).eq("id", orderId);
-
       if (error) throw error;
 
-      // 3. Record history if status changed
-      if (updates.status && updates.status !== previousStatus) {
-        await supabase.from("order_status_history").insert({
-          order_id: orderId,
-          status: updates.status as string,
-          previous_status: previousStatus,
-          notes: `Payment status updated to ${paymentStatus}`,
-        });
+      // 2. Route any status change through the single chokepoint (sends one email).
+      if (targetStatus) {
+        await orderService.updateOrderStatus(
+          orderId,
+          targetStatus,
+          `Payment status updated to ${paymentStatus}`,
+        );
       }
 
       return { success: true, error: null };
@@ -869,13 +860,14 @@ export const orderService = {
     cancelled: number;
     total_revenue: number;
     revenue_mtd: number;
+    avg_monthly_earning: number;
     order_placed: number;
     error: string | null;
   }> {
     try {
       const { data, error } = await supabase
         .from("orders")
-        .select("status, total_amount, payment_status, paid_at");
+        .select("status, total_amount, payment_status, paid_at, created_at");
 
       if (error) throw error;
 
@@ -912,6 +904,18 @@ export const orderService = {
             if (t >= mtdStartMs && t <= mtdEndMs) return sum + Number(o.total_amount);
             return sum;
           }, 0) || 0,
+        // Real average: total collected revenue ÷ number of months that had sales.
+        avg_monthly_earning: (() => {
+          const collected = (data || []).filter(countsTowardCollectedRevenue);
+          const total = collected.reduce((sum, o: any) => sum + Number(o.total_amount), 0);
+          const months = new Set(
+            collected.map((o: any) => {
+              const d = new Date(o.paid_at || o.created_at);
+              return `${d.getFullYear()}-${d.getMonth()}`;
+            }),
+          );
+          return months.size > 0 ? Math.round(total / months.size) : 0;
+        })(),
         error: null,
       };
 
@@ -930,6 +934,7 @@ export const orderService = {
         cancelled: 0,
         total_revenue: 0,
         revenue_mtd: 0,
+        avg_monthly_earning: 0,
         order_placed: 0,
         error: err.message || "Failed to fetch stats",
       };
@@ -1035,8 +1040,9 @@ export const orderService = {
             // Skip cancelled or refunded orders in the VIP Pulse for a cleaner, high-intent feed
             if (o.status === "cancelled" || o.status === "refunded") return;
 
+            // COD: payment_confirmed = cash collected = a completed purchase.
             const action =
-              o.status === "delivered" || o.status === "shipped"
+              o.status === "delivered" || o.status === "shipped" || o.status === "payment_confirmed"
                 ? "completed purchase"
                 : "placed an order";
 

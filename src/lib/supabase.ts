@@ -38,6 +38,9 @@ export interface Database {
           };
           layout: string;
           promo_banner: Record<string, unknown>;
+          animation_style?: string;
+          background_animation?: string;
+          craft_story?: Record<string, unknown>;
           created_at: string;
           updated_at: string;
         };
@@ -46,6 +49,15 @@ export interface Database {
           "id" | "created_at" | "updated_at"
         >;
         Update: Partial<Database["public"]["Tables"]["content"]["Insert"]>;
+      };
+      site_lists: {
+        Row: {
+          id: string;
+          data: unknown;
+          updated_at: string;
+        };
+        Insert: { id: string; data: unknown };
+        Update: Partial<{ id: string; data: unknown }>;
       };
       products: {
         Row: {
@@ -59,6 +71,7 @@ export interface Database {
           description: string;
           sizes: string[];
           colors?: import("@/lib/product-colors").ProductColor[];
+          size_chart?: import("@/lib/size-chart").SizeChart;
           secondary_images?: string[];
           sustainability?: string;
           care_instructions?: string;

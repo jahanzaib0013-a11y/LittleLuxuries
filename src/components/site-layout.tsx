@@ -12,6 +12,16 @@ import { useStoreSettingsContext } from "@/context/StoreSettingsContext";
 import { subscribeToNewsletter } from "@/lib/email.server";
 import { validateEmail } from "@/lib/form-validation";
 import { cn } from "@/lib/utils";
+import { PageTransition } from "@/components/page-transition";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
+import { IntroLoader } from "@/components/motion/intro-loader";
+import { CustomCursor } from "@/components/motion/custom-cursor";
+import { Toaster } from "@/components/ui/sonner";
+import {
+  loadPublishedContent,
+  SITE_CONTENT_PUBLISHED_UPDATED_EVENT,
+  type AnimationTemplate,
+} from "@/lib/content-data";
 
 const stickyPromoPad = "pb-28 sm:pb-32";
 
@@ -270,6 +280,22 @@ export function Footer({ className }: { className?: string }) {
   );
 }
 
+/**
+ * Active motion template for the storefront shell. Starts at the SSR-safe
+ * default and syncs from the published content (localStorage) on mount, then
+ * tracks publish events so the page-transition look stays in step with Content.
+ */
+function useAnimationTemplate(): AnimationTemplate {
+  const [template, setTemplate] = useState<AnimationTemplate>("couture");
+  useEffect(() => {
+    const sync = () => setTemplate(loadPublishedContent().animationTemplate ?? "couture");
+    sync();
+    window.addEventListener(SITE_CONTENT_PUBLISHED_UPDATED_EVENT, sync);
+    return () => window.removeEventListener(SITE_CONTENT_PUBLISHED_UPDATED_EVENT, sync);
+  }, []);
+  return template;
+}
+
 function FooterCol({ title, links }: { title: string; links: { label: string; to: string }[] }) {
   return (
     <div>
@@ -303,13 +329,21 @@ export function Layout({
 }) {
   const { isCartOpen, closeCart } = useCart();
   const pad = padForStickyPromo ? stickyPromoPad : undefined;
+  const animationTemplate = useAnimationTemplate();
   return (
-    <div className="flex min-h-screen flex-col">
-      {beforeHeader}
-      <Header />
-      <main className={cn("flex-1", pad)}>{children}</main>
-      <Footer className={pad} />
-      <CartSidebar isOpen={isCartOpen} onOpenChange={closeCart} />
-    </div>
+    <SmoothScroll template={animationTemplate}>
+      <IntroLoader template={animationTemplate} />
+      <CustomCursor template={animationTemplate} />
+      <div className="flex min-h-screen flex-col" data-anim-template={animationTemplate}>
+        {beforeHeader}
+        <Header />
+        <main className={cn("flex-1", pad)}>
+          <PageTransition>{children}</PageTransition>
+        </main>
+        <Footer className={pad} />
+        <CartSidebar isOpen={isCartOpen} onOpenChange={closeCart} />
+      </div>
+      <Toaster />
+    </SmoothScroll>
   );
 }

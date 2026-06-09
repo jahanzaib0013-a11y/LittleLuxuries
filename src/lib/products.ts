@@ -1,4 +1,5 @@
 import type { ProductColor } from "@/lib/product-colors";
+import type { SizeChart } from "@/lib/size-chart";
 import onesie from "@/assets/product-onesie.jpg";
 import booties from "@/assets/product-booties.jpg";
 import swaddle from "@/assets/product-swaddle.jpg";
@@ -18,6 +19,7 @@ export type Product = {
   description: string;
   sizes: string[];
   colors?: ProductColor[];
+  size_chart?: SizeChart;
   secondary_images?: string[];
   sustainability?: string;
   care_instructions?: string;

@@ -105,17 +105,28 @@ export async function getCustomers(
     (data as unknown as CustomerQueryRow[])?.map((customer) => {
       const orders = customer.orders || [];
       const totalOrders = orders.length;
+      // COD: an order is a settled/completed sale once payment is confirmed
+      // (cash collected on delivery). payment_confirmed sets payment_status =
+      // "completed", so we key off that.
+      const isSettled = (order: { status: string; payment_status: string }) =>
+        order.payment_status === "completed" &&
+        order.status !== "cancelled" &&
+        order.status !== "refunded";
+      // Orders still awaiting payment/fulfilment — payment_confirmed is NOT
+      // pending for COD (it means the sale is done).
       const pendingOrders = orders.filter((order) =>
-        ["pending_payment", "payment_initiated", "paid", "order_confirmed", "payment_confirmed", "packed"].includes(
+        ["pending_payment", "payment_initiated", "paid", "order_confirmed", "packed"].includes(
           order.status,
         ),
       ).length;
-      const totalSpent = orders.reduce((sum, order) => {
-        if (order.payment_status !== "completed") return sum;
-        if (order.status === "cancelled" || order.status === "refunded") return sum;
-        return sum + (parseFloat(String(order.total_amount)) || 0);
-      }, 0);
-      const membershipTier = calculateTier(totalOrders);
+      const totalSpent = orders.reduce(
+        (sum, order) =>
+          isSettled(order) ? sum + (parseFloat(String(order.total_amount)) || 0) : sum,
+        0,
+      );
+      // Tier reflects real (paid/confirmed) purchases, not just placed orders.
+      const paidOrders = orders.filter(isSettled).length;
+      const membershipTier = calculateTier(paidOrders);
 
       return {
         id: customer.id,
@@ -198,13 +209,13 @@ export async function getCustomerStats(): Promise<CustomerStats> {
     Standard: 0,
   };
 
-  (customerSpending as unknown as Array<{ orders: Array<unknown> }>)?.forEach((c) => {
-    const count = c.orders?.length || 0;
-    if (count >= 12) tier_counts.Platinum++;
-    else if (count >= 8) tier_counts.Gold++;
-    else if (count >= 5) tier_counts.Silver++;
-    else if (count >= 3) tier_counts.Bronze++;
-    else tier_counts.Standard++;
+  (customerSpending as unknown as SpendingQueryRow[])?.forEach((c) => {
+    // Tier reflects settled (paid/confirmed) orders, consistent with getCustomers.
+    const count = (c.orders || []).filter(
+      (o) =>
+        o.payment_status === "completed" && o.status !== "cancelled" && o.status !== "refunded",
+    ).length;
+    tier_counts[calculateTier(count)]++;
   });
 
   // Get new gold members today (those who reached 8 orders today)

@@ -51,6 +51,7 @@ function SettingsPage() {
   });
   const [storeProfile, setStoreProfile] = useState({
     storeName: "Little Luxuries Boutique",
+    founderName: "Eleanor Vance",
     businessEmail: "concierge@littleluxuries.com",
     contactPhone: "+1 (555) 892-0192",
     timezone: "London (GMT +00)",
@@ -91,6 +92,7 @@ function SettingsPage() {
 
       setStoreProfile({
         storeName: settings.store_name || "Little Luxuries Boutique",
+        founderName: settings.founder_name || "Eleanor Vance",
         businessEmail: settings.business_email || "concierge@littleluxuries.com",
         contactPhone: settings.contact_phone || "+1 (555) 892-0192",
         timezone: settings.timezone_display || "London (GMT +00)",
@@ -152,6 +154,7 @@ function SettingsPage() {
       // Update all profile settings
       const updates = [
         { key: "store_name" as const, value: storeProfile.storeName },
+        { key: "founder_name" as const, value: storeProfile.founderName },
         { key: "business_email" as const, value: storeProfile.businessEmail },
         { key: "contact_phone" as const, value: storeProfile.contactPhone },
         { key: "timezone_display" as const, value: storeProfile.timezone },
@@ -395,6 +398,17 @@ function SettingsPage() {
                 <Input
                   value={storeProfile.storeName}
                   onChange={(e) => setStoreProfile({ ...storeProfile, storeName: e.target.value })}
+                  className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
+                />
+              </div>
+              <div>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+                  Founder Name
+                </Label>
+                <Input
+                  value={storeProfile.founderName}
+                  onChange={(e) => setStoreProfile({ ...storeProfile, founderName: e.target.value })}
+                  placeholder="e.g. Eleanor Vance"
                   className="mt-2 h-12 bg-muted/40 border-0 rounded-xl"
                 />
               </div>

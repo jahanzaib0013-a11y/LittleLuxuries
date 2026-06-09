@@ -23,13 +23,12 @@ function CategoryCard({
   imageClassName?: string;
   titleClassName?: string;
 }) {
-  console.log('[CategoryCard] Rendering category:', category.name, 'image:', category.image);
   return (
     <Link
       to="/shop"
       search={{ category: category.name }}
       className={cn(
-        "group relative block max-w-full overflow-hidden rounded-3xl bg-muted",
+        "lux-hover-card lux-zoom group relative block max-w-full overflow-hidden rounded-3xl bg-muted",
         className,
       )}
     >

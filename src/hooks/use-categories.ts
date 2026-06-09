@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useDbList } from "@/hooks/use-db-list";
 import onesie from "@/assets/product-onesie.jpg";
 import booties from "@/assets/product-booties.jpg";
 import swaddle from "@/assets/product-swaddle.jpg";
@@ -22,51 +22,13 @@ const defaultCategories: CategoryDef[] = [
   { id: "6", name: "Swaddles", image: swaddle, tagline: "Wrapped in love" },
 ];
 
+/** Global category list — persisted in Supabase (`site_lists` id="categories"). */
 export function useCategories() {
-  const [categories, setCategoriesState] = useState<CategoryDef[]>(defaultCategories);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("site_categories");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        console.log('[useCategories] Loaded from localStorage:', parsed);
-        setCategoriesState(parsed);
-      } catch (e) {
-        console.error("Failed to parse categories", e);
-      }
-    }
-
-    const handleStorageChange = () => {
-      const updated = localStorage.getItem("site_categories");
-      if (updated) {
-        try {
-          setCategoriesState(JSON.parse(updated));
-        } catch (e) {
-          // Ignore parse errors from storage
-        }
-      }
-    };
-
-    window.addEventListener("categories-updated", handleStorageChange);
-    window.addEventListener("storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("categories-updated", handleStorageChange);
-      window.removeEventListener("storage", handleStorageChange);
-    };
-  }, []);
-
-  const setCategories = (
-    newCategories: CategoryDef[] | ((prev: CategoryDef[]) => CategoryDef[]),
-  ) => {
-    setCategoriesState((prev) => {
-      const updated = typeof newCategories === "function" ? newCategories(prev) : newCategories;
-      localStorage.setItem("site_categories", JSON.stringify(updated));
-      window.dispatchEvent(new Event("categories-updated"));
-      return updated;
-    });
-  };
-
+  const { items: categories, setItems: setCategories } = useDbList<CategoryDef>(
+    "categories",
+    defaultCategories,
+    "categories-updated",
+    "site_categories",
+  );
   return { categories, setCategories, defaultCategories };
 }

@@ -21,11 +21,19 @@ export const Route = createFileRoute("/shop")({
         content:
           "Browse our curated collection of organic cotton, linen, and merino wool baby garments. Onesies, sleepwear, swaddles, and accessories handcrafted with love in Pakistan.",
       },
-      { name: "keywords", content: "baby clothes shop, organic baby clothing, baby onesies, baby sleepwear, baby swaddles, baby accessories, Pakistan baby store" },
-      { property: "og:title", content: "Shop Premium Baby Clothing & Accessories — Little Luxuries" },
+      {
+        name: "keywords",
+        content:
+          "baby clothes shop, organic baby clothing, baby onesies, baby sleepwear, baby swaddles, baby accessories, Pakistan baby store",
+      },
+      {
+        property: "og:title",
+        content: "Shop Premium Baby Clothing & Accessories — Little Luxuries",
+      },
       {
         property: "og:description",
-        content: "Browse our curated collection of organic cotton, linen, and merino wool baby garments.",
+        content:
+          "Browse our curated collection of organic cotton, linen, and merino wool baby garments.",
       },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://littleluxuries.pk/shop" },
@@ -37,9 +45,10 @@ export const Route = createFileRoute("/shop")({
       },
     ],
   }),
-  validateSearch: (search: Record<string, unknown>): { category?: string } => {
+  validateSearch: (search: Record<string, unknown>): { category?: string; badge?: string } => {
     return {
       category: search.category as string | undefined,
+      badge: search.badge as string | undefined,
     };
   },
   component: Shop,
@@ -80,23 +89,28 @@ function ProductCardImage({
         height={1067}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
-        className={cn(className, "transition-opacity duration-300", loaded ? "opacity-100" : "opacity-0")}
+        className={cn(
+          className,
+          "transition-opacity duration-300",
+          loaded ? "opacity-100" : "opacity-0",
+        )}
       />
     </>
   );
 }
 
 function Shop() {
-  const { category: initialCategory } = Route.useSearch();
+  const { category: initialCategory, badge: initialBadge } = Route.useSearch();
   const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || "All");
-  const [selectedBadges, setSelectedBadges] = useState<string[]>([]);
+  const [selectedBadges, setSelectedBadges] = useState<string[]>(
+    initialBadge ? [initialBadge] : [],
+  );
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc" | "newest">(
     "featured",
   );
   const { data: shopProducts = [], isLoading: loading } = usePublishedProducts();
   const badges = useMemo(
-    () =>
-      Array.from(new Set(shopProducts.map((p) => p.badge).filter(Boolean) as string[])),
+    () => Array.from(new Set(shopProducts.map((p) => p.badge).filter(Boolean) as string[])),
     [shopProducts],
   );
 
@@ -268,13 +282,13 @@ function Shop() {
                   }}
                 />
                 {searchQuery && (
-          <button
+                  <button
                     onClick={() => setSearchQuery("")}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 grid size-5 place-items-center rounded-full transition-colors"
                     style={{ background: "oklch(0.91 0.012 300)" }}
                   >
                     <X className="size-3" style={{ color: "oklch(0.50 0.025 290)" }} />
-          </button>
+                  </button>
                 )}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-3 md:ml-auto md:justify-end">
@@ -370,103 +384,103 @@ function Shop() {
                     "min-w-0 border-b border-border/25 pb-4 lg:flex lg:max-w-full lg:flex-1 lg:flex-col lg:gap-2.5 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6",
                     mobileFilterType !== "category" && "hidden md:block lg:flex",
                   )}
-              >
-                <span
-                    className="mb-2 block font-serif text-[12px] italic lg:mb-0"
-                  style={{ color: "oklch(0.60 0.03 290)" }}
                 >
-                  Category
-                </span>
+                  <span
+                    className="mb-2 block font-serif text-[12px] italic lg:mb-0"
+                    style={{ color: "oklch(0.60 0.03 290)" }}
+                  >
+                    Category
+                  </span>
                   <div className="flex flex-wrap gap-2">
-                {(["All", ...collections.map((c) => c.name)] as string[]).map((cat) => {
+                    {(["All", ...collections.map((c) => c.name)] as string[]).map((cat) => {
                       const on =
                         cat === "All" ? selectedCategory === "All" : selectedCategory === cat;
-                  return (
-            <button
+                      return (
+                        <button
                           type="button"
-              key={cat}
-                      onClick={() => setSelectedCategory(on && cat !== "All" ? "All" : cat)}
+                          key={cat}
+                          onClick={() => setSelectedCategory(on && cat !== "All" ? "All" : cat)}
                           className="inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200 touch-manipulation sm:px-4"
-                      style={
-                        on
-                          ? {
-                              background: "oklch(0.18 0.025 285)",
-                              color: "#fff",
-                              border: "1px solid oklch(0.18 0.025 285)",
-                              boxShadow:
-                                "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
-                              letterSpacing: "0.06em",
-                            }
-                          : {
-                              background: "transparent",
-                              color: "oklch(0.52 0.025 290)",
-                              border: "1px solid oklch(0.89 0.012 300)",
-                              letterSpacing: "0.06em",
-                            }
-                      }
-            >
-              {cat}
-                    </button>
-                  );
-                })}
+                          style={
+                            on
+                              ? {
+                                  background: "oklch(0.18 0.025 285)",
+                                  color: "#fff",
+                                  border: "1px solid oklch(0.18 0.025 285)",
+                                  boxShadow:
+                                    "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
+                                  letterSpacing: "0.06em",
+                                }
+                              : {
+                                  background: "transparent",
+                                  color: "oklch(0.52 0.025 290)",
+                                  border: "1px solid oklch(0.89 0.012 300)",
+                                  letterSpacing: "0.06em",
+                                }
+                          }
+                        >
+                          {cat}
+                        </button>
+                      );
+                    })}
                   </div>
-              </div>
+                </div>
 
                 <div
                   className={cn(
                     "min-w-0 border-b border-border/25 pb-4 lg:flex lg:flex-col lg:gap-2.5 lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6",
                     mobileFilterType !== "status" && "hidden md:block lg:flex",
                   )}
-              >
-                <span
-                    className="mb-2 block font-serif text-[12px] italic lg:mb-0"
-                  style={{ color: "oklch(0.60 0.03 290)" }}
                 >
-                  Status
-                </span>
+                  <span
+                    className="mb-2 block font-serif text-[12px] italic lg:mb-0"
+                    style={{ color: "oklch(0.60 0.03 290)" }}
+                  >
+                    Status
+                  </span>
                   <div className="flex flex-wrap gap-2">
-                {badges.map((badge) => {
-                  const on = selectedBadges.includes(badge);
-                  const ct = shopProducts.filter((p) => p.badge === badge).length;
-                  return (
-                    <button
+                    {badges.map((badge) => {
+                      const on = selectedBadges.includes(badge);
+                      const ct = shopProducts.filter((p) => p.badge === badge).length;
+                      return (
+                        <button
                           type="button"
-                      key={badge}
-                      onClick={() => toggleBadge(badge)}
+                          key={badge}
+                          onClick={() => toggleBadge(badge)}
                           className="inline-flex min-h-9 shrink-0 items-center gap-2 rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200 touch-manipulation sm:px-4"
-                      style={
-                        on
-                          ? {
-                              background: "oklch(0.18 0.025 285)",
-                              color: "#fff",
-                              border: "1px solid oklch(0.18 0.025 285)",
-                              boxShadow:
-                                "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
-                              letterSpacing: "0.06em",
-                            }
-                          : {
-                              background: "transparent",
-                              color: "oklch(0.52 0.025 290)",
-                              border: "1px solid oklch(0.89 0.012 300)",
-                              letterSpacing: "0.06em",
-                            }
-                      }
-                    >
-                      {badge}
-                      <span
+                          style={
+                            on
+                              ? {
+                                  background: "oklch(0.18 0.025 285)",
+                                  color: "#fff",
+                                  border: "1px solid oklch(0.18 0.025 285)",
+                                  boxShadow:
+                                    "0 2px 10px oklch(0.18 0.025 285/0.25), inset 0 1px 0 oklch(1 0 0/0.08)",
+                                  letterSpacing: "0.06em",
+                                }
+                              : {
+                                  background: "transparent",
+                                  color: "oklch(0.52 0.025 290)",
+                                  border: "1px solid oklch(0.89 0.012 300)",
+                                  letterSpacing: "0.06em",
+                                }
+                          }
+                        >
+                          {badge}
+                          <span
                             className="inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[9px] font-black tracking-tight transition-all"
-                        style={{
-                          background: on ? "oklch(1 0 0/0.18)" : "oklch(0.93 0.010 300)",
-                          color: on ? "#fff" : "oklch(0.50 0.025 290)",
-                        }}
-                      >
-                        {ct}
-                      </span>
-                    </button>
-                  );
-                })}
+                            style={{
+                              background: on ? "oklch(1 0 0/0.18)" : "oklch(0.93 0.010 300)",
+                              color: on ? "#fff" : "oklch(0.50 0.025 290)",
+                            }}
+                          >
+                            {ct}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
-              </div>
+                </div>
 
                 <div
                   className={cn(
@@ -474,71 +488,71 @@ function Shop() {
                     mobileFilterType !== "budget" && "hidden md:block lg:flex",
                   )}
                 >
-                <span
+                  <span
                     className="mb-2 block font-serif text-[12px] italic lg:mb-0"
-                  style={{ color: "oklch(0.60 0.03 290)" }}
-                >
-                  Budget
-                </span>
+                    style={{ color: "oklch(0.60 0.03 290)" }}
+                  >
+                    Budget
+                  </span>
                   <div className="flex flex-wrap gap-2">
-                {(
-                  [
-                    { label: "Under 2K", min: null, max: 2000 },
-                    { label: "2K – 5K", min: 2000, max: 5000 },
-                    { label: "5K+", min: 5000, max: null },
-                  ] as { label: string; min: number | null; max: number | null }[]
-                ).map((q) => {
-                  const on = priceRange.min === q.min && priceRange.max === q.max;
-                  return (
-                    <button
+                    {(
+                      [
+                        { label: "Under 2K", min: null, max: 2000 },
+                        { label: "2K – 5K", min: 2000, max: 5000 },
+                        { label: "5K+", min: 5000, max: null },
+                      ] as { label: string; min: number | null; max: number | null }[]
+                    ).map((q) => {
+                      const on = priceRange.min === q.min && priceRange.max === q.max;
+                      return (
+                        <button
                           type="button"
-                      key={q.label}
-                      onClick={() =>
+                          key={q.label}
+                          onClick={() =>
                             setPriceRange(
                               on ? { min: null, max: null } : { min: q.min, max: q.max },
                             )
-                      }
+                          }
                           className="inline-flex min-h-9 shrink-0 items-center rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-wider transition-all duration-200 touch-manipulation sm:px-4"
-                      style={
-                        on
-                          ? {
-                              background:
-                                "linear-gradient(135deg, oklch(0.80 0.14 85) 0%, oklch(0.70 0.12 72) 100%)",
-                              color: "oklch(0.22 0.05 75)",
-                              border: "1px solid oklch(0.68 0.12 74)",
-                              boxShadow:
-                                "0 2px 12px oklch(0.75 0.13 83/0.35), inset 0 1px 0 oklch(1 0 0/0.30)",
-                              letterSpacing: "0.06em",
-                            }
-                          : {
-                              background: "transparent",
-                              color: "oklch(0.52 0.025 290)",
-                              border: "1px solid oklch(0.89 0.012 300)",
-                              letterSpacing: "0.06em",
-                            }
-                      }
-                    >
-                      {q.label}
-                    </button>
-                  );
-                })}
+                          style={
+                            on
+                              ? {
+                                  background:
+                                    "linear-gradient(135deg, oklch(0.80 0.14 85) 0%, oklch(0.70 0.12 72) 100%)",
+                                  color: "oklch(0.22 0.05 75)",
+                                  border: "1px solid oklch(0.68 0.12 74)",
+                                  boxShadow:
+                                    "0 2px 12px oklch(0.75 0.13 83/0.35), inset 0 1px 0 oklch(1 0 0/0.30)",
+                                  letterSpacing: "0.06em",
+                                }
+                              : {
+                                  background: "transparent",
+                                  color: "oklch(0.52 0.025 290)",
+                                  border: "1px solid oklch(0.89 0.012 300)",
+                                  letterSpacing: "0.06em",
+                                }
+                          }
+                        >
+                          {q.label}
+                        </button>
+                      );
+                    })}
                   </div>
-              </div>
+                </div>
 
                 {activeFilterCount > 0 && (
-                <button
+                  <button
                     type="button"
                     onClick={clearAllFilters}
                     className="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-full px-3.5 py-2 text-[10px] font-bold uppercase tracking-widest transition-all duration-200 touch-manipulation sm:w-auto xl:ml-auto xl:self-center"
-                  style={{
-                    color: "oklch(0.58 0.025 290)",
-                    border: "1px solid oklch(0.89 0.012 300)",
-                  }}
-                >
-                  <X className="size-3" /> Reset all
-                </button>
-              )}
-            </div>
+                    style={{
+                      color: "oklch(0.58 0.025 290)",
+                      border: "1px solid oklch(0.89 0.012 300)",
+                    }}
+                  >
+                    <X className="size-3" /> Reset all
+                  </button>
+                )}
+              </div>
             )}
 
             {/* ACTIVE CHIPS */}
@@ -579,8 +593,8 @@ function Shop() {
                     }}
                   >
                     {b} <X className="size-2.5 opacity-50" />
-            </button>
-          ))}
+                  </button>
+                ))}
                 {(priceRange.min !== null || priceRange.max !== null) && (
                   <button
                     type="button"
@@ -715,7 +729,7 @@ function Shop() {
                       className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
                       style={{ aspectRatio: "3/4" }}
                     >
-                {p.badge && (
+                      {p.badge && (
                         <span
                           className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
                           style={{
@@ -724,9 +738,9 @@ function Shop() {
                             boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
                           }}
                         >
-                    {p.badge}
-                  </span>
-                )}
+                          {p.badge}
+                        </span>
+                      )}
 
                       <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
                         <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
@@ -735,18 +749,18 @@ function Shop() {
                       </div>
 
                       <ProductCardImage
-                    src={p.image}
-                    alt={p.name}
+                        src={p.image}
+                        alt={p.name}
                         className="h-full w-full object-contain grayscale-[0.5]"
                       />
-              </div>
+                    </div>
                   ) : (
-                  <Link
-                    to="/product/$id"
-                    params={{ id: p.id }}
+                    <Link
+                      to="/product/$id"
+                      params={{ id: p.id }}
                       className="block relative overflow-hidden rounded-2xl"
                       style={{ aspectRatio: "3/4" }}
-                  >
+                    >
                       {p.badge && (
                         <span
                           className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
@@ -856,18 +870,23 @@ function Shop() {
                             >
                               {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
                               color.image_url ? (
-                                <img src={color.image_url} alt="" loading="lazy" className="h-full w-full object-contain" />
+                                <img
+                                  src={color.image_url}
+                                  alt=""
+                                  loading="lazy"
+                                  className="h-full w-full object-contain"
+                                />
                               ) : null}
                             </span>
                           ))}
                         </div>
                       );
                     })()}
-              </div>
-            </article>
+                  </div>
+                </article>
               );
             })}
-        </div>
+          </div>
         )}
       </section>
 

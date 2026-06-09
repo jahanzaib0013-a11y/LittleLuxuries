@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
 import { usePublishedProducts } from "@/lib/product-queries";
 import { orderService, type CartItem, type CheckoutPrefillSnapshot } from "@/lib/order-service";
+import { sendOrderStatusEmail } from "@/lib/email.server";
 import { couponService, type Coupon } from "@/lib/coupon-service";
 import { toast } from "sonner";
 import {
@@ -42,9 +43,13 @@ export const Route = createFileRoute("/checkout")({
       { title: "Checkout — Little Luxuries Pakistan" },
       {
         name: "description",
-        content: "Review your order and complete your purchase of premium organic baby clothing and accessories. Secure checkout with multiple payment options.",
+        content:
+          "Review your order and complete your purchase of premium organic baby clothing and accessories. Secure checkout with multiple payment options.",
       },
-      { name: "keywords", content: "baby clothes checkout, buy baby clothes online, Pakistan baby store checkout" },
+      {
+        name: "keywords",
+        content: "baby clothes checkout, buy baby clothes online, Pakistan baby store checkout",
+      },
       { property: "og:title", content: "Checkout — Little Luxuries" },
       {
         property: "og:description",
@@ -393,6 +398,21 @@ function Checkout() {
         throw new Error(error || "Failed to create order");
       }
 
+      // Send the "order placed" email (from the component so it runs as a
+      // real server RPC). Best-effort — never block order success.
+      try {
+        await (sendOrderStatusEmail as any)({
+          data: {
+            orderNumber: order.order_number,
+            customerEmail: order.customer_email,
+            customerName: `${order.customer_first_name} ${order.customer_last_name}`,
+            status: "order_placed",
+          },
+        });
+      } catch (emailErr) {
+        console.error("Failed to send order placed email:", emailErr);
+      }
+
       setPlacedOrder({
         orderNumber: order.order_number,
         total: Number(order.total_amount),
@@ -526,7 +546,7 @@ function Checkout() {
                       </div>
                       <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
                         <div className="inline-flex items-center gap-1 rounded-full border border-border bg-card px-1 w-fit">
-                          <button 
+                          <button
                             onClick={() =>
                               handleQuantityChange(
                                 item.id,
@@ -541,7 +561,7 @@ function Checkout() {
                             <Minus className="size-3.5" />
                           </button>
                           <span className="w-10 text-center text-sm font-medium">{item.qty}</span>
-                          <button 
+                          <button
                             onClick={() =>
                               handleQuantityChange(
                                 item.id,
@@ -549,14 +569,14 @@ function Checkout() {
                                 item.qty + 1,
                                 item.color || "",
                               )
-                            } 
+                            }
                             className="grid size-8 place-items-center rounded-full hover:bg-muted transition-colors"
                           >
                             <Plus className="size-3.5" />
                           </button>
                         </div>
-                        <button 
-                          onClick={() => handleRemoveItem(item.id, item.size, item.color || "")} 
+                        <button
+                          onClick={() => handleRemoveItem(item.id, item.size, item.color || "")}
                           className="flex min-h-11 items-center gap-1.5 self-start px-3 py-2 rounded-full border border-border text-xs font-medium text-muted-foreground hover:bg-destructive hover:text-destructive-foreground hover:border-destructive transition-all sm:ml-auto"
                           aria-label="Remove item"
                         >
@@ -678,41 +698,41 @@ function Checkout() {
                     required
                     error={fieldErrors.lastName}
                   />
-              <div className="sm:col-span-2">
-                <Field
-                  label="Phone (optional)"
-                  placeholder="+92-300-1234567"
-                  value={formData.phone}
-                  onChange={(v) => handleInputChange("phone", v)}
-                  error={fieldErrors.phone}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <Field
+                  <div className="sm:col-span-2">
+                    <Field
+                      label="Phone (optional)"
+                      placeholder="+92-300-1234567"
+                      value={formData.phone}
+                      onChange={(v) => handleInputChange("phone", v)}
+                      error={fieldErrors.phone}
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Field
                       label="Street address"
-                  placeholder="123 Willow Lane, Apartment 4B"
-                  value={formData.streetAddress}
-                  onChange={(v) => handleInputChange("streetAddress", v)}
-                  required
-                  error={fieldErrors.streetAddress}
-                />
-              </div>
-              <Field
-                label="City"
-                placeholder="Lahore"
-                value={formData.city}
-                onChange={(v) => handleInputChange("city", v)}
-                required
-                error={fieldErrors.city}
-              />
-              <Field
+                      placeholder="123 Willow Lane, Apartment 4B"
+                      value={formData.streetAddress}
+                      onChange={(v) => handleInputChange("streetAddress", v)}
+                      required
+                      error={fieldErrors.streetAddress}
+                    />
+                  </div>
+                  <Field
+                    label="City"
+                    placeholder="Lahore"
+                    value={formData.city}
+                    onChange={(v) => handleInputChange("city", v)}
+                    required
+                    error={fieldErrors.city}
+                  />
+                  <Field
                     label="Postal code"
-                placeholder="54000"
-                value={formData.postalCode}
-                onChange={(v) => handleInputChange("postalCode", v)}
-                required
-                error={fieldErrors.postalCode}
-              />
+                    placeholder="54000"
+                    value={formData.postalCode}
+                    onChange={(v) => handleInputChange("postalCode", v)}
+                    required
+                    error={fieldErrors.postalCode}
+                  />
                 </div>
               </div>
 
