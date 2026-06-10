@@ -83,7 +83,7 @@ import { CONTENT_ICONS, getContentIcon, getPromiseIcon, isStarIcon } from "@/lib
 import { toast } from "sonner";
 import { CategorySection } from "@/components/category-section";
 import { useCategories } from "@/hooks/use-categories";
-import hero from "@/assets/hero-baby.jpg";
+import hero from "@/assets/hero-baby.webp";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/content")({

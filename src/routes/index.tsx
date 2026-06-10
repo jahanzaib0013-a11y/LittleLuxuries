@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
 import { HomePage, PromoTopBar } from "@/components/home-page";
 import { useStickyPromoActive } from "@/hooks/use-sticky-promo-active";
-import heroImage from "@/assets/hero-baby.jpg";
+import heroImage from "@/assets/hero-baby.webp";
 
 export const Route = createFileRoute("/")({
   // No server loader: the app renders client-side (shell SSR), so awaiting a

@@ -1,13 +1,13 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowRight, Leaf, CheckCircle2, Loader2, Heart } from "lucide-react";
-import { products as fallbackProducts } from "@/lib/products";
+import { ProductGridSkeleton } from "@/components/product-card-skeleton";
 import { usePublishedProducts } from "@/lib/product-queries";
 import { useCategories } from "@/hooks/use-categories";
 import { useBadges } from "@/hooks/use-badges";
 import { useFavorites } from "@/hooks/use-favorites";
 import logo from "@/assets/logo.png";
-import hero from "@/assets/hero-baby.jpg";
+import hero from "@/assets/hero-baby.webp";
 import { subscribeToNewsletter } from "@/lib/email.server";
 import { formatPkr } from "@/lib/format-currency";
 import { validateEmail } from "@/lib/form-validation";
@@ -99,8 +99,11 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
   const { categories } = useCategories();
   const { badges } = useBadges();
   const { toggleFavorite, isFavorite } = useFavorites();
-  const { data: fetchedProducts } = usePublishedProducts();
-  const realProducts = fetchedProducts ?? fallbackProducts;
+  const { data: fetchedProducts, isLoading: productsLoading } = usePublishedProducts();
+  // While the catalog is loading, render nothing product-derived (and show
+  // skeletons in the rows) rather than the bundled sample SKUs — those have
+  // placeholder names and demo prices that briefly flashed as "real" products.
+  const realProducts = fetchedProducts ?? [];
 
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
@@ -238,7 +241,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                     <img
                       src={heroImageSrc}
                       alt="Baby wrapped in lavender swaddle"
-                      width={1280}
+                      width={1024}
                       height={1280}
                       fetchPriority="high"
                       decoding="async"
@@ -317,7 +320,22 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
 
         <CraftStory story={content.craftStory} />
 
-        {badges.map((badge, index) => {
+        {productsLoading && (
+          <section className="overflow-x-clip bg-secondary/40 py-24 sm:py-32">
+            <div className="mx-auto min-w-0 max-w-7xl px-4 sm:px-6">
+              <div className="mb-14 flex flex-col items-center text-center">
+                <span className="label-eyebrow">Curated for you</span>
+                <h2 className="display-serif mt-4 text-4xl text-foreground break-words sm:text-5xl md:text-6xl">
+                  Our Collection
+                </h2>
+              </div>
+              <ProductGridSkeleton count={8} />
+            </div>
+          </section>
+        )}
+
+        {!productsLoading &&
+          badges.map((badge, index) => {
           const badgeProducts = realProducts.filter(
             (p) =>
               p.badge === badge.name &&

@@ -6,7 +6,7 @@ import { RevealText } from "@/components/motion/reveal-text";
 import { usePublishedBlogs } from "@/lib/blog-queries";
 import type { Blog } from "@/lib/blog-service";
 import { isUsableImageUrl, imgErrorFallback } from "@/lib/utils";
-import heroFallback from "@/assets/hero-baby.jpg";
+import heroFallback from "@/assets/hero-baby.webp";
 
 export const Route = createFileRoute("/blog/")({
   head: () => ({

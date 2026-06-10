@@ -22,6 +22,11 @@ data/admin-auth.json
 .wrangler/
 .dev.vars
 
+# Test output / debug artifacts (belong in CI, not source control)
+test-results/
+playwright-report/
+debug-settings-page.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

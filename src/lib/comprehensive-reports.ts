@@ -303,18 +303,9 @@ export function getReportsByCategory(category: ReportData["category"]): Promise<
 }
 
 export function verifyReportPassword(inputPassword: string): boolean {
-  // Trim whitespace and compare case-insensitive for user convenience
+  // Trim whitespace for user convenience, then compare.
   const normalizedInput = inputPassword.trim();
-  const correctPassword = DEFAULT_REPORT_PASSWORD;
-  
-  // Debug logging (remove in production)
-  console.log("Password verification:", {
-    input: normalizedInput,
-    expected: correctPassword,
-    match: normalizedInput === correctPassword,
-  });
-  
-  return normalizedInput === correctPassword;
+  return normalizedInput === DEFAULT_REPORT_PASSWORD;
 }
 
 export async function createPasswordProtectedDownload(report: ReportData): Promise<string> {

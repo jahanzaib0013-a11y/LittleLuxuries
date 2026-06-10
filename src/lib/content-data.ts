@@ -453,7 +453,6 @@ export function saveContent(content: Partial<SiteContent>): void {
 export async function loadPublishedContentAsync(): Promise<SiteContent> {
   try {
     const fromDb = await contentService.getSiteContent();
-    console.log("[loadPublishedContentAsync] From DB:", fromDb);
     if (fromDb) {
       publishPublishedContent(fromDb);
       return fromDb;
@@ -462,7 +461,6 @@ export async function loadPublishedContentAsync(): Promise<SiteContent> {
     console.warn("Supabase content load failed, using local cache:", error);
   }
   const fromLocal = loadPublishedContent();
-  console.log("[loadPublishedContentAsync] From localStorage:", fromLocal);
   return fromLocal;
 }
 
@@ -476,12 +474,10 @@ export async function saveContentAsync(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const merged = mergeSiteContent(loadPublishedContent(), content);
-    console.log("[saveContentAsync] Saving to DB, layout:", merged.layout);
     publishPublishedContent(merged);
     publishContentPreview(merged);
 
     const dbResult = await contentService.saveSiteContent(merged);
-    console.log("[saveContentAsync] DB save result:", dbResult);
     if (!dbResult.success) {
       return {
         success: true,

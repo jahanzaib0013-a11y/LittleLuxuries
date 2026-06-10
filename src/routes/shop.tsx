@@ -55,6 +55,10 @@ export const Route = createFileRoute("/shop")({
   component: Shop,
 });
 
+// How many product cards to render per infinite-scroll batch. Keeps the initial
+// DOM/image count low (one screenful) so images on screen load fast.
+const PRODUCTS_PER_PAGE = 12;
+
 function ProductCardImage({
   src,
   alt,
@@ -65,6 +69,14 @@ function ProductCardImage({
   className?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
+  // Drive lazy-loading ourselves instead of native loading="lazy". On client-side
+  // navigation the grid paints from the react-query cache *during* the 600ms
+  // page-enter transform animation, with Lenis smooth-scroll already active — and
+  // native lazy mis-evaluates "near viewport" under a transformed/JS-scrolled
+  // subtree, so below-the-fold images loaded late. A JS IntersectionObserver with
+  // a large rootMargin preloads each image well before it's reached, reliably, in
+  // both the navigated and hard-refresh cases.
+  const [inView, setInView] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -72,22 +84,39 @@ function ProductCardImage({
   }, [src]);
 
   useEffect(() => {
+    if (inView) return;
+    const node = imgRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "1200px 0px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [inView]);
+
+  useEffect(() => {
     const img = imgRef.current;
     if (img?.complete && img.naturalWidth > 0) {
       setLoaded(true);
     }
-  }, [src]);
+  }, [src, inView]);
 
   return (
     <>
       {!loaded && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
       <img
         ref={imgRef}
-        src={src}
+        src={inView ? src : undefined}
         alt={alt}
-        loading="lazy"
         width={800}
         height={1067}
+        decoding="async"
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
         className={cn(
@@ -109,7 +138,7 @@ function Shop() {
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc" | "newest">(
     "featured",
   );
-  const { data: shopProducts = [], isLoading: loading } = usePublishedProducts();
+  const { data: shopProducts = [], isLoading: loading, isError, refetch } = usePublishedProducts();
   const { categories } = useCategories();
   const badges = useMemo(
     () => Array.from(new Set(shopProducts.map((p) => p.badge).filter(Boolean) as string[])),
@@ -191,6 +220,54 @@ function Shop() {
 
     return result;
   }, [shopProducts, searchQuery, selectedCategory, selectedBadges, sortBy, priceRange]);
+
+  // Infinite scroll: only render a window of the filtered list so the page never
+  // mounts hundreds of cards/images at once. More reveal as the sentinel nears view.
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Any change to the filtered set (search/category/badge/price/sort) resets the window.
+  useEffect(() => {
+    setVisibleCount(PRODUCTS_PER_PAGE);
+  }, [filtered]);
+
+  const visibleProducts = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const hasMore = visibleCount < filtered.length;
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+
+    const loadMore = () => setVisibleCount((c) => c + PRODUCTS_PER_PAGE);
+
+    // Primary trigger: IntersectionObserver.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMore();
+      },
+      { rootMargin: "600px 0px" }, // start loading well before the user reaches the end
+    );
+    observer.observe(node);
+
+    // Fallback trigger: a scroll/resize bounding-box check. The observer's
+    // intersection state can go stale under the page-enter transform animation
+    // + Lenis smooth-scroll on client-side navigation (which left the list stuck
+    // at the first page). Re-reading getBoundingClientRect on each scroll is
+    // self-correcting and works regardless of how scrolling is implemented.
+    const checkRect = () => {
+      if (node.getBoundingClientRect().top < window.innerHeight + 600) loadMore();
+    };
+    checkRect(); // in case the sentinel is already near the viewport on mount
+    window.addEventListener("scroll", checkRect, { passive: true });
+    window.addEventListener("resize", checkRect);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", checkRect);
+      window.removeEventListener("resize", checkRect);
+    };
+  }, [hasMore, visibleProducts.length]);
 
   function ProductCardSkeleton() {
     return (
@@ -675,6 +752,41 @@ function Shop() {
               <ProductCardSkeleton key={i} />
             ))}
           </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center">
+            <div
+              className="size-16 rounded-full mb-6 grid place-items-center"
+              style={{ background: "oklch(0.93 0.03 300)" }}
+            >
+              <ShoppingBag className="size-6" style={{ color: "oklch(0.55 0.06 295)" }} />
+            </div>
+            <p
+              className="text-[10px] font-black uppercase tracking-[0.22em] mb-2"
+              style={{ color: "oklch(0.65 0.025 290)" }}
+            >
+              Couldn't load the collection
+            </p>
+            <h3 className="font-serif text-2xl mb-2" style={{ color: "oklch(0.25 0.03 285)" }}>
+              Something went wrong
+            </h3>
+            <p
+              className="text-sm max-w-xs leading-relaxed mb-8"
+              style={{ color: "oklch(0.58 0.025 290)" }}
+            >
+              We couldn't reach the store just now. Please check your connection and try again.
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 rounded-full px-7 py-3 text-[11px] font-black uppercase tracking-widest transition-all hover:-translate-y-0.5"
+              style={{
+                background: "oklch(0.18 0.025 285)",
+                color: "#fff",
+                boxShadow: "0 4px 18px oklch(0.18 0.025 285/0.25)",
+              }}
+            >
+              Try Again
+            </button>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">
             <div
@@ -717,179 +829,199 @@ function Shop() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((p) => {
-              const isOutOfStock =
-                p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
-              return (
-                <article
-                  key={p.id}
-                  className={cn("group flex flex-col", isOutOfStock && "opacity-80")}
-                >
-                  {/* Image */}
-                  {isOutOfStock ? (
-                    <div
-                      className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
-                      style={{ aspectRatio: "3/4" }}
-                    >
-                      {p.badge && (
-                        <span
-                          className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
-                          style={{
-                            background: "oklch(0.45 0.13 295)",
-                            color: "#fff",
-                            boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
-                          }}
-                        >
-                          {p.badge}
-                        </span>
-                      )}
+          <>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+              {visibleProducts.map((p) => {
+                const isOutOfStock =
+                  p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
+                return (
+                  <article
+                    key={p.id}
+                    className={cn("group flex flex-col", isOutOfStock && "opacity-80")}
+                  >
+                    {/* Image */}
+                    {isOutOfStock ? (
+                      <div
+                        className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
+                        style={{ aspectRatio: "3/4" }}
+                      >
+                        {p.badge && (
+                          <span
+                            className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+                            style={{
+                              background: "oklch(0.45 0.13 295)",
+                              color: "#fff",
+                              boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+                            }}
+                          >
+                            {p.badge}
+                          </span>
+                        )}
 
-                      <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
-                          Sold Out
-                        </span>
+                        <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                          <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
+                            Sold Out
+                          </span>
+                        </div>
+
+                        <ProductCardImage
+                          src={p.image}
+                          alt={p.name}
+                          className="h-full w-full object-contain grayscale-[0.5]"
+                        />
                       </div>
+                    ) : (
+                      <Link
+                        to="/product/$id"
+                        params={{ id: p.id }}
+                        className="block relative overflow-hidden rounded-2xl"
+                        style={{ aspectRatio: "3/4" }}
+                      >
+                        {p.badge && (
+                          <span
+                            className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+                            style={{
+                              background:
+                                p.badge === "New"
+                                  ? "oklch(0.18 0.025 285)"
+                                  : p.badge === "Bestseller"
+                                    ? "linear-gradient(135deg,oklch(0.80 0.14 85),oklch(0.70 0.12 72))"
+                                    : "oklch(0.45 0.13 295)",
+                              color: p.badge === "Bestseller" ? "oklch(0.20 0.05 75)" : "#fff",
+                              boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+                            }}
+                          >
+                            {p.badge}
+                          </span>
+                        )}
 
-                      <ProductCardImage
-                        src={p.image}
-                        alt={p.name}
-                        className="h-full w-full object-contain grayscale-[0.5]"
-                      />
-                    </div>
-                  ) : (
-                    <Link
-                      to="/product/$id"
-                      params={{ id: p.id }}
-                      className="block relative overflow-hidden rounded-2xl"
-                      style={{ aspectRatio: "3/4" }}
-                    >
-                      {p.badge && (
-                        <span
-                          className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+                        <ProductCardImage
+                          src={p.image}
+                          alt={p.name}
+                          className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.04]"
+                        />
+                        <div
+                          className="absolute inset-0 transition-opacity duration-400 opacity-0 group-hover:opacity-100"
                           style={{
                             background:
-                              p.badge === "New"
-                                ? "oklch(0.18 0.025 285)"
-                                : p.badge === "Bestseller"
-                                  ? "linear-gradient(135deg,oklch(0.80 0.14 85),oklch(0.70 0.12 72))"
-                                  : "oklch(0.45 0.13 295)",
-                            color: p.badge === "Bestseller" ? "oklch(0.20 0.05 75)" : "#fff",
-                            boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+                              "linear-gradient(to top, oklch(0.12 0.02 285/0.55) 0%, transparent 55%)",
                           }}
-                        >
-                          {p.badge}
-                        </span>
-                      )}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-100 transition-all duration-300 sm:p-4 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleAddToCart(p);
+                            }}
+                            className="flex h-11 min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-xl transition-all hover:bg-primary hover:text-white"
+                          >
+                            <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
+                            <span className="truncate sm:hidden">Add</span>
+                            <span className="truncate hidden sm:inline">Add to Cart</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleFavorite(p.id);
+                            }}
+                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition-all"
+                            style={{
+                              background: isFavorite(p.id) ? "var(--primary)" : "oklch(1 0 0/0.20)",
+                              color: isFavorite(p.id) ? "white" : "#fff",
+                              backdropFilter: "blur(8px)",
+                            }}
+                            aria-label="Wishlist"
+                          >
+                            <Heart className={`size-4 ${isFavorite(p.id) ? "fill-white" : ""}`} />
+                          </button>
+                        </div>
+                      </Link>
+                    )}
 
-                      <ProductCardImage
-                        src={p.image}
-                        alt={p.name}
-                        className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.04]"
-                      />
-                      <div
-                        className="absolute inset-0 transition-opacity duration-400 opacity-0 group-hover:opacity-100"
-                        style={{
-                          background:
-                            "linear-gradient(to top, oklch(0.12 0.02 285/0.55) 0%, transparent 55%)",
-                        }}
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-100 transition-all duration-300 sm:p-4 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleAddToCart(p);
-                          }}
-                          className="flex h-11 min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-xl transition-all hover:bg-primary hover:text-white"
-                        >
-                          <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
-                          <span className="truncate sm:hidden">Add</span>
-                          <span className="truncate hidden sm:inline">Add to Cart</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            toggleFavorite(p.id);
-                          }}
-                          className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition-all"
-                          style={{
-                            background: isFavorite(p.id) ? "var(--primary)" : "oklch(1 0 0/0.20)",
-                            color: isFavorite(p.id) ? "white" : "#fff",
-                            backdropFilter: "blur(8px)",
-                          }}
-                          aria-label="Wishlist"
-                        >
-                          <Heart className={`size-4 ${isFavorite(p.id) ? "fill-white" : ""}`} />
-                        </button>
-                      </div>
-                    </Link>
-                  )}
-
-                  {/* Info */}
-                  <div className="mt-3 px-0.5">
-                    <div className="flex items-start justify-between gap-2">
-                      {isOutOfStock ? (
-                        <h3 className="font-serif text-[15px] leading-snug text-foreground/60 cursor-not-allowed line-clamp-1">
-                          {p.name}
-                        </h3>
-                      ) : (
-                        <Link to="/product/$id" params={{ id: p.id }}>
-                          <h3 className="font-serif text-[15px] leading-snug text-foreground transition-colors group-hover:text-primary line-clamp-1">
+                    {/* Info */}
+                    <div className="mt-3 px-0.5">
+                      <div className="flex items-start justify-between gap-2">
+                        {isOutOfStock ? (
+                          <h3 className="font-serif text-[15px] leading-snug text-foreground/60 cursor-not-allowed line-clamp-1">
                             {p.name}
                           </h3>
-                        </Link>
-                      )}
-                      <span
-                        className="font-serif text-[15px] font-semibold shrink-0"
-                        style={{ color: "oklch(0.30 0.04 285)" }}
+                        ) : (
+                          <Link to="/product/$id" params={{ id: p.id }}>
+                            <h3 className="font-serif text-[15px] leading-snug text-foreground transition-colors group-hover:text-primary line-clamp-1">
+                              {p.name}
+                            </h3>
+                          </Link>
+                        )}
+                        <span
+                          className="font-serif text-[15px] font-semibold shrink-0"
+                          style={{ color: "oklch(0.30 0.04 285)" }}
+                        >
+                          {formatPkr(Number(p.price))}
+                        </span>
+                      </div>
+                      <p
+                        className="mt-0.5 text-[11px] font-medium truncate"
+                        style={{ color: "oklch(0.62 0.022 290)" }}
                       >
-                        {formatPkr(Number(p.price))}
-                      </span>
+                        {p.variant}
+                      </p>
+                      {(() => {
+                        const colors = getProductColors(p);
+                        if (colors.length <= 1) return null;
+                        return (
+                          <div
+                            className="mt-2 flex flex-wrap gap-1.5"
+                            aria-label="Available colors"
+                          >
+                            {colors.slice(0, 5).map((color) => (
+                              <span
+                                key={color.id}
+                                title={color.name}
+                                className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-border/60"
+                                style={
+                                  color.hex && /^#[0-9A-Fa-f]{6}$/i.test(color.hex)
+                                    ? { backgroundColor: color.hex }
+                                    : undefined
+                                }
+                              >
+                                {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
+                                color.image_url ? (
+                                  <img
+                                    src={color.image_url}
+                                    alt=""
+                                    loading="lazy"
+                                    width={16}
+                                    height={16}
+                                    className="h-full w-full object-contain"
+                                  />
+                                ) : null}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <p
-                      className="mt-0.5 text-[11px] font-medium truncate"
-                      style={{ color: "oklch(0.62 0.022 290)" }}
-                    >
-                      {p.variant}
-                    </p>
-                    {(() => {
-                      const colors = getProductColors(p);
-                      if (colors.length <= 1) return null;
-                      return (
-                        <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Available colors">
-                          {colors.slice(0, 5).map((color) => (
-                            <span
-                              key={color.id}
-                              title={color.name}
-                              className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-border/60"
-                              style={
-                                color.hex && /^#[0-9A-Fa-f]{6}$/i.test(color.hex)
-                                  ? { backgroundColor: color.hex }
-                                  : undefined
-                              }
-                            >
-                              {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
-                              color.image_url ? (
-                                <img
-                                  src={color.image_url}
-                                  alt=""
-                                  loading="lazy"
-                                  className="h-full w-full object-contain"
-                                />
-                              ) : null}
-                            </span>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                  </article>
+                );
+              })}
+            </div>
+            {hasMore && (
+              <div
+                ref={sentinelRef}
+                className="mt-10 grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4"
+                aria-hidden
+              >
+                {Array.from({
+                  length: Math.min(PRODUCTS_PER_PAGE, filtered.length - visibleCount),
+                }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 

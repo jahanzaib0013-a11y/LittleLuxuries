@@ -5,7 +5,8 @@ import { Minus, Plus, ShoppingBag, Trash2, ArrowRight } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
+import { cn, imgErrorFallback } from "@/lib/utils";
+import cartImageFallback from "@/assets/hero-baby.webp";
 import { getProductDisplayImage } from "@/lib/product-colors";
 import { useCheckoutPricing } from "@/hooks/use-checkout-pricing";
 export function CartSidebar({
@@ -94,6 +95,8 @@ export function CartSidebar({
                       <img
                         src={item.product.image_url || item.product.image}
                         alt={item.product.name}
+                        loading="lazy"
+                        onError={imgErrorFallback(cartImageFallback)}
                         className="h-full w-full object-cover"
                       />
                     )}

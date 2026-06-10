@@ -387,20 +387,23 @@ export const subscribeToSiteList = (id: string, callback: () => void) => {
 
 // Products management
 export const productService = {
-  // Get all products
-  async getProducts(status?: string) {
-    let query = supabase.from("products").select("*");
-    if (status && status !== "all") {
-      query = query.eq("status", status);
-    }
-    const { data, error } = await query.order("created_at", { ascending: false });
+  // Get all products. `columns` lets storefront list callers fetch only the
+  // fields the grids need (smaller payload); defaults to all columns.
+  async getProducts(status?: string, opts?: { throwOnError?: boolean; columns?: string }) {
+    const base = supabase.from("products").select(opts?.columns ?? "*");
+    const filtered = status && status !== "all" ? base.eq("status", status) : base;
+    const { data, error } = await filtered.order("created_at", { ascending: false });
 
     if (error) {
       console.error("Error fetching products:", error);
+      // Storefront read paths opt in to throwOnError so a real backend failure
+      // surfaces as a query error (retry UI) instead of an empty list that the
+      // caller would mistake for "no products" and backfill with demo data.
+      if (opts?.throwOnError) throw error;
       return [];
     }
 
-    return data || [];
+    return (data ?? []) as unknown as Database["public"]["Tables"]["products"]["Row"][];
   },
 
   // Get product by ID

@@ -20,13 +20,7 @@ export const Route = createFileRoute("/contact")({
 });
 
 function Contact() {
-  console.log("🌐 Contact page component rendering");
-  const { settings, loading, error } = useStoreSettingsContext();
-
-  // Debug logging
-  console.log("📋 Contact page - settings:", settings);
-  console.log("⏳ Contact page - loading:", loading);
-  console.log("❌ Contact page - error:", error);
+  const { settings } = useStoreSettingsContext();
 
   // Build dynamic address string
   const buildAddress = () => {

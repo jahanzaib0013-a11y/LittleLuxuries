@@ -27,21 +27,13 @@ export function useSiteContent(options?: UseSiteContentOptions) {
   const isPreview = source === "preview";
   const initialContent = options?.initialContent ?? null;
 
-  // Initialize synchronously from the locally-cached content on the client, so
-  // returning visitors render the correct layout (promo bar, announcement
-  // section, real hero text) on the FIRST paint — no default→real swap that
-  // pushed the page around. Falls back to defaults on the server / first visit.
-  const [content, setContent] = useState<SiteContent>(() => {
-    if (initialContent) return initialContent;
-    if (typeof window !== "undefined") {
-      try {
-        return isPreview ? loadPreviewContent() : loadPublishedContent();
-      } catch {
-        return defaultContent;
-      }
-    }
-    return defaultContent;
-  });
+  // The FIRST render must match the server HTML exactly to avoid a React
+  // hydration mismatch: the server has no localStorage, so it renders
+  // `initialContent ?? defaultContent`. We mirror that here and only swap in the
+  // locally-cached content AFTER hydration (in the mount effect below), so
+  // returning visitors still get their saved layout — just one tick later,
+  // behind the brand splash — without discarding the server markup.
+  const [content, setContent] = useState<SiteContent>(initialContent ?? defaultContent);
   const [isLoading, setIsLoading] = useState(!initialContent);
 
   const loadLocal = useCallback(() => {
@@ -70,6 +62,12 @@ export function useSiteContent(options?: UseSiteContentOptions) {
   }, [isPreview, loadLocal]);
 
   useEffect(() => {
+    // Post-hydration: apply the locally-cached layout immediately (returning
+    // visitors), unless the server already provided real content. Safe now —
+    // this runs after hydration, so it can't cause an SSR mismatch.
+    if (!initialContent) {
+      setContent(loadLocal());
+    }
     reload();
 
     const eventName = isPreview
@@ -100,7 +98,7 @@ export function useSiteContent(options?: UseSiteContentOptions) {
       window.removeEventListener(eventName, onUpdate);
       window.removeEventListener("storage", onStorage);
     };
-  }, [reload, isPreview, loadLocal]);
+  }, [reload, isPreview, loadLocal, initialContent]);
 
   return { content, isLoading, reload };
 }

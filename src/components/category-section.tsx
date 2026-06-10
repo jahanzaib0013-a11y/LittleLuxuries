@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { defaultCategoryImage, type CategoryDef } from "@/hooks/use-categories";
 import type { CategoryLayout } from "@/lib/content-data";
-import hero from "@/assets/hero-baby.jpg";
+import hero from "@/assets/hero-baby.webp";
 import { cn, isUsableImageUrl, imgErrorFallback } from "@/lib/utils";
 
 type CategorySectionProps = {

@@ -6,7 +6,7 @@ import { Parallax } from "@/components/motion/parallax";
 import { blogService, videoEmbed, type Blog } from "@/lib/blog-service";
 import { usePublishedBlogs } from "@/lib/blog-queries";
 import { isUsableImageUrl, imgErrorFallback } from "@/lib/utils";
-import heroFallback from "@/assets/hero-baby.jpg";
+import heroFallback from "@/assets/hero-baby.webp";
 
 export const Route = createFileRoute("/blog/$slug")({
   component: BlogPostPage,
