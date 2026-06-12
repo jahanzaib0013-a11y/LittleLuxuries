@@ -10,7 +10,7 @@ import { formatPkr } from "@/lib/format-currency";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { getProductColors } from "@/lib/product-colors";
+import { getProductColors, getDefaultColor, type ProductColor } from "@/lib/product-colors";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export const Route = createFileRoute("/shop")({
@@ -126,6 +126,202 @@ function ProductCardImage({
         )}
       />
     </>
+  );
+}
+
+function ShopProductCard({
+  p,
+  isFavorite,
+  onToggleFavorite,
+  onAddToCart,
+}: {
+  p: Product;
+  isFavorite: boolean;
+  onToggleFavorite: (id: string) => void;
+  onAddToCart: (product: Product) => void;
+}) {
+  const colors = useMemo(() => getProductColors(p), [p]);
+  const [selectedColorId, setSelectedColorId] = useState<string | undefined>(
+    () => getDefaultColor(colors)?.id,
+  );
+  const selectedColor = colors.find((c) => c.id === selectedColorId) ?? getDefaultColor(colors);
+  const displayImage = selectedColor?.image_url || p.image;
+
+  const isOutOfStock = p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
+
+  const hasHex = (c: ProductColor) => !!c.hex && /^#[0-9A-Fa-f]{6}$/i.test(c.hex);
+
+  return (
+    <article className={cn("group flex flex-col", isOutOfStock && "opacity-80")}>
+      {/* Image */}
+      {isOutOfStock ? (
+        <div
+          className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
+          style={{ aspectRatio: "3/4" }}
+        >
+          {p.badge && (
+            <span
+              className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+              style={{
+                background: "oklch(0.45 0.13 295)",
+                color: "#fff",
+                boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+              }}
+            >
+              {p.badge}
+            </span>
+          )}
+
+          <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+            <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
+              Sold Out
+            </span>
+          </div>
+
+          <ProductCardImage
+            src={displayImage}
+            alt={p.name}
+            className="h-full w-full object-contain grayscale-[0.5]"
+          />
+        </div>
+      ) : (
+        <Link
+          to="/product/$id"
+          params={{ id: p.id }}
+          className="block relative overflow-hidden rounded-2xl"
+          style={{ aspectRatio: "3/4" }}
+        >
+          {p.badge && (
+            <span
+              className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+              style={{
+                background:
+                  p.badge === "New"
+                    ? "oklch(0.18 0.025 285)"
+                    : p.badge === "Bestseller"
+                      ? "linear-gradient(135deg,oklch(0.80 0.14 85),oklch(0.70 0.12 72))"
+                      : "oklch(0.45 0.13 295)",
+                color: p.badge === "Bestseller" ? "oklch(0.20 0.05 75)" : "#fff",
+                boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+              }}
+            >
+              {p.badge}
+            </span>
+          )}
+
+          <ProductCardImage
+            src={displayImage}
+            alt={p.name}
+            className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.04]"
+          />
+          <div
+            className="absolute inset-0 transition-opacity duration-400 opacity-0 group-hover:opacity-100"
+            style={{
+              background:
+                "linear-gradient(to top, oklch(0.12 0.02 285/0.55) 0%, transparent 55%)",
+            }}
+          />
+          <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-100 transition-all duration-300 sm:p-4 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                onAddToCart(p);
+              }}
+              className="flex h-11 min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-xl transition-all hover:bg-primary hover:text-white"
+            >
+              <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
+              <span className="truncate sm:hidden">Add</span>
+              <span className="truncate hidden sm:inline">Add to Cart</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onToggleFavorite(p.id);
+              }}
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition-all"
+              style={{
+                background: isFavorite ? "var(--primary)" : "oklch(1 0 0/0.20)",
+                color: isFavorite ? "white" : "#fff",
+                backdropFilter: "blur(8px)",
+              }}
+              aria-label="Wishlist"
+            >
+              <Heart className={`size-4 ${isFavorite ? "fill-white" : ""}`} />
+            </button>
+          </div>
+        </Link>
+      )}
+
+      {/* Info */}
+      <div className="mt-3 px-0.5">
+        <div className="flex items-start justify-between gap-2">
+          {isOutOfStock ? (
+            <h3 className="font-serif text-[15px] leading-snug text-foreground/60 cursor-not-allowed line-clamp-1">
+              {p.name}
+            </h3>
+          ) : (
+            <Link to="/product/$id" params={{ id: p.id }}>
+              <h3 className="font-serif text-[15px] leading-snug text-foreground transition-colors group-hover:text-primary line-clamp-1">
+                {p.name}
+              </h3>
+            </Link>
+          )}
+          <span
+            className="font-serif text-[15px] font-semibold shrink-0"
+            style={{ color: "oklch(0.30 0.04 285)" }}
+          >
+            {formatPkr(Number(p.price))}
+          </span>
+        </div>
+        <p
+          className="mt-0.5 text-[11px] font-medium truncate"
+          style={{ color: "oklch(0.62 0.022 290)" }}
+        >
+          {selectedColor?.name || p.variant}
+        </p>
+        {colors.length > 1 && (
+          <div className="mt-2 flex flex-wrap gap-1.5" role="listbox" aria-label="Available colors">
+            {colors.slice(0, 5).map((color) => {
+              const on = color.id === selectedColor?.id;
+              return (
+                <button
+                  type="button"
+                  key={color.id}
+                  role="option"
+                  aria-selected={on}
+                  title={color.name}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setSelectedColorId(color.id);
+                  }}
+                  className={cn(
+                    "h-4 w-4 shrink-0 overflow-hidden rounded-full border transition-all",
+                    on
+                      ? "border-primary ring-2 ring-primary/40 ring-offset-1"
+                      : "border-border/60 hover:border-primary/50",
+                  )}
+                  style={hasHex(color) ? { backgroundColor: color.hex } : undefined}
+                >
+                  {!hasHex(color) && color.image_url ? (
+                    <img
+                      src={color.image_url}
+                      alt=""
+                      loading="lazy"
+                      width={16}
+                      height={16}
+                      className="h-full w-full object-contain"
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </article>
   );
 }
 
@@ -831,182 +1027,15 @@ function Shop() {
         ) : (
           <>
             <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-              {visibleProducts.map((p) => {
-                const isOutOfStock =
-                  p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
-                return (
-                  <article
-                    key={p.id}
-                    className={cn("group flex flex-col", isOutOfStock && "opacity-80")}
-                  >
-                    {/* Image */}
-                    {isOutOfStock ? (
-                      <div
-                        className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
-                        style={{ aspectRatio: "3/4" }}
-                      >
-                        {p.badge && (
-                          <span
-                            className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
-                            style={{
-                              background: "oklch(0.45 0.13 295)",
-                              color: "#fff",
-                              boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
-                            }}
-                          >
-                            {p.badge}
-                          </span>
-                        )}
-
-                        <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
-                          <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
-                            Sold Out
-                          </span>
-                        </div>
-
-                        <ProductCardImage
-                          src={p.image}
-                          alt={p.name}
-                          className="h-full w-full object-contain grayscale-[0.5]"
-                        />
-                      </div>
-                    ) : (
-                      <Link
-                        to="/product/$id"
-                        params={{ id: p.id }}
-                        className="block relative overflow-hidden rounded-2xl"
-                        style={{ aspectRatio: "3/4" }}
-                      >
-                        {p.badge && (
-                          <span
-                            className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
-                            style={{
-                              background:
-                                p.badge === "New"
-                                  ? "oklch(0.18 0.025 285)"
-                                  : p.badge === "Bestseller"
-                                    ? "linear-gradient(135deg,oklch(0.80 0.14 85),oklch(0.70 0.12 72))"
-                                    : "oklch(0.45 0.13 295)",
-                              color: p.badge === "Bestseller" ? "oklch(0.20 0.05 75)" : "#fff",
-                              boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
-                            }}
-                          >
-                            {p.badge}
-                          </span>
-                        )}
-
-                        <ProductCardImage
-                          src={p.image}
-                          alt={p.name}
-                          className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.04]"
-                        />
-                        <div
-                          className="absolute inset-0 transition-opacity duration-400 opacity-0 group-hover:opacity-100"
-                          style={{
-                            background:
-                              "linear-gradient(to top, oklch(0.12 0.02 285/0.55) 0%, transparent 55%)",
-                          }}
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-100 transition-all duration-300 sm:p-4 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              handleAddToCart(p);
-                            }}
-                            className="flex h-11 min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-xl transition-all hover:bg-primary hover:text-white"
-                          >
-                            <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
-                            <span className="truncate sm:hidden">Add</span>
-                            <span className="truncate hidden sm:inline">Add to Cart</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleFavorite(p.id);
-                            }}
-                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition-all"
-                            style={{
-                              background: isFavorite(p.id) ? "var(--primary)" : "oklch(1 0 0/0.20)",
-                              color: isFavorite(p.id) ? "white" : "#fff",
-                              backdropFilter: "blur(8px)",
-                            }}
-                            aria-label="Wishlist"
-                          >
-                            <Heart className={`size-4 ${isFavorite(p.id) ? "fill-white" : ""}`} />
-                          </button>
-                        </div>
-                      </Link>
-                    )}
-
-                    {/* Info */}
-                    <div className="mt-3 px-0.5">
-                      <div className="flex items-start justify-between gap-2">
-                        {isOutOfStock ? (
-                          <h3 className="font-serif text-[15px] leading-snug text-foreground/60 cursor-not-allowed line-clamp-1">
-                            {p.name}
-                          </h3>
-                        ) : (
-                          <Link to="/product/$id" params={{ id: p.id }}>
-                            <h3 className="font-serif text-[15px] leading-snug text-foreground transition-colors group-hover:text-primary line-clamp-1">
-                              {p.name}
-                            </h3>
-                          </Link>
-                        )}
-                        <span
-                          className="font-serif text-[15px] font-semibold shrink-0"
-                          style={{ color: "oklch(0.30 0.04 285)" }}
-                        >
-                          {formatPkr(Number(p.price))}
-                        </span>
-                      </div>
-                      <p
-                        className="mt-0.5 text-[11px] font-medium truncate"
-                        style={{ color: "oklch(0.62 0.022 290)" }}
-                      >
-                        {p.variant}
-                      </p>
-                      {(() => {
-                        const colors = getProductColors(p);
-                        if (colors.length <= 1) return null;
-                        return (
-                          <div
-                            className="mt-2 flex flex-wrap gap-1.5"
-                            aria-label="Available colors"
-                          >
-                            {colors.slice(0, 5).map((color) => (
-                              <span
-                                key={color.id}
-                                title={color.name}
-                                className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-border/60"
-                                style={
-                                  color.hex && /^#[0-9A-Fa-f]{6}$/i.test(color.hex)
-                                    ? { backgroundColor: color.hex }
-                                    : undefined
-                                }
-                              >
-                                {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
-                                color.image_url ? (
-                                  <img
-                                    src={color.image_url}
-                                    alt=""
-                                    loading="lazy"
-                                    width={16}
-                                    height={16}
-                                    className="h-full w-full object-contain"
-                                  />
-                                ) : null}
-                              </span>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  </article>
-                );
-              })}
+              {visibleProducts.map((p) => (
+                <ShopProductCard
+                  key={p.id}
+                  p={p}
+                  isFavorite={isFavorite(p.id)}
+                  onToggleFavorite={toggleFavorite}
+                  onAddToCart={handleAddToCart}
+                />
+              ))}
             </div>
             {hasMore && (
               <div

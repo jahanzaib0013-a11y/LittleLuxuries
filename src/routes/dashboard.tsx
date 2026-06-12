@@ -26,7 +26,7 @@ import {
   Trash2,
   Download,
 } from "lucide-react";
-import { dailySales, monthlySales, topSellers } from "@/lib/admin-data";
+import { dailySales, monthlySales } from "@/lib/admin-data";
 import {
   orderService,
   type OrderWithItems,
@@ -135,7 +135,7 @@ function DashboardContent() {
     new_customers: 0,
     low_stock_alerts: 0,
   };
-  const realTopSellers = data?.topSellers ?? topSellers;
+  const realTopSellers = data?.topSellers ?? [];
   const isLoading = isPending && !data;
 
   const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
@@ -496,6 +496,12 @@ function DashboardContent() {
                       </div>
                     </div>
                   ))
+                : realTopSellers.length === 0
+                  ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">
+                      No sales yet — your best sellers will appear here.
+                    </p>
+                  )
                 : realTopSellers.map((p, i) => (
                     <div key={p.name} className="flex items-center gap-3">
                       <div
