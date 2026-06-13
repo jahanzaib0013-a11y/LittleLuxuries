@@ -238,6 +238,8 @@ export function HomePage({ contentSource = "published" }: HomePageProps) {
                       alt="Baby wrapped in lavender swaddle"
                       width={1280}
                       height={1280}
+                      fetchPriority="high"
+                      decoding="async"
                       onError={imgErrorFallback(hero)}
                       className="h-full w-full object-cover"
                     />
