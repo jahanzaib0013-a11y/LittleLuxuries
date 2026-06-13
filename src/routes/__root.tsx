@@ -181,7 +181,7 @@ export const Route = createRootRoute({
     ],
     links: [
       // Preload the splash logo so the brand screen paints instantly.
-      { rel: "preload", as: "image", href: logo, fetchpriority: "high" },
+      { rel: "preload", as: "image", href: logo, fetchPriority: "high" },
       // Connect to the font hosts early so web fonts load sooner (less reflow).
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },

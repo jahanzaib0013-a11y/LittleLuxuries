@@ -23,7 +23,7 @@ export const Route = createFileRoute("/")({
         content: "Hand-crafted, ethically-made baby garments. Gentle luxuries for your little one.",
       },
     ],
-    links: [{ rel: "preload", as: "image", href: heroImage, fetchpriority: "high" }],
+    links: [{ rel: "preload", as: "image", href: heroImage, fetchPriority: "high" }],
   }),
   component: Index,
 });
