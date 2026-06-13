@@ -58,6 +58,10 @@ export const Route = createRootRoute({
       },
       { name: "author", content: "Little Luxuries" },
       { name: "robots", content: "index, follow" },
+      {
+        name: "google-site-verification",
+        content: "Z2Xeg_3J0_LXL1FCEFcv0y2_XfA6s6jE8C-f6-yGO4k",
+      },
       { property: "og:title", content: "Little Luxuries - Premium Baby Clothing & Accessories" },
       {
         property: "og:description",
