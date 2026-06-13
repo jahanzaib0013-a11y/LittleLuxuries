@@ -293,6 +293,8 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
             alt={alt}
             width={1024}
             height={1024}
+            fetchPriority="high"
+            decoding="async"
             draggable={false}
             className="h-full w-full object-contain"
             style={{

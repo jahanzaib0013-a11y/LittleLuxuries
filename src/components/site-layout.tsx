@@ -15,9 +15,9 @@ import { subscribeToNewsletter } from "@/lib/email.server";
 import { validateEmail } from "@/lib/form-validation";
 import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/page-transition";
-import { SmoothScroll } from "@/components/motion/smooth-scroll";
-import { IntroLoader } from "@/components/motion/intro-loader";
-import { CustomCursor } from "@/components/motion/custom-cursor";
+// Lazy wrappers: defer the heavy motion/lenis libraries until after first paint
+// (keeps the full experience, keeps them out of the main entry chunk).
+import { SmoothScroll, IntroLoader, CustomCursor } from "@/components/motion/lazy-motion";
 import { Toaster } from "@/components/ui/sonner";
 import {
   loadPublishedContent,
