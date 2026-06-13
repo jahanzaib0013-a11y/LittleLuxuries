@@ -1,6 +1,64 @@
 import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 
 import appCss from "../styles.css?url";
+import logo from "@/assets/logo.png";
+
+/**
+ * Brand splash shown in the very first HTML the browser receives, so visitors
+ * see the logo on-brand background instantly instead of a blank white screen
+ * while the JS bundle downloads (this app renders its body client-side).
+ *
+ * It is rendered by React in the server HTML (so it paints before hydration),
+ * stays visible through hydration (initial state matches SSR → no mismatch),
+ * then fades out once the app has mounted. Styles are inline and self-contained
+ * so it does not depend on the main stylesheet loading first. The background +
+ * logo match the intro animation, so it hands off seamlessly into whatever
+ * animation is selected in the admin dashboard.
+ */
+function AppSplash() {
+  const [hidden, setHidden] = useState(false);
+  const [removed, setRemoved] = useState(false);
+
+  useEffect(() => {
+    // Fade out on the next frame (after the app has painted), then unmount.
+    const raf = requestAnimationFrame(() => setHidden(true));
+    const timer = setTimeout(() => setRemoved(true), 700);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timer);
+    };
+  }, []);
+
+  if (removed) return null;
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 9999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        background:
+          "radial-gradient(ellipse at top, oklch(0.94 0.05 305) 0%, oklch(0.985 0.004 300) 70%)",
+        opacity: hidden ? 0 : 1,
+        pointerEvents: "none",
+        transition: "opacity 500ms ease",
+      }}
+    >
+      <img
+        src={logo}
+        alt="Little Luxuries"
+        width={96}
+        height={96}
+        style={{ width: 96, height: 96, objectFit: "contain" }}
+      />
+    </div>
+  );
+}
 
 function NotFoundComponent() {
   return (
@@ -83,6 +141,8 @@ export const Route = createRootRoute({
       { name: "twitter:image", content: "https://littleluxuries.pk/og-image.jpg" },
     ],
     links: [
+      // Preload the splash logo so the brand screen paints instantly.
+      { rel: "preload", as: "image", href: logo, fetchpriority: "high" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -151,6 +211,7 @@ function RootShell({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
+        <AppSplash />
         {children}
         <Scripts />
       </body>
