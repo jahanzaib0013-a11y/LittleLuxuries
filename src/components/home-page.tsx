@@ -14,7 +14,7 @@ import { validateEmail } from "@/lib/form-validation";
 import { useSiteContent } from "@/hooks/use-site-content";
 import { useStickyPromoActive } from "@/hooks/use-sticky-promo-active";
 import { useCart } from "@/context/CartContext";
-import type { SiteContentSource } from "@/lib/content-data";
+import type { SiteContent, SiteContentSource } from "@/lib/content-data";
 import { isExternalUrl } from "@/lib/content-links";
 import { getContentIcon, getPromiseIcon, isStarIcon } from "@/lib/content-icons";
 import { CategorySection } from "@/components/category-section";
@@ -86,11 +86,13 @@ function Promise({ icon: Icon, title, body }: { icon: typeof Leaf; title: string
 type HomePageProps = {
   /** `published` on `/` (saved only). `preview` on `/storefront` (live while editing). */
   contentSource?: SiteContentSource;
+  /** Server-rendered content from the route loader (SSR hero, no fetch waterfall). */
+  initialContent?: SiteContent | null;
 };
 
 /** Shared landing page body — used by `/` and `/storefront` preview. */
-export function HomePage({ contentSource = "published" }: HomePageProps) {
-  const { content } = useSiteContent({ source: contentSource });
+export function HomePage({ contentSource = "published", initialContent }: HomePageProps) {
+  const { content } = useSiteContent({ source: contentSource, initialContent });
   const heroImageSrc = isUsableImageUrl(content.heroBanner.imageUrl)
     ? content.heroBanner.imageUrl!
     : hero;

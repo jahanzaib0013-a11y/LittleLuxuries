@@ -13,14 +13,22 @@ import {
 type UseSiteContentOptions = {
   /** `published` = live homepage (/). `preview` = storefront draft (/storefront). */
   source?: SiteContentSource;
+  /**
+   * Server-rendered content from the route loader. When provided, the first
+   * render uses the real content (correct hero image in the initial HTML)
+   * instead of `defaultContent`, eliminating the client-side fetch waterfall
+   * that delayed LCP. The hook still re-syncs on mount to pick up live edits.
+   */
+  initialContent?: SiteContent | null;
 };
 
 export function useSiteContent(options?: UseSiteContentOptions) {
   const source = options?.source ?? "published";
   const isPreview = source === "preview";
+  const initialContent = options?.initialContent ?? null;
 
-  const [content, setContent] = useState<SiteContent>(defaultContent);
-  const [isLoading, setIsLoading] = useState(true);
+  const [content, setContent] = useState<SiteContent>(initialContent ?? defaultContent);
+  const [isLoading, setIsLoading] = useState(!initialContent);
 
   const loadLocal = useCallback(() => {
     return isPreview ? loadPreviewContent() : loadPublishedContent();
