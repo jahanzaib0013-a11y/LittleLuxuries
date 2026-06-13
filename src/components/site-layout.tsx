@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 import { PageTransition } from "@/components/page-transition";
 // Lazy wrappers: defer the heavy motion/lenis libraries until after first paint
 // (keeps the full experience, keeps them out of the main entry chunk).
-import { SmoothScroll, IntroLoader, CustomCursor } from "@/components/motion/lazy-motion";
+import { SmoothScroll, CustomCursor } from "@/components/motion/lazy-motion";
 import { Toaster } from "@/components/ui/sonner";
 import {
   loadPublishedContent,
@@ -358,7 +358,9 @@ export function Layout({
   const animationTemplate = useAnimationTemplate();
   return (
     <SmoothScroll template={animationTemplate}>
-      <IntroLoader template={animationTemplate} />
+      {/* Intro curtain removed: the instant brand splash in __root now covers
+          the load moment (it shows before JS, the curtain only after), so
+          running both caused a stutter on the homepage first open. */}
       <CustomCursor template={animationTemplate} />
       <div className="flex min-h-screen flex-col" data-anim-template={animationTemplate}>
         {beforeHeader}
