@@ -21,12 +21,51 @@ function AppSplash() {
   const [removed, setRemoved] = useState(false);
 
   useEffect(() => {
-    // Fade out on the next frame (after the app has painted), then unmount.
-    const raf = requestAnimationFrame(() => setHidden(true));
-    const timer = setTimeout(() => setRemoved(true), 700);
+    let settled = false;
+    let removeTimer: ReturnType<typeof setTimeout>;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      setHidden(true);
+      removeTimer = setTimeout(() => setRemoved(true), 500);
+    };
+
+    // Reveal only once BOTH the content has loaded and the web fonts are ready,
+    // so any reflow (promo bar, announcement section, font swap) happens behind
+    // the splash and the user sees a finished page — not a jumping one.
+    let contentReady = false;
+    let fontsReady = false;
+    let graceTimer: ReturnType<typeof setTimeout>;
+    const tryFinish = () => {
+      if (contentReady && fontsReady) finish();
+    };
+
+    const onReady = () => {
+      contentReady = true;
+      tryFinish();
+    };
+    window.addEventListener("ll-app-ready", onReady);
+
+    const fonts = (document as Document & { fonts?: { ready?: Promise<unknown> } }).fonts?.ready;
+    Promise.resolve(fonts).then(() => {
+      fontsReady = true;
+      tryFinish();
+      // Most pages (e.g. /shop) don't emit "ll-app-ready"; once fonts are in,
+      // give content a short grace window then reveal regardless.
+      graceTimer = setTimeout(() => {
+        contentReady = true;
+        tryFinish();
+      }, 450);
+    });
+
+    // Safety cap: never hold the splash longer than 1.5s, even if something hangs.
+    const cap = setTimeout(finish, 1500);
+
     return () => {
-      cancelAnimationFrame(raf);
-      clearTimeout(timer);
+      window.removeEventListener("ll-app-ready", onReady);
+      clearTimeout(cap);
+      clearTimeout(graceTimer);
+      clearTimeout(removeTimer);
     };
   }, []);
 
@@ -143,6 +182,9 @@ export const Route = createRootRoute({
     links: [
       // Preload the splash logo so the brand screen paints instantly.
       { rel: "preload", as: "image", href: logo, fetchpriority: "high" },
+      // Connect to the font hosts early so web fonts load sooner (less reflow).
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
         rel: "stylesheet",
         href: appCss,
