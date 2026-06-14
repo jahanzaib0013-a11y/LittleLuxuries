@@ -88,13 +88,10 @@ function AppSplash() {
         transition: "opacity 500ms ease",
       }}
     >
-      <img
-        src={logo}
-        alt="Little Luxuries"
-        width={96}
-        height={96}
-        style={{ width: 96, height: 96, objectFit: "contain" }}
-      />
+      <div className="ll-splash" aria-label="Little Luxuries">
+        <span className="ll-splash-outline">Little Luxuries</span>
+        <span className="ll-splash-fill">Little Luxuries</span>
+      </div>
     </div>
   );
 }
