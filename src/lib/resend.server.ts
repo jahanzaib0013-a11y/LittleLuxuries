@@ -21,9 +21,18 @@ export function resendFrom(): string {
   );
 }
 
-/** Where internal store notifications (contact form, new subscriber) are sent. */
+/**
+ * Where general/info store notifications (contact form, new subscriber) are
+ * sent. Independent from ADMIN_EMAIL (the admin LOGIN identity) so the two can
+ * differ. Configure via CONTACT_EMAIL.
+ */
 export function adminNotificationEmail(): string {
-  return serverEnv("ADMIN_EMAIL")?.trim() || "jahanzaib0013@gmail.com";
+  return serverEnv("CONTACT_EMAIL")?.trim() || "Faizanahmad2805@gmail.com";
+}
+
+/** Where order-related store notifications are sent. Configure via ORDERS_EMAIL. */
+export function orderNotificationEmail(): string {
+  return serverEnv("ORDERS_EMAIL")?.trim() || "LittleLuxuriessm@gmail.com";
 }
 
 /** Optional public logo URL for the email header (Resend can't inline CID images). */
