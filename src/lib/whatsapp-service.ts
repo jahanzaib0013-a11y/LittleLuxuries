@@ -116,29 +116,24 @@ export const whatsappService = {
     status: string;
     tier?: string | null;
   }): string {
-    const { customerName, orderNumber, status, tier } = data;
+    const { customerName, orderNumber, status } = data;
 
-    // "Order Placed" uses the dedicated order-received message — the same for
-    // every badge (no tier-specific wording).
+    // "Order Placed" uses the dedicated order-received message.
     if ((status ?? "").trim().toLowerCase() === "order placed") {
       return this.formatConfirmationMessage({ customerName, orderNumber });
     }
 
-    const t = normalizeTier(tier);
-
-    const greeting = tierGreeting(customerName, tier);
-    const line = `Your order *#${orderNumber}* is now *${status}*.`;
-
-    const tierNote: Record<CustomerTier, string> = {
-      Standard: "Thank you for shopping with us.",
-      Bronze: "We appreciate your continued support.",
-      Silver:
-        "Thank you for being a valued part of our boutique — we're here for anything you need.",
-      Gold: "As a Gold member, your order is handled with our priority care.",
-      Platinum: "As a Platinum member, your order receives our highest, white-glove attention.",
-    };
-
-    return `${greeting}\n${line}\n\n${tierNote[t]}\n\n${tierSignoff(tier)}`;
+    // All other statuses: one uniform message for every badge (no tier wording).
+    const name = customerName?.trim() ? ` ${customerName.trim()}` : "";
+    return [
+      `Hello${name},`,
+      "",
+      `Your order #${orderNumber} is now ${status}.`,
+      "",
+      "Thank you for choosing Little Luxuries! 💖",
+      "",
+      "— Team Little Luxuries",
+    ].join("\n");
   },
 
   /**
