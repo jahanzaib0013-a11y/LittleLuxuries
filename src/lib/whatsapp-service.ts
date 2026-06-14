@@ -77,6 +77,18 @@ export function tierSignoff(tier?: string | null): string {
   return TIER_VOICE[normalizeTier(tier)].signoff;
 }
 
+/** The tier-graded appreciation line used in order messages. */
+export function tierNote(tier?: string | null): string {
+  const notes: Record<CustomerTier, string> = {
+    Standard: "Thank you for shopping with us.",
+    Bronze: "We appreciate your continued support.",
+    Silver: "Thank you for being a valued part of our boutique — we're here for anything you need.",
+    Gold: "As a Gold member, your order is handled with our priority care.",
+    Platinum: "As a Platinum member, your order receives our highest, white-glove attention.",
+  };
+  return notes[normalizeTier(tier)];
+}
+
 export const whatsappService = {
   /**
    * Order confirmation prefill — tier-graded greeting, items with quantity,
@@ -89,21 +101,20 @@ export const whatsappService = {
     total?: number;
     tier?: string | null;
   }): string {
-    const { customerName, orderNumber } = data;
-    const name = customerName?.trim() ? ` ${customerName.trim()}` : "";
+    const { customerName, orderNumber, tier } = data;
 
     return [
-      `Hello${name},`,
+      tierGreeting(customerName, tier),
       "",
-      `Your order #${orderNumber} has been received.`,
+      `Your order *#${orderNumber}* has been received.`,
       "",
       "✅ Is your order correct and confirmed?",
       "",
-      "Kindly reply with YES to proceed with processing your order.",
+      "Kindly reply with *YES* to proceed with processing your order.",
       "",
-      "Thank you for choosing Little Luxuries! 💖",
+      tierNote(tier),
       "",
-      "— Team Little Luxuries",
+      tierSignoff(tier),
     ].join("\n");
   },
 
@@ -118,26 +129,16 @@ export const whatsappService = {
   }): string {
     const { customerName, orderNumber, status, tier } = data;
 
-    // "Order Placed" uses the dedicated order-received message.
+    // "Order Placed" uses the dedicated order-received message (tier-graded).
     if ((status ?? "").trim().toLowerCase() === "order placed") {
-      return this.formatConfirmationMessage({ customerName, orderNumber });
+      return this.formatConfirmationMessage({ customerName, orderNumber, tier });
     }
 
     // All other statuses keep the badge-graded (tier) personalization.
-    const t = normalizeTier(tier);
     const greeting = tierGreeting(customerName, tier);
     const line = `Your order *#${orderNumber}* is now *${status}*.`;
 
-    const tierNote: Record<CustomerTier, string> = {
-      Standard: "Thank you for shopping with us.",
-      Bronze: "We appreciate your continued support.",
-      Silver:
-        "Thank you for being a valued part of our boutique — we're here for anything you need.",
-      Gold: "As a Gold member, your order is handled with our priority care.",
-      Platinum: "As a Platinum member, your order receives our highest, white-glove attention.",
-    };
-
-    return `${greeting}\n${line}\n\n${tierNote[t]}\n\n${tierSignoff(tier)}`;
+    return `${greeting}\n${line}\n\n${tierNote(tier)}\n\n${tierSignoff(tier)}`;
   },
 
   /**
