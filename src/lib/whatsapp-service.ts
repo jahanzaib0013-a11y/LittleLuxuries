@@ -4,7 +4,6 @@
  * communications. All WhatsApp text in the app is built here so tone stays
  * consistent and graded by the customer's loyalty tier.
  */
-import { formatPkr } from "@/lib/format-currency";
 
 export type CustomerTier = "Standard" | "Bronze" | "Silver" | "Gold" | "Platinum";
 
@@ -86,32 +85,26 @@ export const whatsappService = {
   formatConfirmationMessage(data: {
     customerName: string;
     orderNumber: string;
-    items: Array<{ name: string; quantity?: number }>;
+    items?: Array<{ name: string; quantity?: number }>;
     total?: number;
     tier?: string | null;
   }): string {
-    const { customerName, orderNumber, items, total, tier } = data;
+    const { customerName, orderNumber } = data;
+    const name = customerName?.trim() ? ` ${customerName.trim()}` : "";
 
-    const header = "🌸 *Little Luxuries* 🌸";
-    const greeting = tierGreeting(customerName, tier);
-    const intro = `We've received your order *#${orderNumber}* — thank you!`;
-
-    const itemsList =
-      items.length > 0
-        ? `\n\n*Your items:*\n${items
-            .map(
-              (item) =>
-                `✨ *${item.quantity && item.quantity > 1 ? `${item.quantity} ×` : "1 ×"}* ${item.name}`,
-            )
-            .join("\n")}`
-        : "";
-
-    const totalLine =
-      typeof total === "number" && !Number.isNaN(total) ? `\n\n*Total:* ${formatPkr(total)}` : "";
-
-    const footer = `\n\n${tierSignoff(tier)}`;
-
-    return `${header}\n\n${greeting}\n${intro}${itemsList}${totalLine}${footer}`;
+    return [
+      `Hello${name},`,
+      "",
+      `Your order #${orderNumber} has been received.`,
+      "",
+      "✅ Is your order correct and confirmed?",
+      "",
+      "Kindly reply with YES to proceed with processing your order.",
+      "",
+      "Thank you for choosing Little Luxuries! 💖",
+      "",
+      "— Team Little Luxuries",
+    ].join("\n");
   },
 
   /**
