@@ -117,6 +117,13 @@ export const whatsappService = {
     tier?: string | null;
   }): string {
     const { customerName, orderNumber, status, tier } = data;
+
+    // "Order Placed" uses the dedicated order-received message — the same for
+    // every badge (no tier-specific wording).
+    if ((status ?? "").trim().toLowerCase() === "order placed") {
+      return this.formatConfirmationMessage({ customerName, orderNumber });
+    }
+
     const t = normalizeTier(tier);
 
     const greeting = tierGreeting(customerName, tier);
