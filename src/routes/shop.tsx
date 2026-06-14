@@ -350,20 +350,6 @@ function Shop() {
                     <option value="price-desc">Price: High → Low</option>
                   </select>
                 </div>
-                <div className="flex items-baseline gap-1.5 md:pl-4 md:border-l md:border-border/30">
-                  <span
-                    className="font-serif text-3xl font-light leading-none tracking-tight"
-                    style={{ color: "oklch(0.22 0.03 285)" }}
-                  >
-                    {filtered.length}
-                  </span>
-                  <span
-                    className="text-[9px] font-black uppercase tracking-[0.20em] pb-0.5"
-                    style={{ color: "oklch(0.60 0.025 290)" }}
-                  >
-                    {filtered.length === 1 ? "piece" : "pieces"}
-                  </span>
-                </div>
               </div>
             </div>
 
