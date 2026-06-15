@@ -192,7 +192,7 @@ export function Footer({ className }: { className?: string }) {
           </p>
           <div className="mt-4 flex gap-3">
             <a
-              href="https://www.facebook.com/profile.php?id=61590322397482&mibextid=wwXIfr"
+              href="https://www.facebook.com/share/1BUMHJvsQm/?mibextid=wwXIfr"
               target="_blank"
               rel="noopener noreferrer"
               className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
@@ -201,7 +201,7 @@ export function Footer({ className }: { className?: string }) {
               <Facebook className="size-4" />
             </a>
             <a
-              href="https://www.instagram.com/littleluxuries.pakistan?igsh=MXJteHoyMm1ucDd0cA%3D%3D&utm_source=qr"
+              href="https://www.instagram.com/littleluxuries_pk?igsh=MTdmNnE1bzV5cGR4Yg%3D%3D&utm_source=qr"
               target="_blank"
               rel="noopener noreferrer"
               className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-soft text-primary transition-colors hover:bg-primary hover:text-primary-foreground"
