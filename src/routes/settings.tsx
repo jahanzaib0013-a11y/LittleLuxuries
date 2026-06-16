@@ -14,6 +14,7 @@ import { useTaxSettings } from "@/hooks/use-tax-settings";
 import { ShippingZone } from "@/lib/shipping-zones";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { imageService } from "@/lib/image-service";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Store Settings — Little Luxuries Admin" }] }),
@@ -196,31 +197,19 @@ function SettingsPage() {
     }
 
     setIsUploadingLogo(true);
+    // Temporary local preview while the real upload is in flight
+    const tempUrl = URL.createObjectURL(file);
+    setLogoUrl(tempUrl);
+
     try {
-      console.log("Uploading logo:", file.name);
-
-      // Create a temporary URL for preview
-      const tempUrl = URL.createObjectURL(file);
-      setLogoUrl(tempUrl);
-
-      // For now, we'll use a simple approach - in production, you'd upload to a cloud service
-      // For demo purposes, we'll convert to base64 and store that
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const base64Url = e.target?.result as string;
-        console.log("Logo converted to base64");
-
-        // Save the base64 URL to state (this will be saved when profile is saved)
-        setLogoUrl(base64Url);
-        setIsUploadingLogo(false);
-      };
-      reader.readAsDataURL(file);
-
-      console.log("Logo upload completed");
+      const publicUrl = await imageService.uploadImage(file, "store");
+      setLogoUrl(publicUrl);
+      URL.revokeObjectURL(tempUrl);
     } catch (error) {
       console.error("Error uploading logo:", error);
-      setIsUploadingLogo(false);
       toast.error("Failed to upload logo. Please try again.");
+    } finally {
+      setIsUploadingLogo(false);
     }
   };
 
@@ -366,8 +355,8 @@ function SettingsPage() {
 
           <div className="mt-6 grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8">
             <div className="text-center">
-              <div className="h-32 w-32 rounded-2xl bg-muted/40 grid place-items-center relative">
-                <img src={logoUrl} alt="Store Logo" className="h-20 w-20 object-contain" />
+              <div className="h-32 w-32 rounded-2xl bg-white grid place-items-center relative overflow-hidden ring-1 ring-border">
+                <img src={logoUrl} alt="Store Logo" className="h-full w-full object-contain p-1" />
                 {isUploadingLogo && (
                   <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
                     <div className="text-white text-xs">Uploading...</div>
