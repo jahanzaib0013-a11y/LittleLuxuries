@@ -15,6 +15,19 @@ import { ShippingZone } from "@/lib/shipping-zones";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { imageService } from "@/lib/image-service";
+import { cn } from "@/lib/utils";
+
+// Every raster/vector format a browser might hand us. Kept broad on purpose —
+// the upload path re-encodes what it can and passes the rest through untouched.
+const LOGO_ACCEPT =
+  "image/*,.png,.jpg,.jpeg,.jfif,.webp,.gif,.svg,.avif,.bmp,.ico,.tif,.tiff,.heic,.heif";
+
+const IMAGE_EXTENSIONS =
+  /\.(png|jpe?g|jfif|pjpeg|webp|gif|svgz?|avif|bmp|ico|cur|tiff?|hei[cf]|jxl|apng)$/i;
+
+function isImageFile(file: File) {
+  return file.type.startsWith("image/") || IMAGE_EXTENSIONS.test(file.name);
+}
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Store Settings — Little Luxuries Admin" }] }),
@@ -61,6 +74,7 @@ function SettingsPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [logoUrl, setLogoUrl] = useState(logo);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [isLogoDragging, setIsLogoDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isSavingZones, setIsSavingZones] = useState(false);
@@ -181,13 +195,11 @@ function SettingsPage() {
     }
   };
 
-  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please select an image file (PNG, JPG, etc.).");
+  const uploadLogoFile = async (file: File) => {
+    // Some formats (HEIC on Windows, AVIF on older browsers) arrive with an
+    // empty MIME type, so fall back to the extension before rejecting.
+    if (!isImageFile(file)) {
+      toast.error("Please select an image file (PNG, JPG, SVG, WebP, etc.).");
       return;
     }
 
@@ -211,6 +223,34 @@ function SettingsPage() {
     } finally {
       setIsUploadingLogo(false);
     }
+  };
+
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) await uploadLogoFile(file);
+    // Reset so re-picking the same file still fires onChange.
+    event.target.value = "";
+  };
+
+  const handleLogoDrop = async (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    setIsLogoDragging(false);
+    if (isUploadingLogo) return;
+
+    const dropped =
+      Array.from(event.dataTransfer.files).find(isImageFile) ?? event.dataTransfer.files[0];
+    if (dropped) await uploadLogoFile(dropped);
+  };
+
+  const handleLogoDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    if (!isUploadingLogo) setIsLogoDragging(true);
+  };
+
+  const handleLogoDragLeave = (event: React.DragEvent<HTMLDivElement>) => {
+    // Ignore bubbling from children so the highlight doesn't flicker.
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setIsLogoDragging(false);
   };
 
   const triggerFileInput = () => {
@@ -355,8 +395,34 @@ function SettingsPage() {
 
           <div className="mt-6 grid grid-cols-1 md:grid-cols-[auto_1fr] gap-8">
             <div className="text-center">
-              <div className="h-32 w-32 rounded-2xl bg-white grid place-items-center relative overflow-hidden ring-1 ring-border">
+              <div
+                role="button"
+                tabIndex={0}
+                aria-label="Store logo — click or drop an image to replace"
+                onClick={triggerFileInput}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    triggerFileInput();
+                  }
+                }}
+                onDragOver={handleLogoDragOver}
+                onDragEnter={handleLogoDragOver}
+                onDragLeave={handleLogoDragLeave}
+                onDrop={handleLogoDrop}
+                className={cn(
+                  "h-32 w-32 rounded-2xl bg-white grid place-items-center relative overflow-hidden cursor-pointer transition-colors",
+                  "ring-1 ring-border hover:ring-primary/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary",
+                  isLogoDragging && "ring-2 ring-primary ring-dashed bg-primary/5",
+                  isUploadingLogo && "cursor-not-allowed",
+                )}
+              >
                 <img src={logoUrl} alt="Store Logo" className="h-full w-full object-contain p-1" />
+                {isLogoDragging && !isUploadingLogo && (
+                  <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+                    <span className="text-[11px] font-medium text-primary">Drop image</span>
+                  </div>
+                )}
                 {isUploadingLogo && (
                   <div className="absolute inset-0 bg-black/50 rounded-2xl flex items-center justify-center">
                     <div className="text-white text-xs">Uploading...</div>
@@ -366,7 +432,7 @@ function SettingsPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*"
+                accept={LOGO_ACCEPT}
                 onChange={handleLogoUpload}
                 className="hidden"
               />
@@ -378,6 +444,7 @@ function SettingsPage() {
                 <Camera className="h-3.5 w-3.5" />
                 {isUploadingLogo ? "Uploading..." : "Change Logo"}
               </button>
+              <p className="mt-1 text-[11px] text-muted-foreground">or drop an image · max 5MB</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
               <div>
