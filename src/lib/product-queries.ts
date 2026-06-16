@@ -5,6 +5,7 @@ import { products as fallbackProducts, type Product } from "./products";
 import { isSupabaseConfigured, type Database } from "./supabase";
 import { FIVE_MINUTES } from "./query-client";
 import { getProductDisplayImage } from "./product-colors";
+import { getCached, setCached } from "./cache/kv";
 
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 
@@ -34,15 +35,27 @@ const STOREFRONT_LIST_COLUMNS =
   "id,name,price,image_url,category,variant,badge,sizes,colors,units,status,gender,created_at";
 
 export async function fetchPublishedProducts(): Promise<Product[]> {
-  // No real backend configured → this is a demo build, show the bundled sample
-  // catalog. With a backend, let a failed fetch throw so react-query exposes
-  // isError (retry UI) rather than silently masking the outage with demo data.
   if (!isSupabaseConfigured) return fallbackProducts;
+
+  const cacheKey = "products:published:storefront";
+
+  // Try cache first
+  const cached = await getCached<Product[]>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
+  // Fetch from Supabase if not cached
   const fetched = await productService.getProducts("published", {
     throwOnError: true,
     columns: STOREFRONT_LIST_COLUMNS,
   });
-  return fetched.map(mapDbProductToProduct);
+  const products = fetched.map(mapDbProductToProduct);
+
+  // Cache for 30 minutes
+  await setCached(cacheKey, products, 1800);
+
+  return products;
 }
 
 export async function fetchAdminProducts(): Promise<ProductRow[]> {
@@ -53,10 +66,21 @@ export async function fetchProductById(id: string): Promise<Product | null> {
   const staticProduct = fallbackProducts.find((p) => p.id === id);
   if (staticProduct) return staticProduct;
 
+  const cacheKey = `product:${id}`;
+
+  // Try cache first
+  const cached = await getCached<Product>(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     const product = await productService.getProduct(id);
     if (product) {
-      return mapDbProductToProduct(product);
+      const mapped = mapDbProductToProduct(product);
+      // Cache for 1 hour
+      await setCached(cacheKey, mapped, 3600);
+      return mapped;
     }
   } catch (error) {
     console.error("Error loading product from Supabase:", error);

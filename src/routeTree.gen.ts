@@ -37,6 +37,7 @@ import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ApiResetPasswordRouteImport } from './routes/api/reset-password'
 import { Route as ApiForgotPasswordRouteImport } from './routes/api/forgot-password'
 import { Route as ApiCronRouteImport } from './routes/api/cron'
+import { Route as ApiCheckEnvRouteImport } from './routes/api/check-env'
 import { Route as ApiAdminLoginRouteImport } from './routes/api/admin-login'
 
 const StorefrontRoute = StorefrontRouteImport.update({
@@ -179,6 +180,11 @@ const ApiCronRoute = ApiCronRouteImport.update({
   path: '/api/cron',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCheckEnvRoute = ApiCheckEnvRouteImport.update({
+  id: '/api/check-env',
+  path: '/api/check-env',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAdminLoginRoute = ApiAdminLoginRouteImport.update({
   id: '/api/admin-login',
   path: '/api/admin-login',
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/shop': typeof ShopRoute
   '/storefront': typeof StorefrontRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/check-env': typeof ApiCheckEnvRoute
   '/api/cron': typeof ApiCronRoute
   '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/api/reset-password': typeof ApiResetPasswordRoute
@@ -239,6 +246,7 @@ export interface FileRoutesByTo {
   '/shop': typeof ShopRoute
   '/storefront': typeof StorefrontRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/check-env': typeof ApiCheckEnvRoute
   '/api/cron': typeof ApiCronRoute
   '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/api/reset-password': typeof ApiResetPasswordRoute
@@ -271,6 +279,7 @@ export interface FileRoutesById {
   '/shop': typeof ShopRoute
   '/storefront': typeof StorefrontRoute
   '/api/admin-login': typeof ApiAdminLoginRoute
+  '/api/check-env': typeof ApiCheckEnvRoute
   '/api/cron': typeof ApiCronRoute
   '/api/forgot-password': typeof ApiForgotPasswordRoute
   '/api/reset-password': typeof ApiResetPasswordRoute
@@ -304,6 +313,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/storefront'
     | '/api/admin-login'
+    | '/api/check-env'
     | '/api/cron'
     | '/api/forgot-password'
     | '/api/reset-password'
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/storefront'
     | '/api/admin-login'
+    | '/api/check-env'
     | '/api/cron'
     | '/api/forgot-password'
     | '/api/reset-password'
@@ -365,6 +376,7 @@ export interface FileRouteTypes {
     | '/shop'
     | '/storefront'
     | '/api/admin-login'
+    | '/api/check-env'
     | '/api/cron'
     | '/api/forgot-password'
     | '/api/reset-password'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   ShopRoute: typeof ShopRoute
   StorefrontRoute: typeof StorefrontRoute
   ApiAdminLoginRoute: typeof ApiAdminLoginRoute
+  ApiCheckEnvRoute: typeof ApiCheckEnvRoute
   ApiCronRoute: typeof ApiCronRoute
   ApiForgotPasswordRoute: typeof ApiForgotPasswordRoute
   ApiResetPasswordRoute: typeof ApiResetPasswordRoute
@@ -601,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/check-env': {
+      id: '/api/check-env'
+      path: '/api/check-env'
+      fullPath: '/api/check-env'
+      preLoaderRoute: typeof ApiCheckEnvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/admin-login': {
       id: '/api/admin-login'
       path: '/api/admin-login'
@@ -647,6 +667,7 @@ const rootRouteChildren: RootRouteChildren = {
   ShopRoute: ShopRoute,
   StorefrontRoute: StorefrontRoute,
   ApiAdminLoginRoute: ApiAdminLoginRoute,
+  ApiCheckEnvRoute: ApiCheckEnvRoute,
   ApiCronRoute: ApiCronRoute,
   ApiForgotPasswordRoute: ApiForgotPasswordRoute,
   ApiResetPasswordRoute: ApiResetPasswordRoute,
