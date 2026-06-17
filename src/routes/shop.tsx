@@ -55,6 +55,10 @@ export const Route = createFileRoute("/shop")({
   component: Shop,
 });
 
+// How many product cards to render per infinite-scroll batch. Keeps the initial
+// DOM/image count low (one screenful) so images on screen load fast.
+const PRODUCTS_PER_PAGE = 12;
+
 function ProductCardImage({
   src,
   alt,
@@ -191,6 +195,35 @@ function Shop() {
 
     return result;
   }, [shopProducts, searchQuery, selectedCategory, selectedBadges, sortBy, priceRange]);
+
+  // Infinite scroll: only render a window of the filtered list so the page never
+  // mounts hundreds of cards/images at once. More reveal as the sentinel nears view.
+  const [visibleCount, setVisibleCount] = useState(PRODUCTS_PER_PAGE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Any change to the filtered set (search/category/badge/price/sort) resets the window.
+  useEffect(() => {
+    setVisibleCount(PRODUCTS_PER_PAGE);
+  }, [filtered]);
+
+  const visibleProducts = useMemo(() => filtered.slice(0, visibleCount), [filtered, visibleCount]);
+  const hasMore = visibleCount < filtered.length;
+
+  useEffect(() => {
+    if (!hasMore) return;
+    const node = sentinelRef.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleCount((c) => c + PRODUCTS_PER_PAGE);
+        }
+      },
+      { rootMargin: "600px 0px" }, // start loading well before the user reaches the end
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [hasMore, visibleProducts.length]);
 
   function ProductCardSkeleton() {
     return (
@@ -717,179 +750,197 @@ function Shop() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
-            {filtered.map((p) => {
-              const isOutOfStock =
-                p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
-              return (
-                <article
-                  key={p.id}
-                  className={cn("group flex flex-col", isOutOfStock && "opacity-80")}
-                >
-                  {/* Image */}
-                  {isOutOfStock ? (
-                    <div
-                      className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
-                      style={{ aspectRatio: "3/4" }}
-                    >
-                      {p.badge && (
-                        <span
-                          className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
-                          style={{
-                            background: "oklch(0.45 0.13 295)",
-                            color: "#fff",
-                            boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
-                          }}
-                        >
-                          {p.badge}
-                        </span>
-                      )}
+          <>
+            <div className="grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4">
+              {visibleProducts.map((p) => {
+                const isOutOfStock =
+                  p.badge === "Out of Stock" || (p.units !== undefined && p.units <= 0);
+                return (
+                  <article
+                    key={p.id}
+                    className={cn("group flex flex-col", isOutOfStock && "opacity-80")}
+                  >
+                    {/* Image */}
+                    {isOutOfStock ? (
+                      <div
+                        className="block relative overflow-hidden rounded-2xl cursor-not-allowed"
+                        style={{ aspectRatio: "3/4" }}
+                      >
+                        {p.badge && (
+                          <span
+                            className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+                            style={{
+                              background: "oklch(0.45 0.13 295)",
+                              color: "#fff",
+                              boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+                            }}
+                          >
+                            {p.badge}
+                          </span>
+                        )}
 
-                      <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
-                        <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
-                          Sold Out
-                        </span>
+                        <div className="absolute inset-0 z-10 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                          <span className="px-6 py-2 rounded-full border-2 border-white/80 text-white text-[10px] font-black uppercase tracking-[0.25em] shadow-2xl">
+                            Sold Out
+                          </span>
+                        </div>
+
+                        <ProductCardImage
+                          src={p.image}
+                          alt={p.name}
+                          className="h-full w-full object-contain grayscale-[0.5]"
+                        />
                       </div>
+                    ) : (
+                      <Link
+                        to="/product/$id"
+                        params={{ id: p.id }}
+                        className="block relative overflow-hidden rounded-2xl"
+                        style={{ aspectRatio: "3/4" }}
+                      >
+                        {p.badge && (
+                          <span
+                            className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+                            style={{
+                              background:
+                                p.badge === "New"
+                                  ? "oklch(0.18 0.025 285)"
+                                  : p.badge === "Bestseller"
+                                    ? "linear-gradient(135deg,oklch(0.80 0.14 85),oklch(0.70 0.12 72))"
+                                    : "oklch(0.45 0.13 295)",
+                              color: p.badge === "Bestseller" ? "oklch(0.20 0.05 75)" : "#fff",
+                              boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+                            }}
+                          >
+                            {p.badge}
+                          </span>
+                        )}
 
-                      <ProductCardImage
-                        src={p.image}
-                        alt={p.name}
-                        className="h-full w-full object-contain grayscale-[0.5]"
-                      />
-                    </div>
-                  ) : (
-                    <Link
-                      to="/product/$id"
-                      params={{ id: p.id }}
-                      className="block relative overflow-hidden rounded-2xl"
-                      style={{ aspectRatio: "3/4" }}
-                    >
-                      {p.badge && (
-                        <span
-                          className="absolute left-3 top-3 z-10 px-2.5 py-1 text-[9px] font-black uppercase tracking-widest rounded-full"
+                        <ProductCardImage
+                          src={p.image}
+                          alt={p.name}
+                          className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.04]"
+                        />
+                        <div
+                          className="absolute inset-0 transition-opacity duration-400 opacity-0 group-hover:opacity-100"
                           style={{
                             background:
-                              p.badge === "New"
-                                ? "oklch(0.18 0.025 285)"
-                                : p.badge === "Bestseller"
-                                  ? "linear-gradient(135deg,oklch(0.80 0.14 85),oklch(0.70 0.12 72))"
-                                  : "oklch(0.45 0.13 295)",
-                            color: p.badge === "Bestseller" ? "oklch(0.20 0.05 75)" : "#fff",
-                            boxShadow: "0 2px 8px oklch(0 0 0/0.20)",
+                              "linear-gradient(to top, oklch(0.12 0.02 285/0.55) 0%, transparent 55%)",
                           }}
-                        >
-                          {p.badge}
-                        </span>
-                      )}
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-100 transition-all duration-300 sm:p-4 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              handleAddToCart(p);
+                            }}
+                            className="flex h-11 min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-xl transition-all hover:bg-primary hover:text-white"
+                          >
+                            <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
+                            <span className="truncate sm:hidden">Add</span>
+                            <span className="truncate hidden sm:inline">Add to Cart</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleFavorite(p.id);
+                            }}
+                            className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition-all"
+                            style={{
+                              background: isFavorite(p.id) ? "var(--primary)" : "oklch(1 0 0/0.20)",
+                              color: isFavorite(p.id) ? "white" : "#fff",
+                              backdropFilter: "blur(8px)",
+                            }}
+                            aria-label="Wishlist"
+                          >
+                            <Heart className={`size-4 ${isFavorite(p.id) ? "fill-white" : ""}`} />
+                          </button>
+                        </div>
+                      </Link>
+                    )}
 
-                      <ProductCardImage
-                        src={p.image}
-                        alt={p.name}
-                        className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-[1.04]"
-                      />
-                      <div
-                        className="absolute inset-0 transition-opacity duration-400 opacity-0 group-hover:opacity-100"
-                        style={{
-                          background:
-                            "linear-gradient(to top, oklch(0.12 0.02 285/0.55) 0%, transparent 55%)",
-                        }}
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 p-3 opacity-100 transition-all duration-300 sm:p-4 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            handleAddToCart(p);
-                          }}
-                          className="flex h-11 min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-white px-3 text-[10px] font-black uppercase tracking-widest text-primary shadow-xl transition-all hover:bg-primary hover:text-white"
-                        >
-                          <ShoppingBag className="size-3.5 shrink-0" aria-hidden />
-                          <span className="truncate sm:hidden">Add</span>
-                          <span className="truncate hidden sm:inline">Add to Cart</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            toggleFavorite(p.id);
-                          }}
-                          className="grid h-11 w-11 shrink-0 place-items-center rounded-full transition-all"
-                          style={{
-                            background: isFavorite(p.id) ? "var(--primary)" : "oklch(1 0 0/0.20)",
-                            color: isFavorite(p.id) ? "white" : "#fff",
-                            backdropFilter: "blur(8px)",
-                          }}
-                          aria-label="Wishlist"
-                        >
-                          <Heart className={`size-4 ${isFavorite(p.id) ? "fill-white" : ""}`} />
-                        </button>
-                      </div>
-                    </Link>
-                  )}
-
-                  {/* Info */}
-                  <div className="mt-3 px-0.5">
-                    <div className="flex items-start justify-between gap-2">
-                      {isOutOfStock ? (
-                        <h3 className="font-serif text-[15px] leading-snug text-foreground/60 cursor-not-allowed line-clamp-1">
-                          {p.name}
-                        </h3>
-                      ) : (
-                        <Link to="/product/$id" params={{ id: p.id }}>
-                          <h3 className="font-serif text-[15px] leading-snug text-foreground transition-colors group-hover:text-primary line-clamp-1">
+                    {/* Info */}
+                    <div className="mt-3 px-0.5">
+                      <div className="flex items-start justify-between gap-2">
+                        {isOutOfStock ? (
+                          <h3 className="font-serif text-[15px] leading-snug text-foreground/60 cursor-not-allowed line-clamp-1">
                             {p.name}
                           </h3>
-                        </Link>
-                      )}
-                      <span
-                        className="font-serif text-[15px] font-semibold shrink-0"
-                        style={{ color: "oklch(0.30 0.04 285)" }}
+                        ) : (
+                          <Link to="/product/$id" params={{ id: p.id }}>
+                            <h3 className="font-serif text-[15px] leading-snug text-foreground transition-colors group-hover:text-primary line-clamp-1">
+                              {p.name}
+                            </h3>
+                          </Link>
+                        )}
+                        <span
+                          className="font-serif text-[15px] font-semibold shrink-0"
+                          style={{ color: "oklch(0.30 0.04 285)" }}
+                        >
+                          {formatPkr(Number(p.price))}
+                        </span>
+                      </div>
+                      <p
+                        className="mt-0.5 text-[11px] font-medium truncate"
+                        style={{ color: "oklch(0.62 0.022 290)" }}
                       >
-                        {formatPkr(Number(p.price))}
-                      </span>
+                        {p.variant}
+                      </p>
+                      {(() => {
+                        const colors = getProductColors(p);
+                        if (colors.length <= 1) return null;
+                        return (
+                          <div
+                            className="mt-2 flex flex-wrap gap-1.5"
+                            aria-label="Available colors"
+                          >
+                            {colors.slice(0, 5).map((color) => (
+                              <span
+                                key={color.id}
+                                title={color.name}
+                                className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-border/60"
+                                style={
+                                  color.hex && /^#[0-9A-Fa-f]{6}$/i.test(color.hex)
+                                    ? { backgroundColor: color.hex }
+                                    : undefined
+                                }
+                              >
+                                {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
+                                color.image_url ? (
+                                  <img
+                                    src={color.image_url}
+                                    alt=""
+                                    loading="lazy"
+                                    className="h-full w-full object-contain"
+                                  />
+                                ) : null}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <p
-                      className="mt-0.5 text-[11px] font-medium truncate"
-                      style={{ color: "oklch(0.62 0.022 290)" }}
-                    >
-                      {p.variant}
-                    </p>
-                    {(() => {
-                      const colors = getProductColors(p);
-                      if (colors.length <= 1) return null;
-                      return (
-                        <div className="mt-2 flex flex-wrap gap-1.5" aria-label="Available colors">
-                          {colors.slice(0, 5).map((color) => (
-                            <span
-                              key={color.id}
-                              title={color.name}
-                              className="h-4 w-4 shrink-0 overflow-hidden rounded-full border border-border/60"
-                              style={
-                                color.hex && /^#[0-9A-Fa-f]{6}$/i.test(color.hex)
-                                  ? { backgroundColor: color.hex }
-                                  : undefined
-                              }
-                            >
-                              {(!color.hex || !/^#[0-9A-Fa-f]{6}$/i.test(color.hex)) &&
-                              color.image_url ? (
-                                <img
-                                  src={color.image_url}
-                                  alt=""
-                                  loading="lazy"
-                                  className="h-full w-full object-contain"
-                                />
-                              ) : null}
-                            </span>
-                          ))}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                  </article>
+                );
+              })}
+            </div>
+            {hasMore && (
+              <div
+                ref={sentinelRef}
+                className="mt-10 grid grid-cols-2 gap-x-5 gap-y-10 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4"
+                aria-hidden
+              >
+                {Array.from({
+                  length: Math.min(PRODUCTS_PER_PAGE, filtered.length - visibleCount),
+                }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 
