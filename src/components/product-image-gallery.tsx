@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn, imgErrorFallback } from "@/lib/utils";
-import galleryFallback from "@/assets/hero-baby.jpg";
+import galleryFallback from "@/assets/hero-baby.webp";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;

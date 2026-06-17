@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Layout } from "@/components/site-layout";
 import { useStoreSettingsContext } from "@/context/StoreSettingsContext";
 import { Leaf, Heart, Sparkles } from "lucide-react";
-import hero from "@/assets/hero-baby.jpg";
+import hero from "@/assets/hero-baby.webp";
 import logo from "@/assets/logo.png";
 
 export const Route = createFileRoute("/about")({

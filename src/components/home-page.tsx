@@ -7,7 +7,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useBadges } from "@/hooks/use-badges";
 import { useFavorites } from "@/hooks/use-favorites";
 import logo from "@/assets/logo.png";
-import hero from "@/assets/hero-baby.jpg";
+import hero from "@/assets/hero-baby.webp";
 import { subscribeToNewsletter } from "@/lib/email.server";
 import { formatPkr } from "@/lib/format-currency";
 import { validateEmail } from "@/lib/form-validation";

@@ -1,4 +1,4 @@
-import defaultCraftImage from "@/assets/hero-baby.jpg";
+import defaultCraftImage from "@/assets/hero-baby.webp";
 import { Reveal } from "@/components/reveal";
 import { RevealText } from "@/components/motion/reveal-text";
 import { Parallax } from "@/components/motion/parallax";
