@@ -2,7 +2,17 @@ import { Outlet, Link, createRootRoute, HeadContent, Scripts } from "@tanstack/r
 import { useEffect, useState } from "react";
 
 import appCss from "../styles.css?url";
-import logo from "@/assets/logo.png";
+
+// Origin of the configured Supabase project, used to warm the connection for
+// remote (CMS-set) hero/product images so their fetch isn't blocked on a cold
+// DNS/TLS handshake. Empty when no backend is configured (demo build).
+const supabaseOrigin = (() => {
+  try {
+    return new URL(import.meta.env.VITE_SUPABASE_URL ?? "").origin;
+  } catch {
+    return "";
+  }
+})();
 
 /**
  * Brand splash shown in the very first HTML the browser receives, so visitors
@@ -55,11 +65,12 @@ function AppSplash() {
       graceTimer = setTimeout(() => {
         contentReady = true;
         tryFinish();
-      }, 450);
+      }, 300);
     });
 
-    // Safety cap: never hold the splash longer than 1.5s, even if something hangs.
-    const cap = setTimeout(finish, 1500);
+    // Safety cap: never hold the splash longer than 900ms, even if something
+    // hangs (e.g. a slow web-font load). Bounds the worst-case perceived delay.
+    const cap = setTimeout(finish, 900);
 
     return () => {
       window.removeEventListener("ll-app-ready", onReady);
@@ -177,11 +188,20 @@ export const Route = createRootRoute({
       { name: "twitter:image", content: "https://littleluxuries.pk/og-image.jpg" },
     ],
     links: [
-      // Preload the splash logo so the brand screen paints instantly.
-      { rel: "preload", as: "image", href: logo, fetchPriority: "high" },
-      // Connect to the font hosts early so web fonts load sooner (less reflow).
+      // Connect to the font hosts early, then load the font CSS via a <link>
+      // (not a stylesheet @import) so the preload scanner fetches it in parallel
+      // with the main stylesheet instead of in a serial chain after it.
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      {
+        rel: "stylesheet",
+        href: "https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap",
+      },
+      // Warm the Supabase origin so remote (CMS-set) hero/product images aren't
+      // blocked on a cold connection. Omitted when no backend is configured.
+      ...(supabaseOrigin
+        ? [{ rel: "preconnect", href: supabaseOrigin, crossOrigin: "anonymous" as const }]
+        : []),
       {
         rel: "stylesheet",
         href: appCss,

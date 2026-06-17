@@ -164,7 +164,11 @@
 }
 
 @layer base {
-  @import url("https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap");
+  /* Google Fonts are loaded via a <link> in the document head (see __root.tsx)
+     rather than an @import here. An @import sits at byte 0 of this ~200KB
+     stylesheet and forces a serial chain (download this CSS → parse → fetch the
+     font CSS → fetch woff2). A head <link> lets the preload scanner fetch the
+     font CSS in parallel with this stylesheet, so web fonts paint sooner. */
 
   * {
     border-color: var(--color-border);
