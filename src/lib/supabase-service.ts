@@ -388,7 +388,7 @@ export const subscribeToSiteList = (id: string, callback: () => void) => {
 // Products management
 export const productService = {
   // Get all products
-  async getProducts(status?: string) {
+  async getProducts(status?: string, opts?: { throwOnError?: boolean }) {
     let query = supabase.from("products").select("*");
     if (status && status !== "all") {
       query = query.eq("status", status);
@@ -397,6 +397,10 @@ export const productService = {
 
     if (error) {
       console.error("Error fetching products:", error);
+      // Storefront read paths opt in to throwOnError so a real backend failure
+      // surfaces as a query error (retry UI) instead of an empty list that the
+      // caller would mistake for "no products" and backfill with demo data.
+      if (opts?.throwOnError) throw error;
       return [];
     }
 

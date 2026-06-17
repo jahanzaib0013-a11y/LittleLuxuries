@@ -113,7 +113,7 @@ function Shop() {
   const [sortBy, setSortBy] = useState<"featured" | "price-asc" | "price-desc" | "newest">(
     "featured",
   );
-  const { data: shopProducts = [], isLoading: loading } = usePublishedProducts();
+  const { data: shopProducts = [], isLoading: loading, isError, refetch } = usePublishedProducts();
   const { categories } = useCategories();
   const badges = useMemo(
     () => Array.from(new Set(shopProducts.map((p) => p.badge).filter(Boolean) as string[])),
@@ -707,6 +707,41 @@ function Shop() {
             {Array.from({ length: 8 }).map((_, i) => (
               <ProductCardSkeleton key={i} />
             ))}
+          </div>
+        ) : isError ? (
+          <div className="flex flex-col items-center justify-center py-32 text-center">
+            <div
+              className="size-16 rounded-full mb-6 grid place-items-center"
+              style={{ background: "oklch(0.93 0.03 300)" }}
+            >
+              <ShoppingBag className="size-6" style={{ color: "oklch(0.55 0.06 295)" }} />
+            </div>
+            <p
+              className="text-[10px] font-black uppercase tracking-[0.22em] mb-2"
+              style={{ color: "oklch(0.65 0.025 290)" }}
+            >
+              Couldn't load the collection
+            </p>
+            <h3 className="font-serif text-2xl mb-2" style={{ color: "oklch(0.25 0.03 285)" }}>
+              Something went wrong
+            </h3>
+            <p
+              className="text-sm max-w-xs leading-relaxed mb-8"
+              style={{ color: "oklch(0.58 0.025 290)" }}
+            >
+              We couldn't reach the store just now. Please check your connection and try again.
+            </p>
+            <button
+              onClick={() => refetch()}
+              className="inline-flex items-center gap-2 rounded-full px-7 py-3 text-[11px] font-black uppercase tracking-widest transition-all hover:-translate-y-0.5"
+              style={{
+                background: "oklch(0.18 0.025 285)",
+                color: "#fff",
+                boxShadow: "0 4px 18px oklch(0.18 0.025 285/0.25)",
+              }}
+            >
+              Try Again
+            </button>
           </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-32 text-center">

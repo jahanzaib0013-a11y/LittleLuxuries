@@ -3,6 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL ?? "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY ?? "";
 
+/**
+ * True only when a real Supabase backend is configured. Lets data loaders tell
+ * "this is a no-backend demo build → use bundled sample data" apart from "the
+ * backend is configured but the request failed → surface a real error", instead
+ * of silently showing demo products when the live DB is unreachable.
+ */
+export const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
+
 if (!supabaseUrl || !supabaseAnonKey) {
   console.warn(
     "[Little Luxuries] Missing Supabase environment variables — DB features will be unavailable.",
