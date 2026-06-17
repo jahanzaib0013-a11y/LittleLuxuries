@@ -269,7 +269,11 @@ function RootShell({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla adds
+          cz-shortcut-listen) mutate <body> before hydration. This only silences
+          attribute mismatches on <body> itself, not on any children, so real
+          content hydration mismatches are still reported. */}
+      <body suppressHydrationWarning>
         <AppSplash />
         {children}
         <Scripts />

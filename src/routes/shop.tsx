@@ -69,6 +69,14 @@ function ProductCardImage({
   className?: string;
 }) {
   const [loaded, setLoaded] = useState(false);
+  // Drive lazy-loading ourselves instead of native loading="lazy". On client-side
+  // navigation the grid paints from the react-query cache *during* the 600ms
+  // page-enter transform animation, with Lenis smooth-scroll already active — and
+  // native lazy mis-evaluates "near viewport" under a transformed/JS-scrolled
+  // subtree, so below-the-fold images loaded late. A JS IntersectionObserver with
+  // a large rootMargin preloads each image well before it's reached, reliably, in
+  // both the navigated and hard-refresh cases.
+  const [inView, setInView] = useState(false);
   const imgRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
@@ -76,22 +84,39 @@ function ProductCardImage({
   }, [src]);
 
   useEffect(() => {
+    if (inView) return;
+    const node = imgRef.current;
+    if (!node) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setInView(true);
+          io.disconnect();
+        }
+      },
+      { rootMargin: "1200px 0px" },
+    );
+    io.observe(node);
+    return () => io.disconnect();
+  }, [inView]);
+
+  useEffect(() => {
     const img = imgRef.current;
     if (img?.complete && img.naturalWidth > 0) {
       setLoaded(true);
     }
-  }, [src]);
+  }, [src, inView]);
 
   return (
     <>
       {!loaded && <Skeleton className="absolute inset-0 h-full w-full rounded-none" />}
       <img
         ref={imgRef}
-        src={src}
+        src={inView ? src : undefined}
         alt={alt}
-        loading="lazy"
         width={800}
         height={1067}
+        decoding="async"
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(true)}
         className={cn(

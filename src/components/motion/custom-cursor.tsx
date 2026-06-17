@@ -56,7 +56,9 @@ export function CustomCursor({ template }: { template: AnimationTemplate }) {
           width: hovering ? 56 : 30,
           height: hovering ? 56 : 30,
           opacity: hovering ? 0.9 : 0.5,
-          backgroundColor: hovering ? "oklch(0.45 0.13 295 / 0.08)" : "oklch(0.45 0.13 295 / 0)",
+          // rgba (not oklch) so motion can interpolate it — oklch is not animatable.
+          // rgb(92,66,149) === oklch(0.45 0.13 295), the brand primary.
+          backgroundColor: hovering ? "rgba(92, 66, 149, 0.08)" : "rgba(92, 66, 149, 0)",
         }}
         transition={{ type: "spring", stiffness: 300, damping: 22 }}
       />
