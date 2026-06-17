@@ -1,4 +1,5 @@
 import defaultCraftImage from "@/assets/hero-baby.webp";
+import { imgErrorFallback } from "@/lib/utils";
 import { Reveal } from "@/components/reveal";
 import { RevealText } from "@/components/motion/reveal-text";
 import { Parallax } from "@/components/motion/parallax";
@@ -24,6 +25,8 @@ export function CraftStory({ story }: { story?: CraftStoryContent }) {
               <img
                 src={image}
                 alt="Little Luxuries craftsmanship"
+                loading="lazy"
+                onError={imgErrorFallback(defaultCraftImage)}
                 className="h-full w-full object-cover"
               />
             </div>

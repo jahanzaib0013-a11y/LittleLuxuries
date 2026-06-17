@@ -949,6 +949,8 @@ function Shop() {
                                     src={color.image_url}
                                     alt=""
                                     loading="lazy"
+                                    width={16}
+                                    height={16}
                                     className="h-full w-full object-contain"
                                   />
                                 ) : null}

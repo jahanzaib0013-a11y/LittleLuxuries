@@ -241,7 +241,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                     <img
                       src={heroImageSrc}
                       alt="Baby wrapped in lavender swaddle"
-                      width={1280}
+                      width={1024}
                       height={1280}
                       fetchPriority="high"
                       decoding="async"

@@ -417,6 +417,8 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
                 src={img}
                 alt=""
                 loading="lazy"
+                width={120}
+                height={120}
                 draggable={false}
                 onError={imgErrorFallback(galleryFallback)}
                 className="h-full w-full object-contain"
