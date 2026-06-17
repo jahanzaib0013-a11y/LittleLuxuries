@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, imgErrorFallback } from "@/lib/utils";
+import galleryFallback from "@/assets/hero-baby.jpg";
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
@@ -118,23 +119,26 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
     });
   }, [setPanClamped]);
 
-  const zoomAtPoint = useCallback((clientX: number, clientY: number) => {
-    const el = viewportRef.current;
-    if (!el) return;
+  const zoomAtPoint = useCallback(
+    (clientX: number, clientY: number) => {
+      const el = viewportRef.current;
+      if (!el) return;
 
-    const rect = el.getBoundingClientRect();
-    const ox = clientX - rect.left;
-    const oy = clientY - rect.top;
-    const newScale = CLICK_ZOOM;
-    const panX = (rect.width / 2 - ox) * (newScale - 1);
-    const panY = (rect.height / 2 - oy) * (newScale - 1);
-    const nextPan = clampPan({ x: panX, y: panY }, newScale);
+      const rect = el.getBoundingClientRect();
+      const ox = clientX - rect.left;
+      const oy = clientY - rect.top;
+      const newScale = CLICK_ZOOM;
+      const panX = (rect.width / 2 - ox) * (newScale - 1);
+      const panY = (rect.height / 2 - oy) * (newScale - 1);
+      const nextPan = clampPan({ x: panX, y: panY }, newScale);
 
-    scaleRef.current = newScale;
-    panRef.current = nextPan;
-    setScale(newScale);
-    setPan(nextPan);
-  }, [clampPan]);
+      scaleRef.current = newScale;
+      panRef.current = nextPan;
+      setScale(newScale);
+      setPan(nextPan);
+    },
+    [clampPan],
+  );
 
   const stopControlEvent = (e: React.SyntheticEvent) => {
     e.preventDefault();
@@ -143,10 +147,7 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
 
   const endPointerSession = useCallback(
     (clientX: number, clientY: number) => {
-      const moved = Math.hypot(
-        clientX - pointerStart.current.x,
-        clientY - pointerStart.current.y,
-      );
+      const moved = Math.hypot(clientX - pointerStart.current.x, clientY - pointerStart.current.y);
 
       activePointerId.current = null;
       setIsPanning(false);
@@ -283,9 +284,7 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
             "relative h-full w-full touch-none select-none outline-none",
             isZoomed ? (isPanning ? "cursor-grabbing" : "cursor-grab") : "cursor-zoom-in",
           )}
-          aria-label={
-            isZoomed ? "Drag to pan. Tap to reset zoom." : "Tap or click to zoom in"
-          }
+          aria-label={isZoomed ? "Drag to pan. Tap to reset zoom." : "Tap or click to zoom in"}
         >
           <img
             ref={imgRef}
@@ -296,6 +295,7 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
             fetchPriority="high"
             decoding="async"
             draggable={false}
+            onError={imgErrorFallback(galleryFallback)}
             className="h-full w-full object-contain"
             style={{
               transformOrigin: "center center",
@@ -413,7 +413,14 @@ export function ProductImageGallery({ images, alt, badge }: ProductImageGalleryP
               aria-label={`View image ${i + 1}`}
               aria-current={currentImage === img}
             >
-              <img src={img} alt="" className="h-full w-full object-contain" draggable={false} />
+              <img
+                src={img}
+                alt=""
+                loading="lazy"
+                draggable={false}
+                onError={imgErrorFallback(galleryFallback)}
+                className="h-full w-full object-contain"
+              />
             </button>
           ))}
         </div>
