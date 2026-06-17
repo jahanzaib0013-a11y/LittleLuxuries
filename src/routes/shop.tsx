@@ -238,16 +238,35 @@ function Shop() {
     if (!hasMore) return;
     const node = sentinelRef.current;
     if (!node) return;
+
+    const loadMore = () => setVisibleCount((c) => c + PRODUCTS_PER_PAGE);
+
+    // Primary trigger: IntersectionObserver.
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setVisibleCount((c) => c + PRODUCTS_PER_PAGE);
-        }
+        if (entries[0]?.isIntersecting) loadMore();
       },
       { rootMargin: "600px 0px" }, // start loading well before the user reaches the end
     );
     observer.observe(node);
-    return () => observer.disconnect();
+
+    // Fallback trigger: a scroll/resize bounding-box check. The observer's
+    // intersection state can go stale under the page-enter transform animation
+    // + Lenis smooth-scroll on client-side navigation (which left the list stuck
+    // at the first page). Re-reading getBoundingClientRect on each scroll is
+    // self-correcting and works regardless of how scrolling is implemented.
+    const checkRect = () => {
+      if (node.getBoundingClientRect().top < window.innerHeight + 600) loadMore();
+    };
+    checkRect(); // in case the sentinel is already near the viewport on mount
+    window.addEventListener("scroll", checkRect, { passive: true });
+    window.addEventListener("resize", checkRect);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("scroll", checkRect);
+      window.removeEventListener("resize", checkRect);
+    };
   }, [hasMore, visibleProducts.length]);
 
   function ProductCardSkeleton() {
