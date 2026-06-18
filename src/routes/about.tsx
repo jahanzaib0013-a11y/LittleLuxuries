@@ -77,11 +77,6 @@ function About() {
               artisan partners across Portugal and Italy. We use only certified organic cottons,
               French linen, and pure merino wool — never plastics, never shortcuts.
             </p>
-            <div className="mt-8 grid grid-cols-3 gap-3 sm:gap-6 border-t border-border pt-8">
-              <Stat n="12k+" l="Families" />
-              <Stat n="100%" l="Organic" />
-              <Stat n="0" l="Plastic" />
-            </div>
           </div>
         </div>
       </section>
@@ -122,15 +117,6 @@ function About() {
         </p>
       </section>
     </Layout>
-  );
-}
-
-function Stat({ n, l }: { n: string; l: string }) {
-  return (
-    <div>
-      <p className="font-serif text-3xl text-primary">{n}</p>
-      <p className="mt-1 text-xs uppercase tracking-wider text-muted-foreground">{l}</p>
-    </div>
   );
 }
 
