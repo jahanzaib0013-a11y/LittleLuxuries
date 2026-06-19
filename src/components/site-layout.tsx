@@ -257,6 +257,7 @@ export function Footer({ className }: { className?: string }) {
             { label: "Journal", to: "/blog" },
             { label: "Contact", to: "/contact" },
             { label: "Shipping", to: "/contact" },
+            { label: "Returns", to: "/returns" },
             { label: "Our Story", to: "/about" },
           ]}
         />
