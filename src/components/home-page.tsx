@@ -7,6 +7,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useBadges } from "@/hooks/use-badges";
 import { useFavorites } from "@/hooks/use-favorites";
 import logo from "@/assets/logo.png";
+import babyFeetLogo from "@/assets/baby-feet-logo.png";
 import hero from "@/assets/hero-baby.webp";
 import { subscribeToNewsletter } from "@/lib/email.server";
 import { formatPkr } from "@/lib/format-currency";
@@ -271,7 +272,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
         <Reveal index={1}>
           <section className="bg-background py-20">
             <div className="mx-auto flex max-w-md flex-col items-center px-6 text-center">
-              <img src={logo} alt="Little Luxuries" width={140} height={140} />
+              <img src={babyFeetLogo} alt="Little Luxuries" width={140} height={140} />
               <div className="divider-ornament mt-2 w-full">
                 <span className="diamond" />
               </div>
