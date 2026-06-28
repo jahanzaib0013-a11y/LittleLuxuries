@@ -2,7 +2,6 @@ import { queryOptions, useQuery } from "@tanstack/react-query";
 import { orderService, type OrderWithItems } from "./order-service";
 import { productService } from "./supabase-service";
 import { getCustomerStats } from "./customers";
-import { topSellers as fallbackTopSellers } from "./admin-data";
 import { FIVE_MINUTES } from "./query-client";
 
 export interface DashboardTopSeller {
@@ -54,10 +53,9 @@ export async function fetchDashboardSummary(
         new_customers: customerStats.new_this_month,
         low_stock_alerts: lowStockCount,
       },
-      topSellers:
-        topData.error || topData.topSellers.length === 0
-          ? fallbackTopSellers
-          : topData.topSellers,
+      // Show real sales only. No demo fallback — an empty list renders an empty
+      // state rather than fake products.
+      topSellers: topData.error ? [] : topData.topSellers,
     };
   } catch (error) {
     throw error;
