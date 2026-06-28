@@ -270,7 +270,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
         </Reveal>
 
         <Reveal index={1}>
-          <section className="bg-background py-20">
+          <section className="bg-background pt-0 pb-0">
             <div className="mx-auto flex max-w-md flex-col items-center px-6 text-center">
               <img src={babyFeetLogo} alt="Little Luxuries" width={140} height={140} />
               <div className="divider-ornament mt-2 w-full">
