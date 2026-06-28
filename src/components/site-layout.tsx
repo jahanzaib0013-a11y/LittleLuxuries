@@ -183,7 +183,7 @@ export function Footer({ className }: { className?: string }) {
   return (
     <footer className={cn("mt-24 border-t border-border/60 bg-secondary/40", className)}>
       <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 py-12 sm:py-16 md:grid-cols-2 lg:grid-cols-4">
-        <div>
+        <div className="flex flex-col items-center text-center">
           <img src={babyFeetLogo} alt={storeName} width={80} height={80} className="mb-3" />
           <p className="font-serif text-xl italic text-primary">{storeName}</p>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
