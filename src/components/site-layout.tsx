@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ShoppingBag, Heart, Menu, Loader2, CheckCircle2, Instagram, Facebook } from "lucide-react";
 import logo from "@/assets/logo.png";
+import babyFeetLogo from "@/assets/baby-feet-logo.png";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { useEffect, useState } from "react";
 import { useRouterState } from "@tanstack/react-router";
@@ -183,7 +184,7 @@ export function Footer({ className }: { className?: string }) {
     <footer className={cn("mt-24 border-t border-border/60 bg-secondary/40", className)}>
       <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 py-12 sm:py-16 md:grid-cols-2 lg:grid-cols-4">
         <div>
-          <img src={logo} alt={storeName} width={80} height={80} className="mb-3" />
+          <img src={babyFeetLogo} alt={storeName} width={80} height={80} className="mb-3" />
           <p className="font-serif text-xl italic text-primary">{storeName}</p>
           <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">
             Crafting heirloom-quality baby garments with a commitment to ethics, comfort, and
