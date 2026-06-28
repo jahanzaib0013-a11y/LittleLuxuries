@@ -30,6 +30,8 @@ import {
   canMarkOrderDelivered,
 } from "@/lib/order-service";
 import { formatPkr } from "@/lib/format-currency";
+import { invalidateOrderData } from "@/lib/invalidate";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -94,10 +96,11 @@ const tabs = [
 ] as const;
 
 function OrdersContent() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<(typeof tabs)[number]>("All Orders");
   const [dateFilter, setDateFilter] = useState<
     "All Time" | "Last 7 Days" | "Last 30 Days" | "This Year"
-  >("Last 30 Days");
+  >("All Time");
   const [paymentFilter, setPaymentFilter] = useState<"All" | "completed" | "pending" | "failed">(
     "All",
   );
@@ -109,6 +112,9 @@ function OrdersContent() {
   const [isCommunicationModalOpen, setIsCommunicationModalOpen] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState<OrderWithItems | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState({
@@ -137,10 +143,17 @@ function OrdersContent() {
       if (dateFilter === "Last 7 Days") fromDate.setDate(fromDate.getDate() - 7);
       else if (dateFilter === "Last 30 Days") fromDate.setDate(fromDate.getDate() - 30);
       else if (dateFilter === "This Year") fromDate.setMonth(0, 1);
+      // Snap to the start of the day so "Last N Days" includes the whole Nth day
+      // back, not just the slice after the current time-of-day (which dropped
+      // orders sitting exactly on the boundary).
+      fromDate.setHours(0, 0, 0, 0);
+
+      const toDate = new Date();
+      toDate.setHours(23, 59, 59, 999);
 
       const dateRange =
         dateFilter !== "All Time"
-          ? { from: fromDate.toISOString(), to: new Date().toISOString() }
+          ? { from: fromDate.toISOString(), to: toDate.toISOString() }
           : undefined;
 
       const { orders: data, error: fetchError } = await orderService.getAllOrders({
@@ -152,6 +165,7 @@ function OrdersContent() {
 
       if (fetchError) throw new Error(fetchError);
       setOrders(data);
+      setSelectedIds(new Set());
 
       // Fetch stats
       const statsData = await orderService.getOrderStats();
@@ -254,6 +268,7 @@ function OrdersContent() {
         }
       }
       fetchOrders();
+      invalidateOrderData(queryClient);
       toast.success(`Order status updated to ${status}`);
     } catch (e) {
       console.error(e);
@@ -294,6 +309,7 @@ function OrdersContent() {
       }
 
       fetchOrders();
+      invalidateOrderData(queryClient);
       toast.success(`Payment status updated to ${paymentStatus}`);
     } catch (e) {
       console.error(e);
@@ -317,10 +333,85 @@ function OrdersContent() {
       }
       setOrderToDelete(null);
       fetchOrders();
+      invalidateOrderData(queryClient);
     } finally {
       setIsDeleting(false);
     }
   };
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const allSelected = orders.length > 0 && orders.every((o) => selectedIds.has(o.id));
+
+  const toggleSelectAll = () =>
+    setSelectedIds(allSelected ? new Set() : new Set(orders.map((o) => o.id)));
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkStatus = async (status: OrderStatus) => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setIsBulkProcessing(true);
+    let ok = 0;
+    try {
+      for (const id of ids) {
+        const orderToNotify = orders.find((o) => o.id === id);
+        try {
+          await orderService.updateOrderStatus(id, status);
+          if (orderToNotify && status !== orderToNotify.status) {
+            try {
+              await (sendOrderStatusEmail as any)({
+                data: {
+                  orderNumber: orderToNotify.order_number,
+                  customerEmail: orderToNotify.customer_email,
+                  customerName: `${orderToNotify.customer_first_name} ${orderToNotify.customer_last_name}`,
+                  status,
+                  trackingNumber: orderToNotify.tracking_number,
+                },
+              });
+            } catch (e) {
+              console.error("status email failed:", e);
+            }
+          }
+          ok++;
+        } catch (e) {
+          console.error(e);
+        }
+      }
+      toast.success(`Updated ${ok} order${ok !== 1 ? "s" : ""} to ${formatStatusLabel(status)}`);
+      clearSelection();
+      fetchOrders();
+      invalidateOrderData(queryClient);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setIsBulkProcessing(true);
+    let ok = 0;
+    try {
+      for (const id of ids) {
+        const { success } = await orderService.deleteOrder(id);
+        if (success) ok++;
+      }
+      toast.success(`Deleted ${ok} order${ok !== 1 ? "s" : ""}`);
+      clearSelection();
+      setIsBulkDeleteOpen(false);
+      fetchOrders();
+      invalidateOrderData(queryClient);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
   const handleExportCSV = () => {
     if (orders.length === 0) {
       toast.error("No orders to export");
@@ -643,6 +734,74 @@ function OrdersContent() {
           </div>
         </div>
 
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-primary/5">
+            <span className="text-sm font-medium text-foreground">
+              {selectedIds.size} selected
+            </span>
+            <button
+              onClick={clearSelection}
+              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Clear
+            </button>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    disabled={isBulkProcessing}
+                    className="inline-flex items-center gap-2 h-9 px-4 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 text-sm font-medium transition shadow-sm disabled:opacity-50"
+                  >
+                    {isBulkProcessing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Filter className="h-4 w-4" />
+                    )}
+                    Change status <ChevronDown className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52 rounded-xl shadow-(--shadow-card)">
+                  <DropdownMenuLabel className="font-serif">Mark selected as</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {(
+                    [
+                      "order_confirmed",
+                      "packed",
+                      "shipped",
+                      "delivered",
+                      "payment_confirmed",
+                    ] as OrderStatus[]
+                  ).map((s) => (
+                    <DropdownMenuItem
+                      key={s}
+                      onClick={() => handleBulkStatus(s)}
+                      className="cursor-pointer"
+                    >
+                      <span className={`mr-2 h-2 w-2 rounded-full ${getStatusDotColor(s)}`} />
+                      {formatStatusLabel(s)}
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={() => handleBulkStatus("cancelled")}
+                    className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10"
+                  >
+                    Cancel orders
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="destructive"
+                disabled={isBulkProcessing}
+                onClick={() => setIsBulkDeleteOpen(true)}
+                className="h-9 rounded-full"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            </div>
+          </div>
+        )}
+
         <HorizontalScrollArea
           className="px-1 sm:px-2"
           scrollClassName="-mx-1 px-1 sm:mx-0 sm:px-2"
@@ -651,6 +810,15 @@ function OrdersContent() {
           <table className="w-full min-w-[1050px] text-sm border-collapse">
             <thead>
               <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border bg-muted/30">
+                <th className="w-10 px-4 py-4 align-middle">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                    aria-label="Select all orders"
+                  />
+                </th>
                 <th className="min-w-[120px] px-4 py-4 text-left font-medium align-middle">
                   Order ID
                 </th>
@@ -678,6 +846,9 @@ function OrdersContent() {
               {isLoading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={`skeleton-${i}`} className="border-b border-border/40 last:border-0">
+                    <td className="px-4 py-4 align-middle">
+                      <Skeleton className="h-4 w-4 rounded" />
+                    </td>
                     <td className="px-4 py-4 align-middle">
                       <Skeleton className="h-5 w-24" />
                     </td>
@@ -715,7 +886,7 @@ function OrdersContent() {
                 ))
               ) : error ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-destructive">
+                  <td colSpan={10} className="px-6 py-12 text-center text-destructive">
                     <p className="text-sm">{error}</p>
                     <button
                       onClick={fetchOrders}
@@ -727,7 +898,7 @@ function OrdersContent() {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={10} className="px-6 py-12 text-center text-muted-foreground">
                     <p className="text-sm">No orders found</p>
                   </td>
                 </tr>
@@ -735,8 +906,20 @@ function OrdersContent() {
                 orders.map((o) => (
                   <tr
                     key={o.id}
-                    className="border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors"
+                    className={cn(
+                      "border-b border-border/40 last:border-0 hover:bg-muted/20 transition-colors",
+                      selectedIds.has(o.id) && "bg-primary/5",
+                    )}
                   >
+                    <td className="px-4 py-4 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(o.id)}
+                        onChange={() => toggleSelect(o.id)}
+                        className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                        aria-label={`Select order ${o.order_number}`}
+                      />
+                    </td>
                     <td className="px-4 py-4 align-middle font-medium text-primary whitespace-nowrap">
                       {o.order_number}
                     </td>
@@ -1071,6 +1254,36 @@ function OrdersContent() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={isBulkDeleteOpen}
+        onOpenChange={(open) => !open && !isBulkProcessing && setIsBulkDeleteOpen(false)}
+      >
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-serif">
+              Delete {selectedIds.size} order{selectedIds.size !== 1 ? "s" : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the selected orders and their line items from the database.
+              This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full" disabled={isBulkProcessing}>
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              className="rounded-full"
+              disabled={isBulkProcessing}
+              onClick={() => void handleBulkDelete()}
+            >
+              {isBulkProcessing ? "Deleting…" : "Delete orders"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={!!orderToDelete}

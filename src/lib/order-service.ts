@@ -697,8 +697,21 @@ export const orderService = {
   /** Permanently removes the order. `order_items` and `order_status_history` cascade (see migrations). */
   async deleteOrder(orderId: string): Promise<{ success: boolean; error: string | null }> {
     try {
-      const { error } = await supabase.from("orders").delete().eq("id", orderId);
+      // .select() returns the rows actually deleted. A plain delete reports
+      // success even when RLS or permissions silently remove 0 rows, which is
+      // why "deleted" orders kept reappearing — verify a row really went away.
+      const { data, error } = await supabase
+        .from("orders")
+        .delete()
+        .eq("id", orderId)
+        .select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        return {
+          success: false,
+          error: "Order was not deleted — you may not have permission (check RLS policies).",
+        };
+      }
       return { success: true, error: null };
     } catch (err: any) {
       console.error("Error deleting order:", err);

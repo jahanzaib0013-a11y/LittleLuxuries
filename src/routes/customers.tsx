@@ -32,8 +32,9 @@ import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ExportMenu } from "@/components/export-menu";
 import { getCustomers, getCustomerStats, deleteCustomer, Customer } from "@/lib/customers";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { invalidateCustomerData } from "@/lib/invalidate";
+import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ViewCustomerModal } from "@/components/view-customer-modal";
 import { SendMessageModal } from "@/components/send-message-modal";
@@ -57,6 +58,7 @@ function CustomersPage() {
 }
 
 function CustomersContent({ search }: { search: string }) {
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const [tierFilter, setTierFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -66,6 +68,9 @@ function CustomersContent({ search }: { search: string }) {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddCustomerModalOpen, setIsAddCustomerModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkDeleteOpen, setIsBulkDeleteOpen] = useState(false);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
 
   const {
     data: customersData,
@@ -86,6 +91,10 @@ function CustomersContent({ search }: { search: string }) {
     queryFn: getCustomerStats,
   });
 
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [currentPage, search, tierFilter, statusFilter]);
+
   const handleConfirmDelete = async () => {
     if (!selectedCustomer) return;
     setIsDeleting(true);
@@ -95,6 +104,7 @@ function CustomersContent({ search }: { search: string }) {
         toast.success(`Client ${selectedCustomer.customer_name} deleted successfully.`);
         refetchCustomers();
         refetchStats();
+        invalidateCustomerData(queryClient);
         setIsDeleteModalOpen(false);
       } else {
         toast.error(error || "Failed to delete customer");
@@ -139,6 +149,42 @@ function CustomersContent({ search }: { search: string }) {
   const customers = customersData?.customers || [];
   const totalPages = customersData?.totalPages || 1;
   const total = customersData?.total || 0;
+
+  const toggleSelect = (id: string) =>
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  const allSelected = customers.length > 0 && customers.every((c) => selectedIds.has(c.id));
+
+  const toggleSelectAll = () =>
+    setSelectedIds(allSelected ? new Set() : new Set(customers.map((c) => c.id)));
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const handleBulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    setIsBulkProcessing(true);
+    let ok = 0;
+    try {
+      for (const id of ids) {
+        const { success } = await deleteCustomer(id);
+        if (success) ok++;
+      }
+      toast.success(`Deleted ${ok} customer${ok !== 1 ? "s" : ""}`);
+      clearSelection();
+      setIsBulkDeleteOpen(false);
+      refetchCustomers();
+      refetchStats();
+      invalidateCustomerData(queryClient);
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
 
   const handleExportCSV = () => {
     if (customers.length === 0) {
@@ -385,10 +431,41 @@ function CustomersContent({ search }: { search: string }) {
           </div>
         </div>
 
+        {selectedIds.size > 0 && (
+          <div className="flex flex-wrap items-center gap-3 px-6 py-3 border-b border-border bg-primary/5">
+            <span className="text-sm font-medium text-foreground">{selectedIds.size} selected</span>
+            <button
+              onClick={clearSelection}
+              className="text-xs text-muted-foreground hover:text-foreground hover:underline"
+            >
+              Clear
+            </button>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button
+                variant="destructive"
+                disabled={isBulkProcessing}
+                onClick={() => setIsBulkDeleteOpen(true)}
+                className="h-9 rounded-full"
+              >
+                <Trash2 className="h-4 w-4" /> Delete
+              </Button>
+            </div>
+          </div>
+        )}
+
         <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-xs uppercase tracking-[0.15em] text-muted-foreground border-b border-border bg-muted/20">
+                <th className="w-10 px-4 py-4 align-middle">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                    aria-label="Select all customers"
+                  />
+                </th>
                 <th className="px-6 py-4 text-left font-medium">Customer Name</th>
                 <th className="px-4 py-4 text-left font-medium">Email Address</th>
                 <th className="px-4 py-4 text-left font-medium">Total Orders</th>
@@ -415,8 +492,19 @@ function CustomersContent({ search }: { search: string }) {
                 return (
                   <tr
                     key={c.email}
-                    className="border-b border-border/40 last:border-0 hover:bg-muted/20"
+                    className={`border-b border-border/40 last:border-0 hover:bg-muted/20 ${
+                      selectedIds.has(c.id) ? "bg-primary/5" : ""
+                    }`}
                   >
+                    <td className="px-4 py-5 align-middle">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleSelect(c.id)}
+                        className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                        aria-label={`Select ${c.customer_name}`}
+                      />
+                    </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-3">
                         <div className="relative">
@@ -690,6 +778,14 @@ function CustomersContent({ search }: { search: string }) {
         customerName={selectedCustomer?.customer_name || ""}
         onConfirm={handleConfirmDelete}
         isDeleting={isDeleting}
+      />
+
+      <CustomerDeleteConfirmationModal
+        open={isBulkDeleteOpen}
+        onOpenChange={(open) => !isBulkProcessing && setIsBulkDeleteOpen(open)}
+        customerName={`${selectedIds.size} customer${selectedIds.size !== 1 ? "s" : ""}`}
+        onConfirm={handleBulkDelete}
+        isDeleting={isBulkProcessing}
       />
 
       <AddCustomerModal open={isAddCustomerModalOpen} onOpenChange={setIsAddCustomerModalOpen} />
