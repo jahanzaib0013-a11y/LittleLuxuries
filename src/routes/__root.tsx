@@ -251,8 +251,8 @@ export const Route = createRootRoute({
           },
           priceRange: "PKR 500 - PKR 5000",
           sameAs: [
-            "https://www.instagram.com/littleluxuriespk",
-            "https://www.facebook.com/littleluxuriespk",
+            "https://www.instagram.com/littleluxuries_pk?igsh=MTdmNnE1bzV5cGR4Yg%3D%3D&utm_source=qr",
+            "https://www.facebook.com/share/1BUMHJvsQm/?mibextid=wwXIfr",
           ],
         }),
       },
