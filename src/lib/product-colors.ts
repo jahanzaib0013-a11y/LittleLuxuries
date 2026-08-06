@@ -34,7 +34,7 @@ export function createEmptyColor(isDefault = false): ProductColor {
 export function parseProductColors(raw: unknown): ProductColor[] {
   if (!Array.isArray(raw)) return [];
   return raw
-    .map((entry) => {
+    .map((entry): ProductColor | null => {
       if (!entry || typeof entry !== "object") return null;
       const c = entry as Record<string, unknown>;
       const image_url = typeof c.image_url === "string" ? c.image_url : "";
@@ -49,7 +49,7 @@ export function parseProductColors(raw: unknown): ProductColor[] {
           ? c.secondary_images.filter((u): u is string => typeof u === "string")
           : [],
         is_default: Boolean(c.is_default),
-      } satisfies ProductColor;
+      };
     })
     .filter((c): c is ProductColor => c !== null);
 }

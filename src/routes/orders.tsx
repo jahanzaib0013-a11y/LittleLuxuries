@@ -825,6 +825,9 @@ function OrdersContent() {
                 <th className="min-w-[200px] px-3 py-4 text-left font-medium align-middle">
                   Customer
                 </th>
+                <th className="min-w-[220px] px-3 py-4 text-left font-medium align-middle">
+                  Delivery Address
+                </th>
                 <th className="w-28 px-3 py-4 text-left font-medium align-middle whitespace-nowrap">
                   Date
                 </th>
@@ -862,6 +865,9 @@ function OrdersContent() {
                       </div>
                     </td>
                     <td className="px-3 py-4 align-middle">
+                      <Skeleton className="h-8 w-44" />
+                    </td>
+                    <td className="px-3 py-4 align-middle">
                       <Skeleton className="h-4 w-24" />
                     </td>
                     <td className="px-3 py-4 align-middle">
@@ -886,7 +892,7 @@ function OrdersContent() {
                 ))
               ) : error ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-destructive">
+                  <td colSpan={11} className="px-6 py-12 text-center text-destructive">
                     <p className="text-sm">{error}</p>
                     <button
                       onClick={fetchOrders}
@@ -898,7 +904,7 @@ function OrdersContent() {
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-muted-foreground">
+                  <td colSpan={11} className="px-6 py-12 text-center text-muted-foreground">
                     <p className="text-sm">No orders found</p>
                   </td>
                 </tr>
@@ -959,6 +965,22 @@ function OrdersContent() {
                             {o.customer_email}
                           </div>
                         </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-4 align-middle max-w-[220px] text-xs text-muted-foreground">
+                      <div className="line-clamp-2">
+                        {[
+                          (o as any).shipping_street_address,
+                          [
+                            (o as any).shipping_city,
+                            (o as any).shipping_postal_code,
+                            (o as any).shipping_country,
+                          ]
+                            .filter(Boolean)
+                            .join(", "),
+                        ]
+                          .filter(Boolean)
+                          .join(" — ") || "—"}
                       </div>
                     </td>
                     <td className="px-3 py-4 align-middle whitespace-nowrap text-muted-foreground">
@@ -1219,6 +1241,38 @@ function OrdersContent() {
             </div>
           </div>
           <div className={cn(modalScrollPaneClass, "space-y-4 px-3 py-4 sm:px-6")}>
+            {selectedOrder && (
+              <div className="rounded-xl border border-border bg-muted/30 p-3 sm:p-4">
+                <h4 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  Delivery Address
+                </h4>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {[
+                    (selectedOrder as any).shipping_first_name,
+                    (selectedOrder as any).shipping_last_name,
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {(selectedOrder as any).shipping_street_address}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {[
+                    (selectedOrder as any).shipping_city,
+                    (selectedOrder as any).shipping_postal_code,
+                    (selectedOrder as any).shipping_country,
+                  ]
+                    .filter(Boolean)
+                    .join(", ")}
+                </p>
+                {(selectedOrder as any).customer_phone && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Phone: {(selectedOrder as any).customer_phone}
+                  </p>
+                )}
+              </div>
+            )}
             {selectedOrder?.order_items?.map((item: any, idx: number) => (
               <div key={idx} className="flex items-center gap-4 group">
                 <div className="h-16 w-16 rounded-xl bg-muted overflow-hidden shrink-0 ring-1 ring-border group-hover:ring-primary/30 transition-all">

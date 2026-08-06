@@ -25,7 +25,6 @@ import { useCart } from "@/context/CartContext";
 import { CartSidebar } from "@/components/cart-sidebar";
 import { formatPkr } from "@/lib/format-currency";
 import { getAcquisitionData, storeUTMParameters } from "@/lib/utils";
-import type { Database } from "@/lib/supabase";
 import {
   validateEmail,
   validateRequired,
@@ -35,6 +34,7 @@ import {
 import { useCheckoutPricing } from "@/hooks/use-checkout-pricing";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getProductDisplayImage } from "@/lib/product-colors";
+import type { Product } from "@/lib/products";
 import { OrderSuccessScreen } from "@/components/order-success-screen";
 
 export const Route = createFileRoute("/checkout")({
@@ -69,7 +69,6 @@ export const Route = createFileRoute("/checkout")({
 });
 
 type CartItemState = { id: string; size: string; color: string; qty: number };
-type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 
 const CHECKOUT_PREFILL_KEY = "littleluxuries_checkout_prefill_v1";
 
@@ -152,7 +151,7 @@ function Checkout() {
   const { cart, removeFromCart, updateQuantity, clearCart, isCartOpen, openCart, closeCart } =
     useCart();
   const { data: publishedProducts = [], isLoading: productsLoading } = usePublishedProducts();
-  const products = publishedProducts as ProductRow[];
+  const products = publishedProducts;
   const [formData, setFormData] = useState(initialCheckoutForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
@@ -251,7 +250,7 @@ function Checkout() {
       const p = products.find((x) => x.id === c.id);
       return p ? { ...c, product: p } : null;
     })
-    .filter((x): x is CartItemState & { product: ProductRow } => !!x);
+    .filter((x): x is CartItemState & { product: Product } => !!x);
 
   const subtotal = items.reduce((s, i) => s + i.product.price * i.qty, 0);
 
@@ -268,7 +267,7 @@ function Checkout() {
   const { tax, taxLabel, shipping, total } = useCheckoutPricing({
     subtotal,
     discount,
-    countryCode: formData.country,
+    countryCode: "PK",
   });
 
   const handleApplyCoupon = async () => {
@@ -502,7 +501,7 @@ function Checkout() {
                   >
                     <div className="relative aspect-square w-24 shrink-0 overflow-hidden rounded-2xl bg-card border border-border shadow-sm">
                       <img
-                        src={getProductDisplayImage(item.product) || item.product.image_url}
+                        src={getProductDisplayImage(item.product) || item.product.image_url || undefined}
                         alt={item.product.name}
                         loading="lazy"
                         className="h-full w-full object-contain transition-transform hover:scale-105"
