@@ -8,6 +8,6 @@
     "crons": ["0 8 * * *", "0 9 * * 1", "0 10 1 * *", "0 10 1 1,4,7,10 *"],
   },
   "kv_namespaces": [
-    { "binding": "LITTLE_LUXURIES_KV", "id": "YOUR_KV_NAMESPACE_ID", "preview_id": "YOUR_KV_PREVIEW_ID" }
+    { "binding": "LITTLE_LUXURIES_KV", "id": "8002b460370d45db89bed05674334205", "preview_id": "8002b460370d45db89bed05674334205" }
   ],
 }
