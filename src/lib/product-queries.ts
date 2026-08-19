@@ -5,7 +5,7 @@ import { products as fallbackProducts, type Product } from "./products";
 import { isSupabaseConfigured, type Database } from "./supabase";
 import { FIVE_MINUTES } from "./query-client";
 import { getProductDisplayImage } from "./product-colors";
-import { getCached, setCached } from "./cache/redis";
+import { getCached, setCached } from "./cache/kv";
 
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
 

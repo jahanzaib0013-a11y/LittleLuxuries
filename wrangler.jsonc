@@ -7,4 +7,7 @@
   "triggers": {
     "crons": ["0 8 * * *", "0 9 * * 1", "0 10 1 * *", "0 10 1 1,4,7,10 *"],
   },
+  "kv_namespaces": [
+    { "binding": "LITTLE_LUXURIES_KV", "id": "YOUR_KV_NAMESPACE_ID", "preview_id": "YOUR_KV_PREVIEW_ID" }
+  ],
 }
