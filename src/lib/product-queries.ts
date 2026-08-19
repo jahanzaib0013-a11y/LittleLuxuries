@@ -39,10 +39,9 @@ export async function fetchPublishedProducts(): Promise<Product[]> {
 
   const cacheKey = "products:published:storefront";
 
-  // Try Redis cache first
+  // Try cache first
   const cached = await getCached<Product[]>(cacheKey);
   if (cached) {
-    console.log("✅ Cache hit: published products from Redis");
     return cached;
   }
 
@@ -55,7 +54,6 @@ export async function fetchPublishedProducts(): Promise<Product[]> {
 
   // Cache for 30 minutes
   await setCached(cacheKey, products, 1800);
-  console.log("📝 Cached published products for 30 minutes");
 
   return products;
 }
@@ -70,10 +68,9 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 
   const cacheKey = `product:${id}`;
 
-  // Try Redis cache first
+  // Try cache first
   const cached = await getCached<Product>(cacheKey);
   if (cached) {
-    console.log(`✅ Cache hit: product ${id} from Redis`);
     return cached;
   }
 
@@ -83,7 +80,6 @@ export async function fetchProductById(id: string): Promise<Product | null> {
       const mapped = mapDbProductToProduct(product);
       // Cache for 1 hour
       await setCached(cacheKey, mapped, 3600);
-      console.log(`📝 Cached product ${id} for 1 hour`);
       return mapped;
     }
   } catch (error) {
