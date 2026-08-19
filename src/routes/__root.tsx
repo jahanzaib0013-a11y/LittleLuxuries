@@ -258,6 +258,8 @@ export const Route = createRootRoute({
       },
       {
         type: "text/javascript",
+        async: true,
+        defer: true,
         innerHTML: `
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -267,8 +269,15 @@ export const Route = createRootRoute({
           t.src=v;s=b.getElementsByTagName(e)[0];
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '1617315459922059');
-          fbq('track', 'PageView');
+          if(document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+              fbq('init', '1617315459922059');
+              fbq('track', 'PageView');
+            });
+          } else {
+            fbq('init', '1617315459922059');
+            fbq('track', 'PageView');
+          }
         `,
       },
     ],
