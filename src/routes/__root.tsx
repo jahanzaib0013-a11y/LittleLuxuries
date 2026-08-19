@@ -258,8 +258,6 @@ export const Route = createRootRoute({
       },
       {
         type: "text/javascript",
-        async: true,
-        defer: true,
         innerHTML: `
           !function(f,b,e,v,n,t,s)
           {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -269,15 +267,8 @@ export const Route = createRootRoute({
           t.src=v;s=b.getElementsByTagName(e)[0];
           s.parentNode.insertBefore(t,s)}(window, document,'script',
           'https://connect.facebook.net/en_US/fbevents.js');
-          if(document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-              fbq('init', '1617315459922059');
-              fbq('track', 'PageView');
-            });
-          } else {
-            fbq('init', '1617315459922059');
-            fbq('track', 'PageView');
-          }
+          fbq('init', '1617315459922059');
+          fbq('track', 'PageView');
         `,
       },
     ],
@@ -292,6 +283,9 @@ function RootShell({ children }: { children: React.ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <noscript><img height="1" width="1" style={{display:"none"}}
+          src="https://www.facebook.com/tr?id=1617315459922059&ev=PageView&noscript=1"
+        /></noscript>
       </head>
       {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla adds
           cz-shortcut-listen) mutate <body> before hydration. This only silences
