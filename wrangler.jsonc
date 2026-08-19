@@ -10,4 +10,11 @@
   "kv_namespaces": [
     { "binding": "LITTLE_LUXURIES_KV", "id": "8002b460370d45db89bed05674334205", "preview_id": "8002b460370d45db89bed05674334205" }
   ],
+  "env": {
+    "production": {
+      "vars": {
+        "ENVIRONMENT": "production"
+      }
+    }
+  },
 }
