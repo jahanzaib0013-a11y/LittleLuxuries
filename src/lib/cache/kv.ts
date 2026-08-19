@@ -1,5 +1,6 @@
 // Cloudflare KV caching layer
 // Works in Cloudflare Pages / Workers environment
+// Falls back gracefully in development
 
 type KVNamespace = any;
 
@@ -7,9 +8,12 @@ declare global {
   var LITTLE_LUXURIES_KV: KVNamespace;
 }
 
+const isDevMode = () => typeof process !== 'undefined' && process.env.NODE_ENV === 'development';
+
 export async function getCached<T>(key: string): Promise<T | null> {
   try {
-    if (typeof globalThis === 'undefined' || !globalThis.LITTLE_LUXURIES_KV) {
+    // Skip caching in development if KV not available
+    if (isDevMode() || typeof globalThis === 'undefined' || !globalThis.LITTLE_LUXURIES_KV) {
       return null;
     }
 
@@ -19,7 +23,6 @@ export async function getCached<T>(key: string): Promise<T | null> {
     }
     return null;
   } catch (error) {
-    console.error('KV get error:', error);
     return null;
   }
 }
@@ -30,7 +33,7 @@ export async function setCached<T>(
   ttlSeconds: number = 3600
 ): Promise<void> {
   try {
-    if (typeof globalThis === 'undefined' || !globalThis.LITTLE_LUXURIES_KV) {
+    if (isDevMode() || typeof globalThis === 'undefined' || !globalThis.LITTLE_LUXURIES_KV) {
       return;
     }
 
@@ -38,18 +41,16 @@ export async function setCached<T>(
       expirationTtl: ttlSeconds,
     });
   } catch (error) {
-    console.error('KV set error:', error);
+    return;
   }
 }
 
 export async function invalidateCache(pattern: string): Promise<void> {
   try {
-    if (typeof globalThis === 'undefined' || !globalThis.LITTLE_LUXURIES_KV) {
+    if (isDevMode() || typeof globalThis === 'undefined' || !globalThis.LITTLE_LUXURIES_KV) {
       return;
     }
 
-    // KV doesn't support wildcard deletes, so we'll delete specific patterns
-    // For products, we delete the main keys we know about
     const keysToDelete = [
       'products:published:storefront',
       'products:all',
@@ -62,7 +63,7 @@ export async function invalidateCache(pattern: string): Promise<void> {
       }
     }
   } catch (error) {
-    console.error('KV invalidation error:', error);
+    return;
   }
 }
 
