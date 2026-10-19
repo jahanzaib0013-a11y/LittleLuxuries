@@ -51,7 +51,7 @@
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.83.0",
     "@tanstack/react-router": "^1.168.0",
-    "@tanstack/react-start": "^1.167.14",
+    "@tanstack/react-start": "^1.169.3",
     "@tanstack/router-plugin": "^1.167.10",
     "@types/nodemailer": "^8.0.0",
     "class-variance-authority": "^0.7.1",
