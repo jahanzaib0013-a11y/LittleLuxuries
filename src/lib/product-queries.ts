@@ -34,6 +34,35 @@ function mapDbProductToProduct(product: ProductRow): Product {
 const STOREFRONT_LIST_COLUMNS =
   "id,name,price,image_url,category,variant,badge,sizes,colors,units,status,gender,created_at";
 
+// Client-side mirror of the published catalog in localStorage, using the same
+// instant-paint pattern the site content and the categories/badges lists already
+// use. fetchPublishedProducts() always revalidates against Supabase and refreshes
+// this cache; providing it as react-query `initialData` lets returning visitors
+// see their real products on the very first render (behind the brand splash)
+// instead of skeleton rows that pop in and shift the layout after hydration.
+const PUBLISHED_PRODUCTS_LS_KEY = "ll-products-published-cache";
+
+function readProductsCache(): Product[] | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(PUBLISHED_PRODUCTS_LS_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as Product[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeProductsCache(products: Product[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(PUBLISHED_PRODUCTS_LS_KEY, JSON.stringify(products));
+  } catch {
+    /* storage full or unavailable — ignore, cache is best-effort */
+  }
+}
+
 export async function fetchPublishedProducts(): Promise<Product[]> {
   if (!isSupabaseConfigured) return fallbackProducts;
 
@@ -52,8 +81,10 @@ export async function fetchPublishedProducts(): Promise<Product[]> {
   });
   const products = fetched.map(mapDbProductToProduct);
 
-  // Cache for 30 minutes
+  // Cache for 30 minutes (KV on the edge) and mirror to localStorage so the
+  // next client render can paint real products before the fetch resolves.
   await setCached(cacheKey, products, 1800);
+  writeProductsCache(products);
 
   return products;
 }
@@ -95,6 +126,9 @@ export const publishedProductsQueryOptions = () =>
     queryKey: productKeys.list("published"),
     queryFn: fetchPublishedProducts,
     staleTime: FIVE_MINUTES,
+    // Serve the last-known catalog immediately when available; the query still
+    // revalidates in the background (queryFn writes the cache above).
+    initialData: () => readProductsCache() ?? undefined,
   });
 
 export const adminProductsQueryOptions = () =>

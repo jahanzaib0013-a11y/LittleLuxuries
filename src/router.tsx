@@ -66,7 +66,10 @@ export const getRouter = () => {
     // Lenis (smooth-scroll) owns scroll; SmoothScroll resets to top on navigation.
     // Native restoration would fight it and cause double-scroll jank.
     scrollRestoration: false,
-    defaultPreloadStaleTime: 0,
+    // Reuse preloaded route data across navigations instead of refetching on
+    // every hop. 0 treated every preload as stale, so the cached data was
+    // discarded and re-fetched, adding needless Supabase round-trips on nav.
+    defaultPreloadStaleTime: 5 * 60 * 1000,
     defaultErrorComponent: DefaultErrorComponent,
     Wrap: ({ children }) => (
       <QueryClientProvider client={queryClient}>
