@@ -175,6 +175,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                 <span className="label-eyebrow">{content.heroBanner.seasonTag}</span>
                 <RevealText
                   as="h1"
+                  immediate
                   text={content.heroBanner.headline}
                   emphasisClassName="italic text-primary"
                   className="display-serif mt-6 text-[2.75rem] text-foreground break-words sm:text-6xl md:text-7xl xl:text-[5rem]"

@@ -753,6 +753,28 @@ body::-webkit-scrollbar,
   margin-bottom: -0.08em;
 }
 
+/* Composited word entrance — same masked look as the old per-word JS
+   animation, but zero main-thread work. Tuning arrives from the component as
+   CSS vars (--reveal-dist / --reveal-dur / --reveal-stagger) and each word
+   carries its own --w index for the stagger. */
+.reveal-text .reveal-word {
+  display: inline-block;
+  transform: translateY(var(--reveal-dist, 115%));
+}
+.reveal-text[data-inview="true"] .reveal-word {
+  animation:
+    lux-word-rise var(--reveal-dur, 900ms) var(--reveal-ease, cubic-bezier(0.22, 1, 0.36, 1)) both;
+  animation-delay: calc(var(--w, 0) * var(--reveal-stagger, 60ms));
+}
+@keyframes lux-word-rise {
+  from {
+    transform: translateY(var(--reveal-dist, 115%));
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
 /* Lenis smooth-scroll (per docs) — prevent native smooth-scroll fighting it */
 html.lenis,
 html.lenis body {
@@ -771,6 +793,18 @@ html.lenis body {
 @media (prefers-reduced-motion: reduce) {
   .reveal-line {
     overflow: visible;
+  }
+  .reveal-text .reveal-word {
+    transform: none;
+    animation: none;
+  }
+}
+
+/* No JavaScript: masked words must never stay hidden behind the clip. */
+@media (scripting: none) {
+  .reveal-text .reveal-word {
+    transform: none;
+    animation: none;
   }
 }
 
