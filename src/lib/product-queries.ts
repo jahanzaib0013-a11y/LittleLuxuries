@@ -1,5 +1,5 @@
 import { queryOptions, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { productService } from "./supabase-service";
 import { products as fallbackProducts, type Product } from "./products";
 import { isSupabaseConfigured, type Database } from "./supabase";
@@ -37,9 +37,8 @@ const STOREFRONT_LIST_COLUMNS =
 // Client-side mirror of the published catalog in localStorage, using the same
 // instant-paint pattern the site content and the categories/badges lists already
 // use. fetchPublishedProducts() always revalidates against Supabase and refreshes
-// this cache; providing it as react-query `initialData` lets returning visitors
-// see their real products on the very first render (behind the brand splash)
-// instead of skeleton rows that pop in and shift the layout after hydration.
+// this cache; usePublishedProducts() then paints it for returning visitors before
+// the network round-trip finishes (see the mount-effect note below).
 const PUBLISHED_PRODUCTS_LS_KEY = "ll-products-published-cache";
 
 function readProductsCache(): Product[] | null {
@@ -126,9 +125,6 @@ export const publishedProductsQueryOptions = () =>
     queryKey: productKeys.list("published"),
     queryFn: fetchPublishedProducts,
     staleTime: FIVE_MINUTES,
-    // Serve the last-known catalog immediately when available; the query still
-    // revalidates in the background (queryFn writes the cache above).
-    initialData: () => readProductsCache() ?? undefined,
   });
 
 export const adminProductsQueryOptions = () =>
@@ -145,7 +141,29 @@ export const productDetailQueryOptions = (id: string) =>
     staleTime: FIVE_MINUTES,
   });
 
+/**
+ * Published catalog for the storefront.
+ *
+ * The localStorage mirror is applied AFTER mount, never as `initialData`:
+ * `initialData` resolves during the first client render, where the browser holds
+ * a cached catalog while the server had none — that DOM diff makes React discard
+ * the whole server render (hydration error #418) and re-render from scratch,
+ * throwing away the SSR head start. Seeding in a mount effect keeps the first
+ * render identical to the server HTML, then paints the cached catalog straight
+ * afterwards — still behind the brand splash, so returning visitors never see
+ * skeleton rows. Query freshness is left untouched, so the background
+ * revalidation against Supabase always runs.
+ */
 export function usePublishedProducts() {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    const key = productKeys.list("published");
+    if (queryClient.getQueryData<Product[]>(key)) return;
+    const cached = readProductsCache();
+    if (cached) queryClient.setQueryData(key, cached);
+  }, [queryClient]);
+
   return useQuery(publishedProductsQueryOptions());
 }
 
