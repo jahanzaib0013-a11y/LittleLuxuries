@@ -4,6 +4,7 @@ import { Heart, Search, ShoppingBag } from "lucide-react";
 import { type Product } from "@/lib/products";
 import { useFavorites } from "@/hooks/use-favorites";
 import { usePublishedProducts } from "@/lib/product-queries";
+import { retryOriginal } from "@/lib/supabase-image";
 import { formatPkr } from "@/lib/format-currency";
 import { useCart } from "@/context/CartContext";
 import { cn } from "@/lib/utils";
@@ -122,6 +123,7 @@ function FavoritesPage() {
                         src={p.image}
                         alt={p.name}
                         loading="lazy"
+                        onError={retryOriginal}
                         className="h-full w-full object-contain grayscale-[0.5]"
                       />
                     </div>
@@ -142,6 +144,7 @@ function FavoritesPage() {
                           src={p.image}
                           alt={p.name}
                           loading="lazy"
+                          onError={retryOriginal}
                           className="h-full w-full object-contain transition-transform duration-700 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-black/5 opacity-0 transition-opacity group-hover:opacity-100" />

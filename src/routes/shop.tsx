@@ -6,6 +6,7 @@ import { type Product } from "@/lib/products";
 import { useFavorites } from "@/hooks/use-favorites";
 import { useCategories } from "@/hooks/use-categories";
 import { usePublishedProducts } from "@/lib/product-queries";
+import { retryOriginal } from "@/lib/supabase-image";
 import { formatPkr } from "@/lib/format-currency";
 import { useCart } from "@/context/CartContext";
 import { toast } from "sonner";
@@ -118,7 +119,11 @@ function ProductCardImage({
         height={1067}
         decoding="async"
         onLoad={() => setLoaded(true)}
-        onError={() => setLoaded(true)}
+        onError={(e) => {
+          // Card images are resized proxies; a refusal must not leave the card blank.
+          retryOriginal(e);
+          setLoaded(true);
+        }}
         className={cn(
           className,
           "transition-opacity duration-300",

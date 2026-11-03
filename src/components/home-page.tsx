@@ -7,7 +7,7 @@ import { useCategories } from "@/hooks/use-categories";
 import { useBadges } from "@/hooks/use-badges";
 import { useFavorites } from "@/hooks/use-favorites";
 import logo from "@/assets/logo.png";
-import babyFeetLogo from "@/assets/baby-feet-logo.png";
+import babyFeetLogo from "@/assets/baby-feet-logo.webp";
 import hero from "@/assets/hero-baby.webp";
 import { subscribeToNewsletter } from "@/lib/email.server";
 import { formatPkr } from "@/lib/format-currency";
@@ -30,7 +30,8 @@ import { Magnetic } from "@/components/motion/magnetic";
 import { CountUp } from "@/components/motion/count-up";
 import { PromoBannerStrip } from "@/components/promo-banner-strip";
 import type { PromoBanner, PromoBannerPlacements } from "@/lib/content-data";
-import { cn, isUsableImageUrl, imgErrorFallback } from "@/lib/utils";
+import { cn, isUsableImageUrl } from "@/lib/utils";
+import { imageErrorFallback } from "@/lib/supabase-image";
 
 function PromoAt({
   banner,
@@ -247,7 +248,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                       height={1280}
                       fetchPriority="high"
                       decoding="async"
-                      onError={imgErrorFallback(hero)}
+                      onError={imageErrorFallback(hero)}
                       className="h-full w-full object-cover"
                     />
                   </div>
@@ -273,7 +274,8 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
         <Reveal index={1}>
           <section className="bg-background pt-0 pb-0">
             <div className="mx-auto flex max-w-md flex-col items-center px-6 text-center">
-              <img src={babyFeetLogo} alt="Little Luxuries" width={140} height={140} />
+              {/* 140 CSS px box (unchanged); the asset is 320 px wide for retina. */}
+              <img src={babyFeetLogo} alt="Little Luxuries" width={140} height={86} />
               <div className="divider-ornament mt-2 w-full">
                 <span className="diamond" />
               </div>
@@ -391,7 +393,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                                 width={1024}
                                 height={1024}
                                 draggable={false}
-                                onError={imgErrorFallback(hero)}
+                                onError={imageErrorFallback(hero)}
                                 className="h-full w-full max-w-full object-contain grayscale-[0.5]"
                               />
                             </div>
@@ -432,7 +434,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                                   width={1024}
                                   height={1024}
                                   draggable={false}
-                                  onError={imgErrorFallback(hero)}
+                                  onError={imageErrorFallback(hero)}
                                   className="h-full w-full max-w-full object-contain transition-transform duration-700 md:group-hover:scale-105"
                                 />
                               </TiltCard>

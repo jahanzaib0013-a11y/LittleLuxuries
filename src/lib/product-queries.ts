@@ -5,6 +5,7 @@ import { products as fallbackProducts, type Product } from "./products";
 import { isSupabaseConfigured, type Database } from "./supabase";
 import { FIVE_MINUTES } from "./query-client";
 import { getProductDisplayImage } from "./product-colors";
+import { CARD_IMAGE_WIDTH, sizedImage } from "./supabase-image";
 import { getCached, setCached } from "./cache/kv";
 
 export type ProductRow = Database["public"]["Tables"]["products"]["Row"];
@@ -62,15 +63,25 @@ function writeProductsCache(products: Product[]): void {
   }
 }
 
+/**
+ * Rewrites a product's card image to the storage resize endpoint. Idempotent —
+ * an already-proxied URL doesn't match the object path, so it passes through.
+ * Only `image` (what cards render) is touched; `image_url` and `colors[]` stay
+ * full-resolution so the product page gallery keeps its originals.
+ */
+function cardSized(product: Product): Product {
+  return { ...product, image: sizedImage(product.image, CARD_IMAGE_WIDTH) ?? product.image };
+}
+
 export async function fetchPublishedProducts(): Promise<Product[]> {
   if (!isSupabaseConfigured) return fallbackProducts;
 
   const cacheKey = "products:published:storefront";
 
-  // Try cache first
+  // Try cache first — the KV entry holds pre-transform rows, so size it here too.
   const cached = await getCached<Product[]>(cacheKey);
   if (cached) {
-    return cached;
+    return cached.map(cardSized);
   }
 
   // Fetch from Supabase if not cached
@@ -78,7 +89,7 @@ export async function fetchPublishedProducts(): Promise<Product[]> {
     throwOnError: true,
     columns: STOREFRONT_LIST_COLUMNS,
   });
-  const products = fetched.map(mapDbProductToProduct);
+  const products = fetched.map((row) => cardSized(mapDbProductToProduct(row)));
 
   // Cache for 30 minutes (KV on the edge) and mirror to localStorage so the
   // next client render can paint real products before the fetch resolves.

@@ -3,8 +3,9 @@ import { Link } from "@tanstack/react-router";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { defaultCategoryImage, type CategoryDef } from "@/hooks/use-categories";
 import type { CategoryLayout } from "@/lib/content-data";
+import { CARD_IMAGE_WIDTH, imageErrorFallback, sizedImage } from "@/lib/supabase-image";
 import hero from "@/assets/hero-baby.webp";
-import { cn, isUsableImageUrl, imgErrorFallback } from "@/lib/utils";
+import { cn, isUsableImageUrl } from "@/lib/utils";
 
 type CategorySectionProps = {
   layout: string;
@@ -23,6 +24,17 @@ function CategoryCard({
   imageClassName?: string;
   titleClassName?: string;
 }) {
+  // Uploaded category photos arrive at full upload resolution while these cards
+  // render ~300-400 px wide; ask the storage CDN for a retina-sized proxy.
+  // Bundled defaults (imported assets) are returned untouched by sizedImage.
+  const src =
+    sizedImage(
+      isUsableImageUrl(category.image)
+        ? category.image!
+        : (defaultCategoryImage(category.name) ?? hero),
+      CARD_IMAGE_WIDTH,
+    ) ?? hero;
+
   return (
     <Link
       to="/shop"
@@ -33,17 +45,13 @@ function CategoryCard({
       )}
     >
       <img
-        src={
-          isUsableImageUrl(category.image)
-            ? category.image!
-            : (defaultCategoryImage(category.name) ?? hero)
-        }
+        src={src}
         alt={category.name}
         loading="lazy"
         width={1024}
         height={1024}
         draggable={false}
-        onError={imgErrorFallback(hero)}
+        onError={imageErrorFallback(hero)}
         className={cn(
           "h-full w-full max-w-full object-cover transition-transform duration-700 md:group-hover:scale-105",
           imageClassName,
