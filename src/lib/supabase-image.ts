@@ -7,15 +7,18 @@
  * single biggest payload on the page.
  *
  * Supabase exposes the same objects through a resize/format CDN at
- * `/storage/v1/render/image/public/<bucket>/<path>?width=&quality=&format=`, so
- * we rewrite the stored public object URL to that endpoint and ask for a
- * 2x-retina proxy. The bytes shrink hard (measured on this project's own
- * objects: 2.2 MB → 62 KB, 370 KB → 173 KB) and the renderer answers with
- * `cache-control: public, max-age=31536000`, so each variant is computed once.
- * The picture itself does not change: only the width is passed, so the aspect
- * ratio and framing are untouched, and WebP at quality 78 is visually
- * equivalent at these sizes. `format=webp` is not optional — without it the
- * renderer re-encodes to PNG, which measured larger than the original.
+ * `/storage/v1/render/image/public/<bucket>/<path>?width=&resize=&quality=&format=`,
+ * so we rewrite the stored public object URL to that endpoint and ask for a
+ * retina-sized proxy. Two parameters are load-bearing and were measured on this
+ * project's own objects:
+ *   `resize=contain` — with only `width`, the renderer keeps the ORIGINAL height
+ *   and squashes the image (a 1200x1200 photo came back 700x1200). With
+ *   `contain` and no height it scales proportionally (1200x1200 → 700x700,
+ *   1051x1400 → 700x932), which is what preserves the look exactly.
+ *   `format=webp` — without it the renderer re-encodes to PNG, which measured
+ *   larger than the original (1.4 MB vs 2.2 MB source).
+ * The renderer answers with `cache-control: public, max-age=31536000`, so each
+ * variant is computed once and then served from the edge.
  *
  * Everything here is deterministic and side-effect free, so server and client
  * render the same URL (no hydration drift), and any URL we don't recognise
@@ -63,6 +66,8 @@ export function sizedImage(
   const bucketPath = parsed.pathname.slice(PUBLIC_OBJECT_PREFIX.length);
   const proxied = new URL(`${parsed.origin}${RENDER_PREFIX}${bucketPath}`);
   proxied.searchParams.set("width", String(width));
+  // Required for a proportional scale — see the note above (default pins height).
+  proxied.searchParams.set("resize", "contain");
   proxied.searchParams.set("quality", String(quality));
   proxied.searchParams.set("format", "webp");
   return proxied.toString();

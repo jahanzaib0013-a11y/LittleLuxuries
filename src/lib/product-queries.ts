@@ -40,7 +40,11 @@ const STOREFRONT_LIST_COLUMNS =
 // use. fetchPublishedProducts() always revalidates against Supabase and refreshes
 // this cache; usePublishedProducts() then paints it for returning visitors before
 // the network round-trip finishes (see the mount-effect note below).
-const PUBLISHED_PRODUCTS_LS_KEY = "ll-products-published-cache";
+// v2: the mirror stores card-image URLs, so the key is bumped whenever the
+// resize URL format changes — otherwise returning visitors keep painting the
+// previous variant (and one bad variant squashed photos) until the network
+// revalidation lands. A miss just means one fetch, exactly like a new visitor.
+const PUBLISHED_PRODUCTS_LS_KEY = "ll-products-published-cache-v2";
 
 function readProductsCache(): Product[] | null {
   if (typeof window === "undefined") return null;
