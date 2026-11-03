@@ -79,9 +79,14 @@ export async function fetchPublishedProducts(): Promise<Product[]> {
   const cacheKey = "products:published:storefront";
 
   // Try cache first — the KV entry holds pre-transform rows, so size it here too.
+  // The sized list is re-written to localStorage as well: without it, a visitor
+  // whose KV entry is served from cache would keep the original full-resolution
+  // URLs in their local mirror indefinitely and never get the smaller cards.
   const cached = await getCached<Product[]>(cacheKey);
   if (cached) {
-    return cached.map(cardSized);
+    const sized = cached.map(cardSized);
+    writeProductsCache(sized);
+    return sized;
   }
 
   // Fetch from Supabase if not cached
