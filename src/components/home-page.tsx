@@ -157,7 +157,7 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
         data-anim-template={content.animationTemplate ?? "couture"}
         className={cn(stickyPromoActive && "pb-28 sm:pb-32", "min-w-0 overflow-x-clip")}
       >
-        <Reveal index={0}>
+        <Reveal index={0} immediate>
           <section
             className="lux-grain relative overflow-hidden"
             style={{ background: "var(--gradient-hero)" }}
@@ -408,6 +408,11 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                                 )}
                                 <button
                                   type="button"
+                                  aria-label={
+                                    isFavorite(p.id)
+                                      ? `Remove ${p.name} from favourites`
+                                      : `Add ${p.name} to favourites`
+                                  }
                                   onClick={(e) => {
                                     e.preventDefault();
                                     e.stopPropagation();

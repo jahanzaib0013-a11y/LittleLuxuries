@@ -43,6 +43,13 @@ type RevealProps = {
   index?: number;
   as?: ElementType;
   className?: string;
+  /**
+   * Paint visible in the initial (SSR) HTML instead of waiting for JS +
+   * IntersectionObserver. Use for above-the-fold content (hero) so the LCP
+   * element renders on first paint. The hero's own HeroStagger/RevealText
+   * entrance animations are unaffected and still play.
+   */
+  immediate?: boolean;
 };
 
 /**
@@ -51,14 +58,15 @@ type RevealProps = {
  * `data-anim-template` attribute on an ancestor (see styles.css). Honors
  * prefers-reduced-motion and degrades gracefully without IntersectionObserver.
  */
-export function Reveal({ children, index = 0, as, className }: RevealProps) {
+export function Reveal({ children, index = 0, as, className, immediate = false }: RevealProps) {
   const template = useAnimationTemplate();
   const Tag = (as ?? "div") as ElementType;
   const ref = useRef<HTMLElement | null>(null);
-  const [revealed, setRevealed] = useState(false);
+  const [revealed, setRevealed] = useState(immediate);
 
   useEffect(() => {
     if (
+      immediate ||
       template === "none" ||
       prefersReducedMotion() ||
       typeof IntersectionObserver === "undefined"
@@ -81,7 +89,7 @@ export function Reveal({ children, index = 0, as, className }: RevealProps) {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [template]);
+  }, [template, immediate]);
 
   const dir = index % 2 === 0 ? "left" : "right";
   const delayMs = Math.min(index, 6) * 90;
