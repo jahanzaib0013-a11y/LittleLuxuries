@@ -37,6 +37,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-gold: var(--gold);
   --color-gold-foreground: var(--gold-foreground);
+  --color-gold-ink: var(--gold-ink);
   --color-blush: var(--blush);
   --color-lilac: var(--lilac);
   --color-destructive: var(--destructive);
@@ -83,6 +84,9 @@
   /* Gold accent */
   --gold: oklch(0.78 0.13 85);
   --gold-foreground: oklch(0.28 0.05 80);
+  /* Gold for *text* on a light surface: --gold is only ~1.9:1 there, so
+   * decorative numerals/labels use this darker reading of the same hue. */
+  --gold-ink: oklch(0.54 0.12 85);
 
   /* Soft palette */
   --blush: oklch(0.9 0.05 20);
@@ -146,6 +150,8 @@
   --accent-foreground: oklch(0.96 0.01 300);
   --gold: oklch(0.78 0.13 85);
   --gold-foreground: oklch(0.18 0.02 295);
+  /* On the dark surface the bright gold is the readable one, so it stays as-is. */
+  --gold-ink: oklch(0.78 0.13 85);
   --blush: oklch(0.5 0.08 20);
   --lilac: oklch(0.55 0.1 300);
   --destructive: oklch(0.65 0.2 25);

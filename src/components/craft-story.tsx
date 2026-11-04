@@ -44,7 +44,7 @@ export function CraftStory({ story }: { story?: CraftStoryContent }) {
               {data.chapters.map((c, i) => (
                 <Reveal key={i} index={i}>
                   <div className="flex gap-5 border-t border-border/60 pt-6">
-                    <span className="font-serif text-3xl italic text-gold/70">
+                    <span className="font-serif text-3xl italic text-gold-ink">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                     <div>
