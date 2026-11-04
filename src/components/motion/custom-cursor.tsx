@@ -1,6 +1,10 @@
 import { Suspense, lazy } from "react";
 import type { AnimationTemplate } from "@/lib/content-data";
-import { intensityFor, prefersReducedMotion } from "@/lib/motion";
+import {
+  intensityFor,
+  prefersReducedMotion,
+  useMotionContentSettled,
+} from "@/lib/motion";
 
 const Cursor = lazy(() => import("./animated").then((m) => ({ default: m.CustomCursorImpl })));
 
@@ -13,7 +17,8 @@ const Cursor = lazy(() => import("./animated").then((m) => ({ default: m.CustomC
  * it is never fetched for them.
  */
 export function CustomCursor({ template }: { template: AnimationTemplate }) {
-  if (!intensityFor(template).customCursor || prefersReducedMotion()) return null;
+  const settled = useMotionContentSettled();
+  if (!settled || !intensityFor(template).customCursor || prefersReducedMotion()) return null;
 
   return (
     <Suspense fallback={null}>

@@ -82,6 +82,60 @@ export function intensityFor(template: AnimationTemplate): MotionIntensity {
   return MAP[template] ?? COUTURE;
 }
 
+/* --------------------------------------------------------------- settle state */
+
+/**
+ * Has the storefront's published content been read yet?
+ *
+ * There is no server loader (see `routes/index.tsx`), so the first render of
+ * every page — the HTML string and the hydration pass — necessarily uses the
+ * coded default template, `couture`. The real value (`none` today) arrives a
+ * network round trip later. Until then the app is guessing, and guessing
+ * "animate" is expensive: the animation module gets fetched, Lenis mounts and
+ * the parallax springs bind, only for the settled `none` to tear all of that
+ * down and leave a 51 KB chunk and a mount/unmount cycle as pure waste. Lighthouse
+ * measures that waste on every run because it always starts from an empty cache.
+ *
+ * `useSiteContent` flips this the moment its fetch resolves — the same moment it
+ * tells the brand splash to lift — and every motion gate treats `false` as
+ * "render static". Nothing about the page looks different while the splash is
+ * still up, and a storefront published at `none` never asks for the library.
+ *
+ * The window-load failsafe keeps this from becoming a dependency: a page that
+ * never reads published content still gets its animations, just one beat later.
+ */
+let settled = false;
+const settledListeners = new Set<() => void>();
+
+export function markMotionContentSettled(): void {
+  if (settled) return;
+  settled = true;
+  for (const listener of Array.from(settledListeners)) listener();
+}
+
+if (typeof window !== "undefined") {
+  const arm = () => setTimeout(markMotionContentSettled, 1500);
+  if (document.readyState === "complete") arm();
+  else window.addEventListener("load", arm, { once: true });
+}
+
+/** False until the published template is known; stable once true. */
+export function useMotionContentSettled(): boolean {
+  const [isSettled, setIsSettled] = useState(settled);
+  useEffect(() => {
+    if (settled) {
+      setIsSettled(true);
+      return;
+    }
+    const listener = () => setIsSettled(true);
+    settledListeners.add(listener);
+    return () => {
+      settledListeners.delete(listener);
+    };
+  }, []);
+  return isSettled;
+}
+
 /**
  * True only after the component has mounted on the client. Use to defer
  * motion (scroll bindings, Lenis) until layout exists — avoids SSR/hydration

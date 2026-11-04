@@ -1,6 +1,10 @@
 import { Suspense, lazy } from "react";
 import { useAnimationTemplate } from "@/components/reveal";
-import { intensityFor, prefersReducedMotion } from "@/lib/motion";
+import {
+  intensityFor,
+  prefersReducedMotion,
+  useMotionContentSettled,
+} from "@/lib/motion";
 
 const Counter = lazy(() => import("./animated").then((m) => ({ default: m.CountUpImpl })));
 
@@ -16,8 +20,9 @@ const Counter = lazy(() => import("./animated").then((m) => ({ default: m.CountU
 export function CountUp({ text, className }: { text: string; className?: string }) {
   const template = useAnimationTemplate();
   const { enabled } = intensityFor(template);
+  const settled = useMotionContentSettled();
   const match = text.match(/([\d,]+)/);
-  const animateNow = enabled && !prefersReducedMotion() && match !== null;
+  const animateNow = enabled && settled && !prefersReducedMotion() && match !== null;
 
   if (!animateNow) {
     return <span className={className}>{text}</span>;

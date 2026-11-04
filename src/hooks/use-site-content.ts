@@ -9,6 +9,7 @@ import {
   type SiteContent,
   type SiteContentSource,
 } from "@/lib/content-data";
+import { markMotionContentSettled } from "@/lib/motion";
 
 type UseSiteContentOptions = {
   /** `published` = live homepage (/). `preview` = storefront draft (/storefront). */
@@ -53,6 +54,9 @@ export function useSiteContent(options?: UseSiteContentOptions) {
       setContent(loadLocal());
     } finally {
       setIsLoading(false);
+      // The template is now real rather than the coded default, so motion gates
+      // may open (see useMotionContentSettled in @/lib/motion).
+      markMotionContentSettled();
       // Signal the brand splash that content has settled so it can reveal a
       // finished page (see AppSplash in __root.tsx).
       if (typeof window !== "undefined") {

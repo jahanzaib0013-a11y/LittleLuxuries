@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
 import type { AnimationTemplate } from "@/lib/content-data";
-import { intensityFor, prefersReducedMotion } from "@/lib/motion";
+import { intensityFor, prefersReducedMotion, useMotionContentSettled } from "@/lib/motion";
 
 /**
  * Client-only lazy wrappers for the storefront's animation layer.
@@ -12,18 +12,24 @@ import { intensityFor, prefersReducedMotion } from "@/lib/motion";
  * content (or nothing), then dynamically import the animated version and swap
  * it in. No SSR/hydration mismatch because the initial output matches.
  *
- * Each wrapper asks the intensity table before fetching anything. With the
- * published template at `none` nothing here is requested at all — the store
- * renders its static output and the animation layer never enters the network
- * graph. The checks mirror the ones inside the modules being imported, so an
- * enabled template gets exactly the same component it got before.
+ * Each wrapper asks the intensity table before fetching anything, and waits
+ * until the published content has settled: before that the template is the
+ * coded default `couture`, not the store's real value. With the published
+ * template at `none` nothing here is ever requested — the store renders its
+ * static output and the animation layer never enters the network graph. The
+ * checks mirror the ones inside the modules being imported, so an enabled
+ * template gets exactly the same component it got before.
  */
 
 /**
- * True when the reduced-motion preference should veto an otherwise-enabled
- * effect. Safe to call after mount only (these effects run on the client).
+ * Should this effect run at all: does the settled template ask for it, and has
+ * the browser been told not to animate? Both are client-side questions, so this
+ * only ever runs from an effect.
  */
-function wants(template: AnimationTemplate, key: "smoothScroll" | "introLoader" | "customCursor") {
+function wants(
+  template: AnimationTemplate,
+  key: "smoothScroll" | "introLoader" | "customCursor",
+) {
   return intensityFor(template)[key] && !prefersReducedMotion();
 }
 
@@ -39,14 +45,15 @@ export function SmoothScroll({
     template: AnimationTemplate;
     children: ReactNode;
   }> | null>(null);
+  const settled = useMotionContentSettled();
   useEffect(() => {
-    if (!wants(template, "smoothScroll")) return;
+    if (!settled || !wants(template, "smoothScroll")) return;
     let active = true;
     import("./smooth-scroll").then((m) => active && setComp(() => m.SmoothScroll));
     return () => {
       active = false;
     };
-  }, [template]);
+  }, [template, settled]);
   if (!Comp) return <>{children}</>;
   return <Comp template={template}>{children}</Comp>;
 }
@@ -54,27 +61,29 @@ export function SmoothScroll({
 /** First-load brand curtain (motion). Renders nothing until loaded. */
 export function IntroLoader({ template }: { template: AnimationTemplate }) {
   const [Comp, setComp] = useState<ComponentType<{ template: AnimationTemplate }> | null>(null);
+  const settled = useMotionContentSettled();
   useEffect(() => {
-    if (!wants(template, "introLoader")) return;
+    if (!settled || !wants(template, "introLoader")) return;
     let active = true;
     import("./intro-loader").then((m) => active && setComp(() => m.IntroLoader));
     return () => {
       active = false;
     };
-  }, [template]);
+  }, [template, settled]);
   return Comp ? <Comp template={template} /> : null;
 }
 
 /** Custom cursor (motion). Renders nothing until loaded. */
 export function CustomCursor({ template }: { template: AnimationTemplate }) {
   const [Comp, setComp] = useState<ComponentType<{ template: AnimationTemplate }> | null>(null);
+  const settled = useMotionContentSettled();
   useEffect(() => {
-    if (!wants(template, "customCursor")) return;
+    if (!settled || !wants(template, "customCursor")) return;
     let active = true;
     import("./custom-cursor").then((m) => active && setComp(() => m.CustomCursor));
     return () => {
       active = false;
     };
-  }, [template]);
+  }, [template, settled]);
   return Comp ? <Comp template={template} /> : null;
 }

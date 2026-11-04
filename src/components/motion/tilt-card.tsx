@@ -1,6 +1,10 @@
 import { Suspense, lazy, type ReactNode } from "react";
 import { useAnimationTemplate } from "@/components/reveal";
-import { intensityFor, prefersReducedMotion } from "@/lib/motion";
+import {
+  intensityFor,
+  prefersReducedMotion,
+  useMotionContentSettled,
+} from "@/lib/motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Tilt = lazy(() => import("./animated").then((m) => ({ default: m.TiltCardImpl })));
@@ -13,14 +17,16 @@ const Tilt = lazy(() => import("./animated").then((m) => ({ default: m.TiltCardI
  *
  * The spring machinery lives in `./animated` and is fetched on demand, so a
  * storefront published at `animation_style: none` never downloads the animation
- * library for cards that will not move.
+ * library for cards that will not move — and not before the published template
+ * is actually known, either.
  */
 export function TiltCard({ children, className }: { children: ReactNode; className?: string }) {
   const template = useAnimationTemplate();
   const { enabled, tilt } = intensityFor(template);
   const isMobile = useIsMobile();
+  const settled = useMotionContentSettled();
 
-  const active = enabled && tilt > 0 && !isMobile && !prefersReducedMotion();
+  const active = enabled && settled && tilt > 0 && !isMobile && !prefersReducedMotion();
 
   if (!active) {
     return <div className={className}>{children}</div>;

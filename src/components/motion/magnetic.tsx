@@ -1,6 +1,10 @@
 import { Suspense, lazy, type ReactNode } from "react";
 import { useAnimationTemplate } from "@/components/reveal";
-import { intensityFor, prefersReducedMotion } from "@/lib/motion";
+import {
+  intensityFor,
+  prefersReducedMotion,
+  useMotionContentSettled,
+} from "@/lib/motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const Pull = lazy(() => import("./animated").then((m) => ({ default: m.MagneticImpl })));
@@ -14,8 +18,9 @@ export function Magnetic({ children, className }: { children: ReactNode; classNa
   const template = useAnimationTemplate();
   const { enabled, magnet } = intensityFor(template);
   const isMobile = useIsMobile();
+  const settled = useMotionContentSettled();
 
-  const active = enabled && magnet > 0 && !isMobile && !prefersReducedMotion();
+  const active = enabled && settled && magnet > 0 && !isMobile && !prefersReducedMotion();
   if (!active) {
     return <div className={className}>{children}</div>;
   }

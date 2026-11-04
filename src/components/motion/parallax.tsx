@@ -1,6 +1,11 @@
 import { Suspense, lazy, type ReactNode } from "react";
 import { useAnimationTemplate } from "@/components/reveal";
-import { intensityFor, prefersReducedMotion, useMounted } from "@/lib/motion";
+import {
+  intensityFor,
+  prefersReducedMotion,
+  useMounted,
+  useMotionContentSettled,
+} from "@/lib/motion";
 
 const Drift = lazy(() => import("./animated").then((m) => ({ default: m.ParallaxDrift })));
 
@@ -14,6 +19,10 @@ const Drift = lazy(() => import("./animated").then((m) => ({ default: m.Parallax
  * client render and the settled render are identical — no flash, no layout
  * shift, and hydration stays clean because `!mounted` is true on the server and
  * on the first client render alike.
+ *
+ * `settled` covers the other guess: before the published content has been read
+ * the template is the coded default, so drifting would fetch this module for an
+ * effect the real value then throws away.
  */
 export function Parallax({
   children,
@@ -28,8 +37,9 @@ export function Parallax({
   const template = useAnimationTemplate();
   const { enabled, parallax } = intensityFor(template);
   const mounted = useMounted();
+  const settled = useMotionContentSettled();
 
-  if (!enabled || !mounted || prefersReducedMotion()) {
+  if (!enabled || !settled || !mounted || prefersReducedMotion()) {
     return <div className={className}>{children}</div>;
   }
 
