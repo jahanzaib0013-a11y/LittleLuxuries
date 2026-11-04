@@ -1,0 +1,46 @@
+name: Linux build check
+
+# Cloudflare Workers Builds is the only thing that deploys this repo, and its log
+# is not readable from the API token we have. This job runs the *same* commands on
+# the *same* OS as that build (ubuntu + Node 24) so a failure produces a log we can
+# actually read, instead of a red X that points at a dashboard.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install (same command Cloudflare Builds runs)
+        run: npm clean-install --progress=false --no-audit --no-fund
+
+      - name: Build (same command Cloudflare Builds runs)
+        run: npm run build:pages
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "::group::node/npm"
+          node -v; npm -v
+          echo "::endgroup::"
+          echo "::group::@babel/runtime on disk"
+          ls -la node_modules/@babel/runtime 2>&1 | head -20 || echo "MISSING: node_modules/@babel/runtime"
+          ls -la node_modules/@babel/runtime/helpers/typeof.js 2>&1 || echo "MISSING: helpers/typeof.js"
+          echo "::endgroup::"
+          echo "::group::npm ls @babel/runtime"
+          npm ls @babel/runtime || true
+          echo "::endgroup::"
+          echo "::group::npm config"
+          npm config list --json || npm config list
+          echo "::endgroup::"
+          echo "::error::Linux build check failed - see groups above for whether the package tree was incomplete"
