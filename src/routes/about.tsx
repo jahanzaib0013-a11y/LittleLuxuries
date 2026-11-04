@@ -108,7 +108,8 @@ function About() {
       </section>
 
       <section className="mx-auto max-w-3xl px-4 sm:px-6 py-16 sm:py-24 text-center">
-        <img src={logo} alt="Little Luxuries Logo" width={100} height={100} className="mx-auto" />
+        {/* 100x62 = the logo's real 560x346 ratio, so no reflow on decode. */}
+        <img src={logo} alt="Little Luxuries Logo" width={100} height={62} className="mx-auto" />
         <blockquote className="mt-6 font-serif text-2xl italic leading-relaxed text-foreground md:text-3xl">
           "We are not making clothes. We are wrapping a beginning."
         </blockquote>

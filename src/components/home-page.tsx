@@ -254,7 +254,10 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                   </div>
                   <div className="absolute -bottom-6 -left-6 hidden rounded-2xl border border-border bg-card px-5 py-4 shadow-(--shadow-card) md:block">
                     <div className="flex items-center gap-3">
-                      <img src={logo} alt="Little Luxuries Logo" width={48} height={48} />
+                      {/* logo.png is 560x346; the attributes have to carry that
+                          ratio or the browser reserves a square box and the image
+                          jumps when it decodes (preflight sets height:auto). */}
+                      <img src={logo} alt="Little Luxuries Logo" width={48} height={30} />
                       <div>
                         <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                           {content.heroBanner.badgeTitle}

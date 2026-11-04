@@ -35,6 +35,9 @@ function CategoryCard({
       CARD_IMAGE_WIDTH,
     ) ?? hero;
 
+  // The card fixes its own box at 4:5 (aspect-4/5 + object-cover), so the
+  // attributes must describe that box, not the 1024 px upload: a square hint
+  // reserves the wrong height and the tile shifts on decode.
   return (
     <Link
       to="/shop"
@@ -48,8 +51,8 @@ function CategoryCard({
         src={src}
         alt={category.name}
         loading="lazy"
-        width={1024}
-        height={1024}
+        width={700}
+        height={875}
         draggable={false}
         onError={imageErrorFallback(hero)}
         className={cn(

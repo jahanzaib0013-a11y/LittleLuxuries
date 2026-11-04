@@ -287,7 +287,7 @@ export function IntroLoaderImpl({ template }: { template: AnimationTemplate }) {
             src={logo}
             alt="Little Luxuries"
             width={96}
-            height={96}
+            height={59}
             initial={{ opacity: 0, y: 16, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.7, ease: LUX_EASE }}
