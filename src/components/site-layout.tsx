@@ -229,7 +229,7 @@ export function Footer({ className }: { className?: string }) {
           </div>
         </div>
         <div>
-          <h4 className="label-eyebrow mb-4">Shop</h4>
+          <h3 className="label-eyebrow mb-4">Shop</h3>
           <ul className="space-y-2.5">
             <li>
               <Link
@@ -264,7 +264,7 @@ export function Footer({ className }: { className?: string }) {
           ]}
         />
         <div>
-          <h4 className="label-eyebrow mb-4">Newsletter</h4>
+          <h3 className="label-eyebrow mb-4">Newsletter</h3>
           {status === "success" ? (
             <div className="flex flex-col items-center justify-center py-4 text-center animate-in fade-in zoom-in duration-500">
               <CheckCircle2 className="size-6 text-green-500 mb-2" />
@@ -278,8 +278,17 @@ export function Footer({ className }: { className?: string }) {
               </p>
               <form className="flex flex-col gap-2" onSubmit={handleSubscribe} noValidate>
                 <div className="flex flex-col gap-2 sm:flex-row sm:gap-2">
+                  {/* Field names are a label a screen reader can announce and the
+                      id a validation message can point at; sr-only keeps the
+                      visible design (placeholder-only row) exactly as it is. */}
+                  <label className="sr-only" htmlFor="footer-newsletter-email">
+                    Email address
+                  </label>
                   <input
+                    id="footer-newsletter-email"
+                    name="email"
                     type="email"
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -344,7 +353,7 @@ function useAnimationTemplate(): AnimationTemplate {
 function FooterCol({ title, links }: { title: string; links: { label: string; to: string }[] }) {
   return (
     <div>
-      <h4 className="label-eyebrow mb-4">{title}</h4>
+      <h3 className="label-eyebrow mb-4">{title}</h3>
       <ul className="space-y-2.5">
         {links.map((l) => (
           <li key={l.label}>

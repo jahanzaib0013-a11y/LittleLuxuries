@@ -473,6 +473,10 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                       className="lux-hover-cta group inline-flex items-center gap-2 rounded-full border border-border bg-card px-8 py-3.5 text-sm font-medium text-foreground transition-colors hover:border-primary hover:text-primary"
                     >
                       See more
+                      {/* The visible label is four identical "See more" links, which
+                          reads as nothing to a screen reader or a crawler. Hidden
+                          words name the badge without touching the layout. */}
+                      <span className="sr-only"> {badge.name.toLowerCase()} items</span>
                       <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
                     </Link>
                   </div>
@@ -516,8 +520,14 @@ export function HomePage({ contentSource = "published", initialContent }: HomePa
                       noValidate
                     >
                       <div className="flex-1 text-left">
+                        <label className="sr-only" htmlFor="homepage-newsletter-email">
+                          Email address
+                        </label>
                         <input
+                          id="homepage-newsletter-email"
+                          name="email"
                           type="email"
+                          autoComplete="email"
                           value={email}
                           onChange={(e) => {
                             setEmail(e.target.value);
