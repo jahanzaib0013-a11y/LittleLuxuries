@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "build:pages": "vite build && cp dist/server/index.js dist/client/_worker.js",
+    "build:pages": "npm install --cache /tmp/npm-uncached --no-audit --no-fund && vite build && cp dist/server/index.js dist/client/_worker.js",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
