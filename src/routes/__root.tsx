@@ -223,14 +223,19 @@ export const Route = createRootRoute({
     scripts: [
       {
         type: "text/javascript",
-        // The Google tag is fetched when the main thread goes idle instead of
-        // racing the storefront's own startup work. A local desktop run measured
-        // 581 ms of scripting and a 517 ms long task for that 177 KB file, all of
-        // it competing with hydration. The stub below is Google's own async
+        // `children`, not `innerHTML`: TanStack Router renders these entries as
+        // React <script> props (see router-core's Asset), and an entry with no
+        // `children` renders nothing at all. The GA config, the pixel init and
+        // this JSON-LD block were all silently absent from the served document.
+        //
+        // The tag file itself is fetched after the window has loaded, so its
+        // 177 KB and ~600 ms of scripting stop racing storefront hydration (that
+        // is what a local desktop run measured). The stub is Google's own async
         // pattern: every gtag() call is queued in dataLayer and replayed intact
         // once the real file arrives, so the pageview and all events still fire —
-        // they are simply sent a moment later.
-        innerHTML: `
+        // they are simply sent a moment later. Off an idle callback the tag would
+        // never load at all in a background tab.
+        children: `
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
@@ -246,9 +251,6 @@ export const Route = createRootRoute({
               s.src = src;
               document.head.appendChild(s);
             }
-            // After the window has loaded plus a short beat: idle callbacks never
-            // fire in a background tab, and the tag must not be lost when a visitor
-            // opens the store in one.
             if (document.readyState === 'complete') setTimeout(load, 800);
             else window.addEventListener('load', function () { setTimeout(load, 800); });
           })();
@@ -256,7 +258,7 @@ export const Route = createRootRoute({
       },
       {
         type: "application/ld+json",
-        innerHTML: JSON.stringify({
+        children: JSON.stringify({
           "@context": "https://schema.org",
           "@type": "LocalBusiness",
           name: "Little Luxuries",
@@ -277,17 +279,27 @@ export const Route = createRootRoute({
       },
       {
         type: "text/javascript",
-        innerHTML: `
-          !function(f,b,e,v,n,t,s)
-          {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-          n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-          if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-          n.queue=[];t=b.createElement(e);t.async=!0;
-          t.src=v;s=b.getElementsByTagName(e)[0];
-          s.parentNode.insertBefore(t,s)}(window, document,'script',
-          'https://connect.facebook.net/en_US/fbevents.js');
-          fbq('init', '1617315459922059');
-          fbq('track', 'PageView');
+        // Meta's own queue-first pattern, with the network call moved after the
+        // window has loaded. Commands pushed before fbevents.js lands sit in
+        // n.queue and are replayed by the pixel when it initialises, so the
+        // PageView is still attributed to this visit.
+        children: `
+          !function(f,b){
+            if(f.fbq)return;
+            var n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];
+            fbq('init', '1617315459922059');
+            fbq('track', 'PageView');
+            var done=false;
+            function load(){
+              if(done)return; done=true;
+              var t=b.createElement('script');t.async=!0;
+              t.src='https://connect.facebook.net/en_US/fbevents.js';
+              b.head.appendChild(t);
+            }
+            if(b.readyState==='complete')setTimeout(load,1200);
+            else f.addEventListener('load',function(){setTimeout(load,1200);});
+          }(window, document);
         `,
       },
     ],
