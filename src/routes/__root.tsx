@@ -237,14 +237,20 @@ export const Route = createRootRoute({
           gtag('config', 'G-5MVN9EFSEB');
           (function () {
             var src = 'https://www.googletagmanager.com/gtag/js?id=G-5MVN9EFSEB';
-            var load = function () {
+            var done = false;
+            function load () {
+              if (done) return;
+              done = true;
               var s = document.createElement('script');
               s.async = true;
               s.src = src;
               document.head.appendChild(s);
-            };
-            if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 3000 });
-            else window.addEventListener('load', function () { setTimeout(load, 0); });
+            }
+            // After the window has loaded plus a short beat: idle callbacks never
+            // fire in a background tab, and the tag must not be lost when a visitor
+            // opens the store in one.
+            if (document.readyState === 'complete') setTimeout(load, 800);
+            else window.addEventListener('load', function () { setTimeout(load, 800); });
           })();
         `,
       },
