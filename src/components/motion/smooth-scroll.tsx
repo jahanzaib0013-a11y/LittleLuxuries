@@ -19,6 +19,11 @@ function ScrollReset() {
  * Wraps the app in buttery momentum scrolling (Lenis). Smooth wheel only —
  * native touch scrolling is preserved on mobile. Falls back to a plain
  * passthrough when motion is disabled (template "none" / reduced-motion).
+ *
+ * Deliberately a static import, unlike the per-component motion gates in this
+ * folder: this one wraps the entire page, so swapping a lazily fetched wrapper
+ * in would remount every card and image on the site the moment it resolved.
+ * Lenis is ~7 KB; the animation library the gates defer is ~70 KB.
  */
 export function SmoothScroll({
   template,
