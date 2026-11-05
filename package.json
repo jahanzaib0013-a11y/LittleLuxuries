@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "build:pages": "node scripts/ensure-babel-runtime.mjs && vite build && cp dist/server/index.js dist/client/_worker.js",
+    "build:pages": "node scripts/ensure-babel-runtime.mjs && node scripts/diagnose-babel-resolve.mjs && vite build && cp dist/server/index.js dist/client/_worker.js",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
