@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
-    "build:pages": "bash -c \u0027ulimit -n $(ulimit -Hn) 2>/dev/null || ulimit -n 65536 2>/dev/null || ulimit -n 8192 2>/dev/null || true; vite build && cp dist/server/index.js dist/client/_worker.js\u0027",
+    "build:pages": "vite build && cp dist/server/index.js dist/client/_worker.js",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
